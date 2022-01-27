@@ -10,17 +10,24 @@ import (
 	"strings"
 )
 
-func reverseMap(in map[interface{}]string) (result map[string]interface{}) {
+func reverseMap(in map[string]interface{}) (result map[interface{}]interface{}) {
 	for key, value := range in {
 		result[value] = key
 	}
 	return
 }
 
+func assert(clause bool, msg string) {
+	if !clause {
+		log.Fatal(msg)
+	}
+}
+
 type TokenType int
 
 const (
 	TokenInt  TokenType = iota
+	TokenBool TokenType = iota
 	TokenWord TokenType = iota
 
 	TokenCount = iota
@@ -38,31 +45,60 @@ const (
 	IntrinsicPlus  IntrinsicType = iota
 	IntrinsicMinus IntrinsicType = iota
 	IntrinsicMul   IntrinsicType = iota
+	IntrinsicEq    IntrinsicType = iota
 	IntrinsicPrint IntrinsicType = iota
+
+	IntrinsicCount = iota
 )
 
+// TODO: how to assert global dicts have all key/value pairs?
+// assert(IntrinsicCount == 4, "Unhandled intrinsic in WordToIntrinsic")
 var WordToIntrinsic = map[string]IntrinsicType{
 	"+":     IntrinsicPlus,
 	"-":     IntrinsicMinus,
 	"*":     IntrinsicMul,
+	"=":     IntrinsicEq,
 	"print": IntrinsicPrint,
 }
+
+// assert(IntrinsicCount == 4, "Unhandled intrinsic in IntrinsicName")
 var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicPlus:  "+",
 	IntrinsicMinus: "-",
 	IntrinsicMul:   "*",
+	IntrinsicEq:    "=",
 	IntrinsicPrint: "print",
+}
+
+type BoolType int
+
+const (
+	BoolTrue  BoolType = iota
+	BoolFalse BoolType = iota
+)
+
+var WordToBool = map[string]BoolType{
+	"true":  BoolTrue,
+	"false": BoolFalse,
+}
+var BoolName = map[BoolType]string{
+	BoolTrue:  "true",
+	BoolFalse: "false",
 }
 
 type OpType int
 
 const (
-	OpPushInt OpType = iota
-	OpIntrinsic
+	OpPushInt   OpType = iota
+	OpPushBool  OpType = iota
+	OpIntrinsic OpType = iota
+
+	OpCount = iota
 )
 
 var OpName = map[OpType]string{
 	OpPushInt:   "PUSH_INT",
+	OpPushBool:  "PUSH_BOOL",
 	OpIntrinsic: "INTRINSIC",
 }
 
@@ -75,9 +111,12 @@ type Op struct {
 func (op *Op) str() (s string) {
 	var operand string
 
+	assert(OpCount == 3, "Unhandled Op in Op.str()")
 	switch op.Typ {
 	case OpPushInt:
 		operand = strconv.Itoa(op.Operand.(int))
+	case OpPushBool:
+		operand = BoolName[op.Operand.(BoolType)]
 	case OpIntrinsic:
 		operand = IntrinsicName[op.Operand.(IntrinsicType)]
 	}
@@ -87,22 +126,22 @@ func (op *Op) str() (s string) {
 }
 
 type Stack struct {
-	Data []int
+	Data []interface{}
 }
 
-func (s *Stack) push(x int) {
+func (s *Stack) push(x interface{}) {
 	s.Data = append(s.Data, x)
 	// fmt.Printf("INFO: stack after push(%d): %v\n", x, s.Data)
 }
 
-func (s *Stack) pop() (x int) {
+func (s *Stack) pop() (x interface{}) {
 	x = s.Data[len(s.Data)-1]
 	s.Data = s.Data[:len(s.Data)-1]
 	// fmt.Printf("INFO: stack after pop: %v\n", s.Data)
 	return
 }
 
-func (s *Stack) top() (x int) {
+func (s *Stack) top() (x interface{}) {
 	x = s.Data[len(s.Data)-1]
 	return
 }
@@ -132,6 +171,8 @@ func read_file(fn string) (data string) {
 
 func lex(data string) (tokens []Token) {
 	start := 0
+
+	assert(TokenCount == 3, "Unhandled Token in lex()")
 	for start < len(data) {
 		if strings.IndexByte(" \n", data[start]) != -1 {
 			start++
@@ -151,6 +192,13 @@ func lex(data string) (tokens []Token) {
 			continue
 		}
 
+		// check if word is boolean literal
+		boolean, exists := WordToBool[word]
+		if exists {
+			tokens = append(tokens, Token{Typ: TokenBool, Text: word, Value: boolean})
+			continue
+		}
+
 		// check if word is an intrinsic (+-* or print)
 		intrinsic, exists := WordToIntrinsic[word]
 		if exists {
@@ -164,6 +212,7 @@ func lex(data string) (tokens []Token) {
 }
 
 func compile(tokens []Token) (ops []Op) {
+	assert(TokenCount == 3, "Unhandled Token in compile()")
 	for _, token := range tokens {
 
 		switch token.Typ {
@@ -171,6 +220,12 @@ func compile(tokens []Token) (ops []Op) {
 			ops = append(ops, Op{
 				Typ:     OpPushInt,
 				Operand: token.Value.(int),
+				OpToken: token,
+			})
+		case TokenBool:
+			ops = append(ops, Op{
+				Typ:     OpPushBool,
+				Operand: token.Value.(BoolType),
 				OpToken: token,
 			})
 		case TokenWord:
@@ -196,25 +251,38 @@ func interprete(ops []Op, debug bool) {
 		fmt.Println("---------------------------------")
 	}
 
+	assert(OpCount == 3, "Unhandled Op in interprete()")
 	for _, op := range ops {
 		switch op.Typ {
 		case OpPushInt:
 			n := op.Operand.(int)
 			stack.push(n)
+		case OpPushBool:
+			switch op.Operand {
+			case BoolFalse:
+				stack.push(false)
+			case BoolTrue:
+				stack.push(true)
+			}
 		case OpIntrinsic:
+			assert(IntrinsicCount == 5, "Unhandled intrinsic in interprete()")
 			switch op.Operand {
 			case IntrinsicPlus:
-				b := stack.pop()
-				a := stack.pop()
+				b := stack.pop().(int)
+				a := stack.pop().(int)
 				stack.push(a + b)
 			case IntrinsicMinus:
-				b := stack.pop()
-				a := stack.pop()
+				b := stack.pop().(int)
+				a := stack.pop().(int)
 				stack.push(a - b)
 			case IntrinsicMul:
-				b := stack.pop()
-				a := stack.pop()
+				b := stack.pop().(int)
+				a := stack.pop().(int)
 				stack.push(a * b)
+			case IntrinsicEq:
+				b := stack.pop().(int)
+				a := stack.pop().(int)
+				stack.push(a == b)
 			case IntrinsicPrint:
 				x := stack.pop()
 				fmt.Println(x)
