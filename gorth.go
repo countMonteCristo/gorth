@@ -1,9 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -23,6 +24,12 @@ func assert(clause bool, msg string) {
 	}
 }
 
+type Location struct {
+	Filepath string
+	Line     int
+	Column   int
+}
+
 type TokenType int
 
 const (
@@ -37,6 +44,7 @@ type Token struct {
 	Typ   TokenType
 	Text  string
 	Value interface{}
+	Loc   Location
 }
 
 type IntrinsicType int
@@ -163,6 +171,11 @@ func (op *Op) str() (s string) {
 	return
 }
 
+func CompilerFatal(loc *Location, msg string) {
+	fmt.Printf("%s:%d:%d: ERROR: %s\n", loc.Filepath, loc.Line+1, loc.Column+1, msg)
+	os.Exit(1)
+}
+
 type Stack struct {
 	Data []interface{}
 }
@@ -172,15 +185,24 @@ func (s *Stack) push(x interface{}) {
 	// fmt.Printf("INFO: stack after push(%d): %v\n", x, s.Data)
 }
 
-func (s *Stack) pop() (x interface{}) {
-	x = s.Data[len(s.Data)-1]
-	s.Data = s.Data[:len(s.Data)-1]
+func (s *Stack) pop(token *Token) (x interface{}) {
+	if len(s.Data) > 0 {
+		x = s.Data[len(s.Data)-1]
+		s.Data = s.Data[:len(s.Data)-1]
+	} else {
+		CompilerFatal(&token.Loc, "Stack underflow")
+	}
 	// fmt.Printf("INFO: stack after pop: %v\n", s.Data)
 	return
 }
 
-func (s *Stack) top() (x interface{}) {
-	x = s.Data[len(s.Data)-1]
+func (s *Stack) top(token *Token) (x interface{}) {
+	if len(s.Data) > 0 {
+		x = s.Data[len(s.Data)-1]
+	} else {
+		CompilerFatal(&token.Loc, "Stack underflow")
+	}
+
 	return
 }
 
@@ -190,7 +212,7 @@ func check(e error) {
 	}
 }
 
-func read_file(fn string) (data string) {
+func read_file(fn string) (lines []string) {
 	file, err := os.Open(fn)
 	if err != nil {
 		log.Fatal(err)
@@ -201,51 +223,78 @@ func read_file(fn string) (data string) {
 		}
 	}()
 
-	bytes, err := ioutil.ReadAll(file)
-	data = string(bytes)
+	reader := bufio.NewReader(file)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			log.Fatalf("read file line error: %v", err)
+			return
+		}
+		line = strings.TrimRight(line, "\n")
+		lines = append(lines, line)
+	}
 
 	return
 }
 
-func lex(data string) (tokens []Token) {
-	start := 0
-
+func lex(lines []string, filepath string) (tokens []Token) {
 	assert(TokenCount == 3, "Unhandled Token in lex()")
-	for start < len(data) {
-		if strings.IndexByte(" \n", data[start]) != -1 {
-			start++
-			continue
-		}
-		i := start
-		for i < len(data) && strings.IndexByte(" \n", data[i]) == -1 {
-			i++
-		}
-		word := data[start:i]
-		start = i
+	for line_num, data := range lines {
+		// fmt.Printf("Check line: `%s`\n", data)
 
-		// check if word is int literal
-		number, err := strconv.Atoi(word)
-		if err == nil {
-			tokens = append(tokens, Token{Typ: TokenInt, Text: word, Value: number})
-			continue
-		}
+		start := 0
+		for start < len(data) {
 
-		// check if word is boolean literal
-		boolean, exists := WordToBool[word]
-		if exists {
-			tokens = append(tokens, Token{Typ: TokenBool, Text: word, Value: boolean})
-			continue
-		}
+			if data[start] == ' ' {
+				start++
+				continue
+			}
+			i := start
+			for i < len(data) && data[i] != ' ' {
+				i++
+			}
+			word := data[start:i]
 
-		// check if word is an intrinsic (+-* or print)
-		intrinsic, exists := WordToIntrinsic[word]
-		if exists {
-			tokens = append(tokens, Token{Typ: TokenWord, Text: word, Value: intrinsic})
-			continue
-		}
+			token := Token{Text: word, Loc: Location{Filepath: filepath, Line: line_num, Column: start}}
+			start = i
 
-		log.Fatal(fmt.Printf("ERROR: unhandled word: %s\n", word))
+			// fmt.Printf("Check word: `%s`\n", word)
+
+			// check if word is int literal
+			number, err := strconv.Atoi(word)
+			if err == nil {
+				token.Typ = TokenInt
+				token.Value = number
+				tokens = append(tokens, token)
+				continue
+			}
+
+			// check if word is boolean literal
+			boolean, exists := WordToBool[word]
+			if exists {
+				token.Typ = TokenBool
+				token.Value = boolean
+				tokens = append(tokens, token)
+				continue
+			}
+
+			// check if word is an intrinsic
+			intrinsic, exists := WordToIntrinsic[word]
+			if exists {
+				token.Typ = TokenWord
+				token.Value = intrinsic
+				tokens = append(tokens, token)
+				continue
+			}
+
+			CompilerFatal(&token.Loc, fmt.Sprintf("Unknown word: %s", word))
+		}
 	}
+
 	return
 }
 
@@ -273,7 +322,7 @@ func compile(tokens []Token) (ops []Op) {
 				OpToken: token,
 			})
 		default:
-			log.Fatal(fmt.Sprintf("ERROR: Unhandled token: %d\n", token.Typ))
+			CompilerFatal(&token.Loc, fmt.Sprintf("ERROR: Unhandled token: %s\n", token.Text))
 		}
 	}
 	return
@@ -306,66 +355,66 @@ func interprete(ops []Op, debug bool) {
 			assert(IntrinsicCount == 15, "Unhandled intrinsic in interprete()")
 			switch op.Operand {
 			case IntrinsicPlus:
-				b := stack.pop().(int)
-				a := stack.pop().(int)
-				stack.push(a + b)
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) + b.(int))
 			case IntrinsicMinus:
-				b := stack.pop().(int)
-				a := stack.pop().(int)
-				stack.push(a - b)
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) - b.(int))
 			case IntrinsicMul:
-				b := stack.pop().(int)
-				a := stack.pop().(int)
-				stack.push(a * b)
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) * b.(int))
 			case IntrinsicDup:
-				x := stack.top()
+				x := stack.top(&op.OpToken)
 				stack.push(x)
 			case IntrinsicSwap:
-				b := stack.pop()
-				a := stack.pop()
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
 				stack.push(b)
 				stack.push(a)
 			case IntrinsicDrop:
-				_ = stack.pop()
+				_ = stack.pop(&op.OpToken)
 			case IntrinsicOver:
 				x := stack.Data[len(stack.Data)-2]
 				stack.push(x)
 			case IntrinsicRot:
-				c := stack.pop()
-				b := stack.pop()
-				a := stack.pop()
+				c := stack.pop(&op.OpToken)
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
 				stack.push(b)
 				stack.push(c)
 				stack.push(a)
 			case IntrinsicEq:
-				b := stack.pop().(int)
-				a := stack.pop().(int)
-				stack.push(a == b)
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) == b.(int))
 			case IntrinsicNe:
-				b := stack.pop().(int)
-				a := stack.pop().(int)
-				stack.push(a != b)
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) != b.(int))
 			case IntrinsicLe:
-				b := stack.pop().(int)
-				a := stack.pop().(int)
-				stack.push(a <= b)
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) <= b.(int))
 			case IntrinsicGe:
-				b := stack.pop().(int)
-				a := stack.pop().(int)
-				stack.push(a >= b)
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) >= b.(int))
 			case IntrinsicLt:
-				b := stack.pop().(int)
-				a := stack.pop().(int)
-				stack.push(a < b)
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) < b.(int))
 			case IntrinsicGt:
-				b := stack.pop().(int)
-				a := stack.pop().(int)
-				stack.push(a > b)
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) > b.(int))
 			case IntrinsicPrint:
-				x := stack.pop()
+				x := stack.pop(&op.OpToken)
 				fmt.Println(x)
 			default:
-				log.Fatal(fmt.Sprintf("ERROR: unhandled intrinsic: %v", op.Operand.(IntrinsicType)))
+				CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: %s", op.OpToken.Text))
 			}
 		}
 	}
@@ -377,5 +426,5 @@ func main() {
 
 	gorth_script := flag.Args()[0]
 
-	interprete(compile(lex(read_file(gorth_script))), *debugFlag)
+	interprete(compile(lex(read_file(gorth_script), gorth_script)), *debugFlag)
 }
