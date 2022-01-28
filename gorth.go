@@ -55,18 +55,25 @@ const (
 	KeywordElse KeywordType = iota
 	KeywordEnd  KeywordType = iota
 
+	KeywordWhile KeywordType = iota
+	KeywordDo    KeywordType = iota
+
 	KeywordCount = iota
 )
 
 var WordToKeyword = map[string]KeywordType{
-	"if":   KeywordIf,
-	"else": KeywordElse,
-	"end":  KeywordEnd,
+	"if":    KeywordIf,
+	"else":  KeywordElse,
+	"end":   KeywordEnd,
+	"while": KeywordWhile,
+	"do":    KeywordDo,
 }
 var KeywordName = map[KeywordType]string{
-	KeywordIf:   "if",
-	KeywordElse: "else",
-	KeywordEnd:  "end",
+	KeywordIf:    "if",
+	KeywordElse:  "else",
+	KeywordEnd:   "end",
+	KeywordWhile: "while",
+	KeywordDo:    "do",
 }
 
 type IntrinsicType int
@@ -163,6 +170,8 @@ const (
 	OpIf        OpType = iota
 	OpElse      OpType = iota
 	OpEnd       OpType = iota
+	OpWhile     OpType = iota
+	OpDo        OpType = iota
 
 	OpCount = iota
 )
@@ -174,6 +183,8 @@ var OpName = map[OpType]string{
 	OpIf:        "IF",
 	OpElse:      "ELSE",
 	OpEnd:       "END",
+	OpWhile:     "WHILE",
+	OpDo:        "DO",
 }
 
 type Op struct {
@@ -185,7 +196,7 @@ type Op struct {
 func (op *Op) str(addr int) (s string) {
 	var operand string
 
-	assert(OpCount == 6, "Unhandled Op in Op.str()")
+	assert(OpCount == 8, "Unhandled Op in Op.str()")
 	switch op.Typ {
 	case OpPushInt:
 		operand = strconv.Itoa(op.Operand.(int))
@@ -197,8 +208,12 @@ func (op *Op) str(addr int) (s string) {
 		operand = strconv.Itoa(op.Operand.(int))
 	case OpElse:
 		operand = strconv.Itoa(op.Operand.(int))
-	case OpEnd:
+	case OpWhile:
 		operand = ""
+	case OpDo:
+		operand = strconv.Itoa(op.Operand.(int))
+	case OpEnd:
+		operand = strconv.Itoa(op.Operand.(int))
 	}
 
 	s = fmt.Sprintf("%4d: %s %v", addr, OpName[op.Typ], operand)
@@ -394,6 +409,8 @@ func compile(tokens []Token) (ops []Op) {
 					CompilerFatal(&token.Loc, fmt.Sprintf("`else` may only come after `if` block, but got `%s`. Probably bug in lex()", block.Tok.Text))
 				case KeywordEnd:
 					CompilerFatal(&token.Loc, fmt.Sprintf("`else` may only come after `if` block, but got `%s`. Probably bug in lex()", block.Tok.Text))
+				case KeywordWhile:
+					CompilerFatal(&token.Loc, fmt.Sprintf("`else` may only come after `if` block, but got `%s`. Probably bug in lex()", block.Tok.Text))
 				default:
 					CompilerFatal(&token.Loc, "Unhandled block start processing in compile() at KeywordElse")
 				}
@@ -410,17 +427,42 @@ func compile(tokens []Token) (ops []Op) {
 					CompilerFatal(&token.Loc, fmt.Sprintf("Only keywords may form blocks, but not `%s`. Probably bug in lex()", block.Tok.Text))
 				}
 				block_start_kw := block.Tok.Value.(KeywordType)
+				op.Operand = 1
 				switch block_start_kw {
 				case KeywordIf:
 					ops[block.Addr].Operand = len(ops) - block.Addr + 1
 				case KeywordElse:
 					ops[block.Addr].Operand = len(ops) - block.Addr + 1
+				case KeywordWhile:
+					CompilerFatal(&block.Tok.Loc, "`while` block must contain `do` before `end`")
+				case KeywordDo:
+					op.Operand = ops[block.Addr].Operand.(int) + (block.Addr - len(ops))
+					ops[block.Addr].Operand = len(ops) - block.Addr + 1
 				case KeywordEnd:
-					CompilerFatal(&token.Loc, fmt.Sprintf("`end` may only close `if` block, but got `%s`. Probably bug in lex()", block.Tok.Text))
+					CompilerFatal(&token.Loc, fmt.Sprintf("`end` may only close `if-else` or `while-do` blocks, but got `%s`. Probably bug in lex()", block.Tok.Text))
 				default:
 					CompilerFatal(&token.Loc, "Unhandled block start processing in compile()")
 				}
 				op.Typ = OpEnd
+				ops = append(ops, op)
+			case KeywordWhile:
+				op.Typ = OpWhile
+				blocks.push(Block{Addr: len(ops), Tok: token})
+				ops = append(ops, op)
+			case KeywordDo:
+				if blocks.size() == 0 {
+					CompilerFatal(&token.Loc, "Unexpected `do` found")
+				}
+				block := blocks.pop(&token).(Block)
+				if block.Tok.Typ != TokenKeyword {
+					CompilerFatal(&token.Loc, fmt.Sprintf("Only keywords may form blocks, but not `%s`. Probably bug in lex()", block.Tok.Text))
+				}
+				if block.Tok.Value.(KeywordType) != KeywordWhile {
+					CompilerFatal(&token.Loc, fmt.Sprintf("`do` may come only inside `while` block, but not `%s`. Probably bug in lex()", block.Tok.Text))
+				}
+				op.Typ = OpDo
+				op.Operand = block.Addr - len(ops) // save relative address of `while`
+				blocks.push(Block{Addr: len(ops), Tok: token})
 				ops = append(ops, op)
 			default:
 				CompilerFatal(&token.Loc, fmt.Sprintf("Unhandled KewordType handling in compile(): %s", token.Text))
@@ -447,7 +489,7 @@ func interprete(ops []Op, debug bool) {
 		fmt.Println("---------------------------------")
 	}
 
-	assert(OpCount == 6, "Unhandled Op in interprete()")
+	assert(OpCount == 8, "Unhandled Op in interprete()")
 	addr := 0
 	for addr < len(ops) {
 
@@ -477,7 +519,16 @@ func interprete(ops []Op, debug bool) {
 		case OpElse:
 			addr += op.Operand.(int)
 		case OpEnd:
+			addr += op.Operand.(int)
+		case OpWhile:
 			addr++
+		case OpDo:
+			top := stack.pop(&op.OpToken).(bool)
+			if top {
+				addr++
+			} else {
+				addr += op.Operand.(int)
+			}
 		case OpIntrinsic:
 			assert(IntrinsicCount == 15, "Unhandled intrinsic in interprete()")
 			switch op.Operand {
