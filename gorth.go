@@ -47,6 +47,11 @@ const (
 	IntrinsicMul   IntrinsicType = iota
 
 	IntrinsicEq IntrinsicType = iota
+	IntrinsicNe IntrinsicType = iota
+	IntrinsicLe IntrinsicType = iota
+	IntrinsicGe IntrinsicType = iota
+	IntrinsicLt IntrinsicType = iota
+	IntrinsicGt IntrinsicType = iota
 
 	IntrinsicDup  IntrinsicType = iota
 	IntrinsicSwap IntrinsicType = iota
@@ -62,16 +67,22 @@ const (
 // TODO: how to assert global dicts have all key/value pairs?
 // assert(IntrinsicCount == 4, "Unhandled intrinsic in WordToIntrinsic")
 var WordToIntrinsic = map[string]IntrinsicType{
-	"+":     IntrinsicPlus,
-	"-":     IntrinsicMinus,
-	"*":     IntrinsicMul,
-	"=":     IntrinsicEq,
+	"+": IntrinsicPlus,
+	"-": IntrinsicMinus,
+	"*": IntrinsicMul,
 
-	"dup":   IntrinsicDup,
-	"swap":  IntrinsicSwap,
-	"drop":  IntrinsicDrop,
-	"over":  IntrinsicOver,
-	"rot":   IntrinsicRot,
+	"=":  IntrinsicEq,
+	"!=": IntrinsicNe,
+	"<=": IntrinsicLe,
+	">=": IntrinsicGe,
+	"<":  IntrinsicLt,
+	">":  IntrinsicGt,
+
+	"dup":  IntrinsicDup,
+	"swap": IntrinsicSwap,
+	"drop": IntrinsicDrop,
+	"over": IntrinsicOver,
+	"rot":  IntrinsicRot,
 
 	"print": IntrinsicPrint,
 }
@@ -81,7 +92,14 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicPlus:  "+",
 	IntrinsicMinus: "-",
 	IntrinsicMul:   "*",
-	IntrinsicEq:    "=",
+
+	IntrinsicEq: "=",
+	IntrinsicNe: "!=",
+	IntrinsicLe: "<=",
+	IntrinsicGe: ">=",
+	IntrinsicLt: "<",
+	IntrinsicGt: ">",
+
 	IntrinsicDup:   "dup",
 	IntrinsicSwap:  "swap",
 	IntrinsicDrop:  "drop",
@@ -285,7 +303,7 @@ func interprete(ops []Op, debug bool) {
 				stack.push(true)
 			}
 		case OpIntrinsic:
-			assert(IntrinsicCount == 10, "Unhandled intrinsic in interprete()")
+			assert(IntrinsicCount == 15, "Unhandled intrinsic in interprete()")
 			switch op.Operand {
 			case IntrinsicPlus:
 				b := stack.pop().(int)
@@ -323,6 +341,26 @@ func interprete(ops []Op, debug bool) {
 				b := stack.pop().(int)
 				a := stack.pop().(int)
 				stack.push(a == b)
+			case IntrinsicNe:
+				b := stack.pop().(int)
+				a := stack.pop().(int)
+				stack.push(a != b)
+			case IntrinsicLe:
+				b := stack.pop().(int)
+				a := stack.pop().(int)
+				stack.push(a <= b)
+			case IntrinsicGe:
+				b := stack.pop().(int)
+				a := stack.pop().(int)
+				stack.push(a >= b)
+			case IntrinsicLt:
+				b := stack.pop().(int)
+				a := stack.pop().(int)
+				stack.push(a < b)
+			case IntrinsicGt:
+				b := stack.pop().(int)
+				a := stack.pop().(int)
+				stack.push(a > b)
 			case IntrinsicPrint:
 				x := stack.pop()
 				fmt.Println(x)
