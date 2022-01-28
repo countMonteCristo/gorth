@@ -311,6 +311,14 @@ func lex(lines []string, filepath string) (tokens []Token) {
 				start++
 				continue
 			}
+
+			if start+1 < len(data) {
+				if data[start:start+2] == "//" {
+					// fmt.Printf("Find comment at line=%d col=%d\n", line_num+1, start+1)
+					break
+				}
+			}
+
 			i := start
 			for i < len(data) && data[i] != ' ' {
 				i++

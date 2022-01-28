@@ -1,23 +1,29 @@
+// Equal
 1 2 = print
 2 1 = print
 1 1 = print
 
+// Not Equal
 3 4 != print
 4 3 != print
 3 3 != print
 
+// Less Than or Equal
 5 6 <= print
 6 5 <= print
 5 5 <= print
 
+// Greater Than or Equal
 7 8 >= print
 8 7 >= print
 7 7 >= print
 
+// Greater Than
 9 10 > print
 10 9 > print
 9 9  > print
 
+// Less Than
 11 12 < print
 12 11 < print
 11 11 < print
