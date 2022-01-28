@@ -1,0 +1,41 @@
+10 20 < if
+  30 print
+else
+  40 print
+end
+
+10 20 > if
+  50 print
+end
+
+10 20 < if
+  60 print
+end
+
+10 20 > if
+  70 print
+else
+  80 print
+end
+
+10 20 < if
+  30 40 <= if
+    90 print
+  else
+    100 print
+  end
+end
+
+10 20 > if
+  30 40 <= if
+    90 print
+  else
+    100 print
+  end
+else
+  50 60 > if
+    110 print
+  else
+    120 print
+  end
+end
