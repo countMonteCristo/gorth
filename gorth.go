@@ -82,6 +82,8 @@ const (
 	IntrinsicPlus  IntrinsicType = iota
 	IntrinsicMinus IntrinsicType = iota
 	IntrinsicMul   IntrinsicType = iota
+	IntrinsicDiv   IntrinsicType = iota
+	IntrinsicMod   IntrinsicType = iota
 
 	IntrinsicEq IntrinsicType = iota
 	IntrinsicNe IntrinsicType = iota
@@ -107,6 +109,8 @@ var WordToIntrinsic = map[string]IntrinsicType{
 	"+": IntrinsicPlus,
 	"-": IntrinsicMinus,
 	"*": IntrinsicMul,
+	"/": IntrinsicDiv,
+	"%": IntrinsicMod,
 
 	"=":  IntrinsicEq,
 	"!=": IntrinsicNe,
@@ -129,6 +133,8 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicPlus:  "+",
 	IntrinsicMinus: "-",
 	IntrinsicMul:   "*",
+	IntrinsicDiv:   "/",
+	IntrinsicMod:   "%",
 
 	IntrinsicEq: "=",
 	IntrinsicNe: "!=",
@@ -530,7 +536,7 @@ func interprete(ops []Op, debug bool) {
 				addr += op.Operand.(int)
 			}
 		case OpIntrinsic:
-			assert(IntrinsicCount == 15, "Unhandled intrinsic in interprete()")
+			assert(IntrinsicCount == 17, "Unhandled intrinsic in interprete()")
 			switch op.Operand {
 			case IntrinsicPlus:
 				b := stack.pop(&op.OpToken)
@@ -544,6 +550,14 @@ func interprete(ops []Op, debug bool) {
 				b := stack.pop(&op.OpToken)
 				a := stack.pop(&op.OpToken)
 				stack.push(a.(int) * b.(int))
+			case IntrinsicDiv:
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) / b.(int))
+			case IntrinsicMod:
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) % b.(int))
 			case IntrinsicDup:
 				x := stack.top(&op.OpToken)
 				stack.push(x)
