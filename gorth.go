@@ -45,7 +45,15 @@ const (
 	IntrinsicPlus  IntrinsicType = iota
 	IntrinsicMinus IntrinsicType = iota
 	IntrinsicMul   IntrinsicType = iota
-	IntrinsicEq    IntrinsicType = iota
+
+	IntrinsicEq IntrinsicType = iota
+
+	IntrinsicDup  IntrinsicType = iota
+	IntrinsicSwap IntrinsicType = iota
+	IntrinsicDrop IntrinsicType = iota
+	IntrinsicOver IntrinsicType = iota
+	IntrinsicRot  IntrinsicType = iota
+
 	IntrinsicPrint IntrinsicType = iota
 
 	IntrinsicCount = iota
@@ -58,6 +66,13 @@ var WordToIntrinsic = map[string]IntrinsicType{
 	"-":     IntrinsicMinus,
 	"*":     IntrinsicMul,
 	"=":     IntrinsicEq,
+
+	"dup":   IntrinsicDup,
+	"swap":  IntrinsicSwap,
+	"drop":  IntrinsicDrop,
+	"over":  IntrinsicOver,
+	"rot":   IntrinsicRot,
+
 	"print": IntrinsicPrint,
 }
 
@@ -67,6 +82,11 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicMinus: "-",
 	IntrinsicMul:   "*",
 	IntrinsicEq:    "=",
+	IntrinsicDup:   "dup",
+	IntrinsicSwap:  "swap",
+	IntrinsicDrop:  "drop",
+	IntrinsicOver:  "over",
+	IntrinsicRot:   "rot",
 	IntrinsicPrint: "print",
 }
 
@@ -265,7 +285,7 @@ func interprete(ops []Op, debug bool) {
 				stack.push(true)
 			}
 		case OpIntrinsic:
-			assert(IntrinsicCount == 5, "Unhandled intrinsic in interprete()")
+			assert(IntrinsicCount == 10, "Unhandled intrinsic in interprete()")
 			switch op.Operand {
 			case IntrinsicPlus:
 				b := stack.pop().(int)
@@ -279,6 +299,26 @@ func interprete(ops []Op, debug bool) {
 				b := stack.pop().(int)
 				a := stack.pop().(int)
 				stack.push(a * b)
+			case IntrinsicDup:
+				x := stack.top()
+				stack.push(x)
+			case IntrinsicSwap:
+				b := stack.pop()
+				a := stack.pop()
+				stack.push(b)
+				stack.push(a)
+			case IntrinsicDrop:
+				_ = stack.pop()
+			case IntrinsicOver:
+				x := stack.Data[len(stack.Data)-2]
+				stack.push(x)
+			case IntrinsicRot:
+				c := stack.pop()
+				b := stack.pop()
+				a := stack.pop()
+				stack.push(b)
+				stack.push(c)
+				stack.push(a)
 			case IntrinsicEq:
 				b := stack.pop().(int)
 				a := stack.pop().(int)
