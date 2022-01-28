@@ -1,14 +1,29 @@
 // Sum
 10 20 + print
+-5 7 + print
+5 -7 + print
+-5 -7 + print
 
 // Diff
 40 30 - print
+40 -30 - print
+-40 30 - print
+-40 -30 - print
 
 // Mul
 5 7 * print
+5 -7 * print
+-5 7 * print
+-5 -7 * print
 
 // Div
 27 6 / print
+27 -6 / print
+-27 6 / print
+-27 -6 / print
 
 // Mod
 31 7 % print
+31 -7 % print
+-31 7 % print
+-31 -7 % print

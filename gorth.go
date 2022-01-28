@@ -85,6 +85,16 @@ const (
 	IntrinsicDiv   IntrinsicType = iota
 	IntrinsicMod   IntrinsicType = iota
 
+	IntrinsicShl    IntrinsicType = iota
+	IntrinsicShr    IntrinsicType = iota
+	IntrinsicBitAnd IntrinsicType = iota
+	IntrinsicBitOr  IntrinsicType = iota
+	IntrinsicBitXor IntrinsicType = iota
+
+	IntrinsicLogicalAnd IntrinsicType = iota
+	IntrinsicLogicalOr  IntrinsicType = iota
+	IntrinsicLogicalNot IntrinsicType = iota
+
 	IntrinsicEq IntrinsicType = iota
 	IntrinsicNe IntrinsicType = iota
 	IntrinsicLe IntrinsicType = iota
@@ -112,6 +122,16 @@ var WordToIntrinsic = map[string]IntrinsicType{
 	"/": IntrinsicDiv,
 	"%": IntrinsicMod,
 
+	"<<": IntrinsicShl,
+	">>": IntrinsicShr,
+	"&":  IntrinsicBitAnd,
+	"|":  IntrinsicBitOr,
+	"^":  IntrinsicBitXor,
+
+	"&&": IntrinsicLogicalAnd,
+	"||": IntrinsicLogicalOr,
+	"!":  IntrinsicLogicalNot,
+
 	"=":  IntrinsicEq,
 	"!=": IntrinsicNe,
 	"<=": IntrinsicLe,
@@ -136,12 +156,22 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicDiv:   "/",
 	IntrinsicMod:   "%",
 
+	IntrinsicShl:    "<<",
+	IntrinsicShr:    ">>",
+	IntrinsicBitAnd: "&",
+	IntrinsicBitOr:  "|",
+	IntrinsicBitXor: "^",
+
 	IntrinsicEq: "=",
 	IntrinsicNe: "!=",
 	IntrinsicLe: "<=",
 	IntrinsicGe: ">=",
 	IntrinsicLt: "<",
 	IntrinsicGt: ">",
+
+	IntrinsicLogicalAnd: "&&",
+	IntrinsicLogicalOr:  "||",
+	IntrinsicLogicalNot: "!",
 
 	IntrinsicDup:   "dup",
 	IntrinsicSwap:  "swap",
@@ -228,6 +258,11 @@ func (op *Op) str(addr int) (s string) {
 
 func CompilerFatal(loc *Location, msg string) {
 	fmt.Printf("%s:%d:%d: ERROR: %s\n", loc.Filepath, loc.Line+1, loc.Column+1, msg)
+	os.Exit(1)
+}
+
+func RuntimeFatal(loc *Location, msg string) {
+	fmt.Printf("%s:%d:%d: RuntimeError: %s\n", loc.Filepath, loc.Line+1, loc.Column+1, msg)
 	os.Exit(1)
 }
 
@@ -544,7 +579,7 @@ func interprete(ops []Op, debug bool) {
 				addr += op.Operand.(int)
 			}
 		case OpIntrinsic:
-			assert(IntrinsicCount == 17, "Unhandled intrinsic in interprete()")
+			assert(IntrinsicCount == 25, "Unhandled intrinsic in interprete()")
 			switch op.Operand {
 			case IntrinsicPlus:
 				b := stack.pop(&op.OpToken)
@@ -560,12 +595,59 @@ func interprete(ops []Op, debug bool) {
 				stack.push(a.(int) * b.(int))
 			case IntrinsicDiv:
 				b := stack.pop(&op.OpToken)
+				b_arg := b.(int)
+				if b_arg == 0 {
+					RuntimeFatal(&op.OpToken.Loc, "Division by zero")
+				}
 				a := stack.pop(&op.OpToken)
-				stack.push(a.(int) / b.(int))
+				stack.push(a.(int) / b_arg)
 			case IntrinsicMod:
 				b := stack.pop(&op.OpToken)
+				b_arg := b.(int)
+				if b_arg == 0 {
+					RuntimeFatal(&op.OpToken.Loc, "Division by zero")
+				}
 				a := stack.pop(&op.OpToken)
-				stack.push(a.(int) % b.(int))
+				stack.push(a.(int) % b_arg)
+			case IntrinsicShl:
+				b := stack.pop(&op.OpToken)
+				b_arg := b.(int)
+				if b_arg < 0 {
+					RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Negative shift amount in `<<`: %d", b_arg))
+				}
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) << b_arg)
+			case IntrinsicShr:
+				b := stack.pop(&op.OpToken)
+				b_arg := b.(int)
+				if b_arg < 0 {
+					RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Negative shift amount in `>>`: %d", b_arg))
+				}
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) >> b_arg)
+			case IntrinsicLogicalAnd:
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(bool) && b.(bool))
+			case IntrinsicLogicalOr:
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(bool) || b.(bool))
+			case IntrinsicLogicalNot:
+				x := stack.pop(&op.OpToken)
+				stack.push(!x.(bool))
+			case IntrinsicBitAnd:
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) & b.(int))
+			case IntrinsicBitOr:
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) | b.(int))
+			case IntrinsicBitXor:
+				b := stack.pop(&op.OpToken)
+				a := stack.pop(&op.OpToken)
+				stack.push(a.(int) ^ b.(int))
 			case IntrinsicDup:
 				x := stack.top(&op.OpToken)
 				stack.push(x)
