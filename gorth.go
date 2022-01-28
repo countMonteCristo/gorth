@@ -33,9 +33,10 @@ type Location struct {
 type TokenType int
 
 const (
-	TokenInt  TokenType = iota
-	TokenBool TokenType = iota
-	TokenWord TokenType = iota
+	TokenInt     TokenType = iota
+	TokenBool    TokenType = iota
+	TokenWord    TokenType = iota
+	TokenKeyword TokenType = iota
 
 	TokenCount = iota
 )
@@ -45,6 +46,27 @@ type Token struct {
 	Text  string
 	Value interface{}
 	Loc   Location
+}
+
+type KeywordType int
+
+const (
+	KeywordIf   KeywordType = iota
+	KeywordElse KeywordType = iota
+	KeywordEnd  KeywordType = iota
+
+	KeywordCount = iota
+)
+
+var WordToKeyword = map[string]KeywordType{
+	"if":   KeywordIf,
+	"else": KeywordElse,
+	"end":  KeywordEnd,
+}
+var KeywordName = map[KeywordType]string{
+	KeywordIf:   "if",
+	KeywordElse: "else",
+	KeywordEnd:  "end",
 }
 
 type IntrinsicType int
@@ -138,6 +160,9 @@ const (
 	OpPushInt   OpType = iota
 	OpPushBool  OpType = iota
 	OpIntrinsic OpType = iota
+	OpIf        OpType = iota
+	OpElse      OpType = iota
+	OpEnd       OpType = iota
 
 	OpCount = iota
 )
@@ -146,6 +171,9 @@ var OpName = map[OpType]string{
 	OpPushInt:   "PUSH_INT",
 	OpPushBool:  "PUSH_BOOL",
 	OpIntrinsic: "INTRINSIC",
+	OpIf:        "IF",
+	OpElse:      "ELSE",
+	OpEnd:       "END",
 }
 
 type Op struct {
@@ -154,10 +182,10 @@ type Op struct {
 	OpToken Token
 }
 
-func (op *Op) str() (s string) {
+func (op *Op) str(addr int) (s string) {
 	var operand string
 
-	assert(OpCount == 3, "Unhandled Op in Op.str()")
+	assert(OpCount == 6, "Unhandled Op in Op.str()")
 	switch op.Typ {
 	case OpPushInt:
 		operand = strconv.Itoa(op.Operand.(int))
@@ -165,15 +193,26 @@ func (op *Op) str() (s string) {
 		operand = BoolName[op.Operand.(BoolType)]
 	case OpIntrinsic:
 		operand = IntrinsicName[op.Operand.(IntrinsicType)]
+	case OpIf:
+		operand = strconv.Itoa(op.Operand.(int))
+	case OpElse:
+		operand = strconv.Itoa(op.Operand.(int))
+	case OpEnd:
+		operand = ""
 	}
 
-	s = fmt.Sprintf("%s %v", OpName[op.Typ], operand)
+	s = fmt.Sprintf("%4d: %s %v", addr, OpName[op.Typ], operand)
 	return
 }
 
 func CompilerFatal(loc *Location, msg string) {
 	fmt.Printf("%s:%d:%d: ERROR: %s\n", loc.Filepath, loc.Line+1, loc.Column+1, msg)
 	os.Exit(1)
+}
+
+type Block struct {
+	Addr int
+	Tok  Token
 }
 
 type Stack struct {
@@ -206,10 +245,8 @@ func (s *Stack) top(token *Token) (x interface{}) {
 	return
 }
 
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
+func (s *Stack) size() int {
+	return len(s.Data)
 }
 
 func read_file(fn string) (lines []string) {
@@ -242,7 +279,7 @@ func read_file(fn string) (lines []string) {
 }
 
 func lex(lines []string, filepath string) (tokens []Token) {
-	assert(TokenCount == 3, "Unhandled Token in lex()")
+	assert(TokenCount == 4, "Unhandled Token in lex()")
 	for line_num, data := range lines {
 		// fmt.Printf("Check line: `%s`\n", data)
 
@@ -291,6 +328,14 @@ func lex(lines []string, filepath string) (tokens []Token) {
 				continue
 			}
 
+			keyword, exists := WordToKeyword[word]
+			if exists {
+				token.Typ = TokenKeyword
+				token.Value = keyword
+				tokens = append(tokens, token)
+				continue
+			}
+
 			CompilerFatal(&token.Loc, fmt.Sprintf("Unknown word: %s", word))
 		}
 	}
@@ -299,7 +344,10 @@ func lex(lines []string, filepath string) (tokens []Token) {
 }
 
 func compile(tokens []Token) (ops []Op) {
-	assert(TokenCount == 3, "Unhandled Token in compile()")
+	assert(TokenCount == 4, "Unhandled Token in compile()")
+
+	blocks := &Stack{}
+
 	for _, token := range tokens {
 
 		switch token.Typ {
@@ -321,9 +369,70 @@ func compile(tokens []Token) (ops []Op) {
 				Operand: token.Value.(IntrinsicType),
 				OpToken: token,
 			})
+		case TokenKeyword:
+			kw_type := token.Value.(KeywordType)
+			op := Op{OpToken: token}
+			switch kw_type {
+			case KeywordIf:
+				op.Typ = OpIf
+				blocks.push(Block{Addr: len(ops), Tok: token})
+				ops = append(ops, op)
+			case KeywordElse:
+
+				if blocks.size() == 0 {
+					CompilerFatal(&token.Loc, "Unexpected `end` found")
+				}
+				block := blocks.pop(&token).(Block)
+				if block.Tok.Typ != TokenKeyword {
+					CompilerFatal(&token.Loc, fmt.Sprintf("Only keywords may form blocks, but not `%s`. Probably bug in lex()", block.Tok.Text))
+				}
+				block_start_kw := block.Tok.Value.(KeywordType)
+				switch block_start_kw {
+				case KeywordIf:
+					ops[block.Addr].Operand = len(ops) - block.Addr + 1
+				case KeywordElse:
+					CompilerFatal(&token.Loc, fmt.Sprintf("`else` may only come after `if` block, but got `%s`. Probably bug in lex()", block.Tok.Text))
+				case KeywordEnd:
+					CompilerFatal(&token.Loc, fmt.Sprintf("`else` may only come after `if` block, but got `%s`. Probably bug in lex()", block.Tok.Text))
+				default:
+					CompilerFatal(&token.Loc, "Unhandled block start processing in compile() at KeywordElse")
+				}
+
+				op.Typ = OpElse
+				blocks.push(Block{Addr: len(ops), Tok: token})
+				ops = append(ops, op)
+			case KeywordEnd:
+				if blocks.size() == 0 {
+					CompilerFatal(&token.Loc, "Unexpected `end` found")
+				}
+				block := blocks.pop(&token).(Block)
+				if block.Tok.Typ != TokenKeyword {
+					CompilerFatal(&token.Loc, fmt.Sprintf("Only keywords may form blocks, but not `%s`. Probably bug in lex()", block.Tok.Text))
+				}
+				block_start_kw := block.Tok.Value.(KeywordType)
+				switch block_start_kw {
+				case KeywordIf:
+					ops[block.Addr].Operand = len(ops) - block.Addr + 1
+				case KeywordElse:
+					ops[block.Addr].Operand = len(ops) - block.Addr + 1
+				case KeywordEnd:
+					CompilerFatal(&token.Loc, fmt.Sprintf("`end` may only close `if` block, but got `%s`. Probably bug in lex()", block.Tok.Text))
+				default:
+					CompilerFatal(&token.Loc, "Unhandled block start processing in compile()")
+				}
+				op.Typ = OpEnd
+				ops = append(ops, op)
+			default:
+				CompilerFatal(&token.Loc, fmt.Sprintf("Unhandled KewordType handling in compile(): %s", token.Text))
+			}
 		default:
 			CompilerFatal(&token.Loc, fmt.Sprintf("ERROR: Unhandled token: %s\n", token.Text))
 		}
+	}
+
+	if len(blocks.Data) > 0 {
+		top := blocks.Data[len(blocks.Data)-1].(Block)
+		CompilerFatal(&top.Tok.Loc, fmt.Sprintf("Unclosed %s-block", top.Tok.Text))
 	}
 	return
 }
@@ -332,18 +441,24 @@ func interprete(ops []Op, debug bool) {
 	stack := &Stack{}
 
 	if debug {
-		for _, op := range ops {
-			fmt.Println(op.str())
+		for addr, op := range ops {
+			fmt.Println(op.str(addr))
 		}
 		fmt.Println("---------------------------------")
 	}
 
-	assert(OpCount == 3, "Unhandled Op in interprete()")
-	for _, op := range ops {
+	assert(OpCount == 6, "Unhandled Op in interprete()")
+	addr := 0
+	for addr < len(ops) {
+
+		op := ops[addr]
+		// fmt.Printf("Process addr=%d stack=%v\n", addr, stack.Data)
+
 		switch op.Typ {
 		case OpPushInt:
 			n := op.Operand.(int)
 			stack.push(n)
+			addr++
 		case OpPushBool:
 			switch op.Operand {
 			case BoolFalse:
@@ -351,6 +466,18 @@ func interprete(ops []Op, debug bool) {
 			case BoolTrue:
 				stack.push(true)
 			}
+			addr++
+		case OpIf:
+			top := stack.pop(&op.OpToken).(bool)
+			if top {
+				addr++
+			} else {
+				addr += op.Operand.(int)
+			}
+		case OpElse:
+			addr += op.Operand.(int)
+		case OpEnd:
+			addr++
 		case OpIntrinsic:
 			assert(IntrinsicCount == 15, "Unhandled intrinsic in interprete()")
 			switch op.Operand {
@@ -416,6 +543,7 @@ func interprete(ops []Op, debug bool) {
 			default:
 				CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: %s", op.OpToken.Text))
 			}
+			addr++
 		}
 	}
 }
