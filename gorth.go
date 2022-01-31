@@ -353,13 +353,25 @@ func read_file(fn string) (lines []string) {
 	return
 }
 
-func ChopChar(data string, pos int) (b byte, escaped bool, e error) {
-	e = nil
+type Lexer struct {
+	Fn  string
+	Loc Location
+}
+
+func (lx *Lexer) process_file(fn string) (tokens []Token) {
+	lx.Fn = fn
+
+	lines := read_file(lx.Fn)
+	tokens = lx.lex(lines)
+	return
+}
+
+func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool) {
 	escaped = false
 	if data[pos] == '\\' {
 		escaped = true
 		if pos+1 == len(data) {
-			e = fmt.Errorf("Unexpected end of char literal")
+			CompilerFatal(&lx.Loc, "Unexpected end of escaped char literal")
 			return
 		}
 		switch data[pos+1] {
@@ -372,7 +384,7 @@ func ChopChar(data string, pos int) (b byte, escaped bool, e error) {
 		case '"':
 			b = '"'
 		default:
-			e = fmt.Errorf("Unknown escape character: %s", data[pos:pos+2])
+			CompilerFatal(&lx.Loc, fmt.Sprintf("Unknown escape character: %s", data[pos:pos+2]))
 		}
 	} else {
 		b = data[pos]
@@ -380,83 +392,89 @@ func ChopChar(data string, pos int) (b byte, escaped bool, e error) {
 	return
 }
 
-func lex(lines []string, filepath string) (tokens []Token) {
+func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, comment bool) {
+	comment = false
+	for pos < len(data) {
+		if strings.IndexByte(" \t", data[pos]) != -1 {
+			pos++
+			continue
+		} else {
+			break
+		}
+	}
+
+	lx.Loc = Location{Filepath: lx.Fn, Line: line, Column: pos}
+
+	start := pos
+	switch data[pos] {
+	case '"':
+		pos++
+		chars := make([]byte, 0)
+		chars = append(chars, '"')
+		closed := false
+		for pos < len(data) {
+			b, escaped := lx.ChopChar(data, pos)
+			pos++
+			if escaped {
+				pos++
+			}
+			chars = append(chars, b)
+			if b == '"' && !escaped {
+				closed = true
+				break
+			}
+		}
+		if !closed {
+			CompilerFatal(&lx.Loc, fmt.Sprintf("Expecting to find closing \" for string literal, but got <%s>", string(chars[len(chars)-1])))
+		}
+		word = string(chars)
+	case '\'':
+		pos++
+		b, escaped := lx.ChopChar(data, pos)
+		pos++
+		if escaped {
+			pos++
+		}
+		if pos == len(data) {
+			CompilerFatal(&lx.Loc, fmt.Sprintf("Unexpecting end of char literal"))
+		}
+		if data[pos] != '\'' {
+			CompilerFatal(&lx.Loc, fmt.Sprintf("Expecting to find closing ' for char literal, but got <%s>", string(data[pos])))
+		}
+		word = "'" + string(b) + "'"
+		pos++
+	default:
+		for pos < len(data) && data[pos] != ' ' {
+			if data[pos] == ' ' {
+				break
+			}
+			if pos < len(data)-1 && data[pos:pos+2] == "//" {
+				comment = true
+				break
+			}
+			pos++
+		}
+		word = data[start:pos]
+	}
+
+	return
+}
+
+func (lx *Lexer) lex(lines []string) (tokens []Token) {
 	assert(TokenCount == 6, "Unhandled Token in lex()")
-	for line_num, data := range lines {
-		// fmt.Printf("Check line: `%s`\n", data)
+	for line, data := range lines {
 
-		start := 0
-		for start < len(data) {
-
-			if data[start] == ' ' {
-				start++
-				continue
+		pos := 0
+		for pos < len(data) {
+			word, comment := lx.ChopWord(data, line, pos)
+			if comment {
+				break
 			}
 
-			if start+1 < len(data) {
-				if data[start:start+2] == "//" {
-					break
-				}
-			}
+			pos = lx.Loc.Column + len(word) + 1
+			token := Token{Text: word, Loc: lx.Loc}
 
-			loc := Location{Filepath: filepath, Line: line_num, Column: start}
-
-			var word string
-			j := start + 1
-
-			switch data[start] {
-			case '"':
-				// TODO: move to separate function
-				chars := make([]byte, 0)
-				chars = append(chars, '"')
-				closed := false
-				for j < len(data) {
-					b, escaped, err := ChopChar(data, j)
-					if err != nil {
-						CompilerFatal(&loc, err.Error())
-					}
-					j++
-					if escaped {
-						j++
-					}
-					chars = append(chars, b)
-					if b == '"' && !escaped {
-						closed = true
-						break
-					}
-				}
-				if !closed {
-					CompilerFatal(&loc, fmt.Sprintf("Expecting to find closing \" for string literal, but got <%s>", string(chars[len(chars)-1])))
-				}
-				word = string(chars)
-			case '\'':
-				b, escaped, err := ChopChar(data, j)
-				if err != nil {
-					CompilerFatal(&loc, err.Error())
-				}
-				j++
-				if escaped {
-					j++
-				}
-				if j == len(data) {
-					CompilerFatal(&loc, fmt.Sprintf("Unexpecting end of char literal"))
-				}
-				if data[j] != '\'' {
-					CompilerFatal(&loc, fmt.Sprintf("Expecting to find closing ' for char literal, but got <%s>", string(data[j])))
-				}
-				word = "'" + string(b) + "'"
-				j++
-			default:
-				for j < len(data) && data[j] != ' ' {
-					j++
-				}
-				word = data[start:j]
-			}
-
-			token := Token{Text: word, Loc: loc}
-			start = j
-
-			// fmt.Printf("Check word: `%s`\n", word)
+			// check if word is string literal
 			if word[0] == '"' {
 				token.Typ = TokenString
 				token.Value = word[1 : len(word)-1]
@@ -464,6 +482,7 @@ func lex(lines []string, filepath string) (tokens []Token) {
 				continue
 			}
 
+			// check if word is char literal
 			if word[0] == '\'' {
 				token.Typ = TokenChar
 				token.Value = int(word[1])
@@ -498,6 +517,7 @@ func lex(lines []string, filepath string) (tokens []Token) {
 				continue
 			}
 
+			// check if word is keyword
 			keyword, exists := WordToKeyword[word]
 			if exists {
 				token.Typ = TokenKeyword
@@ -678,8 +698,6 @@ func interprete(ops []Op, debug bool) {
 			}
 			addr++
 		case OpPushStr:
-			// size := len(op.OpToken.Value.(string))
-			// stack.push(size)
 			ptr := op.Operand.(int)
 			stack.push(ptr)
 			addr++
@@ -842,5 +860,6 @@ func main() {
 
 	gorth_script := flag.Args()[0]
 
-	interprete(compile(lex(read_file(gorth_script), gorth_script)), *debugFlag)
+	lx := Lexer{}
+	interprete(compile(lx.process_file(gorth_script)), *debugFlag)
 }

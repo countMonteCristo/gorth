@@ -39,7 +39,7 @@ func (t *TestCase) run() (status int) {
 
 	stdout, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(string(stdout))
 		return
 	}
 

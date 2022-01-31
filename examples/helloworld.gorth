@@ -1,1 +1,3 @@
+// `Hello world` example in Gorth
+
 "Hello, world!\n" puts
