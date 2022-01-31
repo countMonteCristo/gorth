@@ -66,22 +66,30 @@ const (
 	KeywordWhile KeywordType = iota
 	KeywordDo    KeywordType = iota
 
+	KeywordAlloc KeywordType = iota
+
 	KeywordCount = iota
 )
 
 var WordToKeyword = map[string]KeywordType{
-	"if":    KeywordIf,
-	"else":  KeywordElse,
-	"end":   KeywordEnd,
+	"if":   KeywordIf,
+	"else": KeywordElse,
+	"end":  KeywordEnd,
+
 	"while": KeywordWhile,
 	"do":    KeywordDo,
+
+	"alloc": KeywordAlloc,
 }
 var KeywordName = map[KeywordType]string{
-	KeywordIf:    "if",
-	KeywordElse:  "else",
-	KeywordEnd:   "end",
+	KeywordIf:   "if",
+	KeywordElse: "else",
+	KeywordEnd:  "end",
+
 	KeywordWhile: "while",
 	KeywordDo:    "do",
+
+	KeywordAlloc: "alloc",
 }
 
 type IntrinsicType int
@@ -119,6 +127,9 @@ const (
 	IntrinsicPuti IntrinsicType = iota
 	IntrinsicPuts IntrinsicType = iota
 	IntrinsicPutc IntrinsicType = iota
+
+	IntrinsicLoad8  IntrinsicType = iota
+	IntrinsicStore8 IntrinsicType = iota
 
 	IntrinsicCount = iota
 )
@@ -158,6 +169,9 @@ var WordToIntrinsic = map[string]IntrinsicType{
 	"puti": IntrinsicPuti,
 	"puts": IntrinsicPuts,
 	"putc": IntrinsicPutc,
+
+	"@8": IntrinsicLoad8,
+	"!8": IntrinsicStore8,
 }
 
 // assert(IntrinsicCount == 4, "Unhandled intrinsic in IntrinsicName")
@@ -194,6 +208,9 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicPuti: "puti",
 	IntrinsicPuts: "puts",
 	IntrinsicPutc: "putc",
+
+	IntrinsicLoad8:  "@8",
+	IntrinsicStore8: "!8",
 }
 
 type BoolType int
@@ -353,16 +370,113 @@ func read_file(fn string) (lines []string) {
 	return
 }
 
+const MemorySize = 640 * 1024
+
+var Memory [MemorySize]byte
+var MemPtr = 0
+
+var Allocs = make(map[string]int)
+
 type Lexer struct {
-	Fn  string
-	Loc Location
+	Fn    string
+	Loc   Location
+	Lines []string
+	Row   int
+	Col   int
 }
 
 func (lx *Lexer) process_file(fn string) (tokens []Token) {
 	lx.Fn = fn
+	lx.Row = 0
+	lx.Col = 0
 
-	lines := read_file(lx.Fn)
-	tokens = lx.lex(lines)
+	lx.Lines = read_file(lx.Fn)
+	for {
+		token, end := lx.next_token()
+		if end {
+			break
+		}
+		// fmt.Printf("Got token: <%s>\n", token.Text)
+		switch token.Typ {
+		case TokenInt:
+			tokens = append(tokens, token)
+		case TokenBool:
+			tokens = append(tokens, token)
+		case TokenString:
+			tokens = append(tokens, token)
+		case TokenChar:
+			tokens = append(tokens, token)
+		case TokenKeyword:
+			switch token.Value.(KeywordType) {
+			case KeywordIf:
+				tokens = append(tokens, token)
+			case KeywordElse:
+				tokens = append(tokens, token)
+			case KeywordEnd:
+				tokens = append(tokens, token)
+			case KeywordDo:
+				tokens = append(tokens, token)
+			case KeywordWhile:
+				tokens = append(tokens, token)
+			case KeywordAlloc:
+				// tokens = append(tokens, token)
+				// CompilerFatal(&token.Loc, "Allocs are not implemented yet!")
+				name_tok, end := lx.next_token()
+				if end {
+					CompilerFatal(&token.Loc, "Expected alloc name, but got nothing")
+				}
+				if name_tok.Typ != TokenWord {
+					CompilerFatal(&token.Loc, fmt.Sprintf("Expected alloc name to be a word, but got %s", name_tok.Text))
+				}
+				fmt.Printf("Alloc name: %s\n", name_tok.Text)
+
+				size_tok, end := lx.next_token()
+				if end {
+					CompilerFatal(&token.Loc, "Expected alloc size, but got nothing")
+				}
+				if size_tok.Typ != TokenInt {
+					CompilerFatal(&token.Loc, fmt.Sprintf("Expected alloc size to be an int, but got %s", name_tok.Text))
+				}
+				alloc_size := size_tok.Value.(int)
+				if alloc_size <= 0 {
+					CompilerFatal(&token.Loc, fmt.Sprintf("Alloc size must be positive, but got %d", alloc_size))
+				}
+
+				end_tok, end := lx.next_token()
+				if end {
+					CompilerFatal(&token.Loc, "Expected alloc end, but got nothing")
+				}
+				if end_tok.Typ != TokenKeyword || end_tok.Value.(KeywordType) != KeywordEnd {
+					CompilerFatal(&token.Loc, fmt.Sprintf("Expected alloc to be closed by end, but got %s", end_tok.Text))
+				}
+
+				Allocs[name_tok.Text] = MemPtr
+				MemPtr += alloc_size
+			}
+
+		case TokenWord:
+			intrinsic, exists := WordToIntrinsic[token.Text]
+			if exists {
+				token.Value = intrinsic
+				tokens = append(tokens, token)
+				continue
+			}
+
+			ptr, exists := Allocs[token.Text]
+			if exists {
+				token.Typ = TokenInt
+				token.Value = ptr
+				tokens = append(tokens, token)
+				continue
+			}
+
+			CompilerFatal(&token.Loc, fmt.Sprintf("Unknown word: %s", token.Text))
+		default:
+			CompilerFatal(&token.Loc, "Unhandled Token.Typ in Lexer.process_file")
+		}
+
+	}
+	// tokens = lx.lex(lines)
 	return
 }
 
@@ -392,8 +506,8 @@ func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool) {
 	return
 }
 
-func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, comment bool) {
-	comment = false
+func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bool) {
+	empty = false
 	for pos < len(data) {
 		if strings.IndexByte(" \t", data[pos]) != -1 {
 			pos++
@@ -404,6 +518,10 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, comment 
 	}
 
 	lx.Loc = Location{Filepath: lx.Fn, Line: line, Column: pos}
+	if pos == len(data) {
+		empty = true
+		return
+	}
 
 	start := pos
 	switch data[pos] {
@@ -449,7 +567,7 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, comment 
 				break
 			}
 			if pos < len(data)-1 && data[pos:pos+2] == "//" {
-				comment = true
+				empty = true
 				break
 			}
 			pos++
@@ -460,76 +578,104 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, comment 
 	return
 }
 
-func (lx *Lexer) lex(lines []string) (tokens []Token) {
-	assert(TokenCount == 6, "Unhandled Token in lex()")
-	for line, data := range lines {
+// func (lx *Lexer) lex(lines []string) (tokens []Token) {
 
-		pos := 0
-		for pos < len(data) {
-			word, comment := lx.ChopWord(data, line, pos)
-			if comment {
-				break
-			}
+// }
 
-			pos = lx.Loc.Column + len(word) + 1
-			token := Token{Text: word, Loc: lx.Loc}
-
-			// check if word is string literal
-			if word[0] == '"' {
-				token.Typ = TokenString
-				token.Value = word[1 : len(word)-1]
-				tokens = append(tokens, token)
-				continue
-			}
-
-			// check if word is char literal
-			if word[0] == '\'' {
-				token.Typ = TokenChar
-				token.Value = int(word[1])
-				tokens = append(tokens, token)
-				continue
-			}
-
-			// check if word is int literal
-			number, err := strconv.Atoi(word)
-			if err == nil {
-				token.Typ = TokenInt
-				token.Value = number
-				tokens = append(tokens, token)
-				continue
-			}
-
-			// check if word is boolean literal
-			boolean, exists := WordToBool[word]
-			if exists {
-				token.Typ = TokenBool
-				token.Value = boolean
-				tokens = append(tokens, token)
-				continue
-			}
-
-			// check if word is an intrinsic
-			intrinsic, exists := WordToIntrinsic[word]
-			if exists {
-				token.Typ = TokenWord
-				token.Value = intrinsic
-				tokens = append(tokens, token)
-				continue
-			}
-
-			// check if word is keyword
-			keyword, exists := WordToKeyword[word]
-			if exists {
-				token.Typ = TokenKeyword
-				token.Value = keyword
-				tokens = append(tokens, token)
-				continue
-			}
-
-			CompilerFatal(&token.Loc, fmt.Sprintf("Unknown word: %s", word))
+func (lx *Lexer) next_token() (token Token, end bool) {
+	end = false
+	if lx.Row >= len(lx.Lines) {
+		end = true
+		return
+	}
+	if lx.Col >= len(lx.Lines[lx.Row]) {
+		lx.Row++
+		lx.Col = 0
+		if lx.Row == len(lx.Lines) {
+			end = true
+			return
 		}
 	}
+	assert(TokenCount == 6, "Unhandled Token in lex()")
 
+	for lx.Row < len(lx.Lines) {
+		// fmt.Printf("Try to chop word from line=%d col=%d\n", lx.Row+1, lx.Col+1)
+		word, empty := lx.ChopWord(lx.Lines[lx.Row], lx.Row, lx.Col)
+
+		// fmt.Printf("Chopped word: <%s> empty=%t\n", word, empty)
+
+		lx.Col = lx.Loc.Column + len(word) + 1
+
+		if empty {
+			lx.Row++
+			lx.Col = 0
+			continue
+		}
+
+		token = Token{Text: word, Loc: lx.Loc}
+
+		// check if word is string literal
+		if word[0] == '"' {
+			// fmt.Printf("<%s> - is a string\n", word)
+			token.Typ = TokenString
+			token.Value = word[1 : len(word)-1]
+			return
+		}
+
+		// check if word is char literal
+		if word[0] == '\'' {
+			// fmt.Printf("<%s> - is a char\n", word)
+			token.Typ = TokenChar
+			token.Value = int(word[1])
+			return
+		}
+
+		// check if word is int literal
+		number, err := strconv.Atoi(word)
+		if err == nil {
+			// fmt.Printf("<%s> - is an int\n", word)
+			token.Typ = TokenInt
+			token.Value = number
+			return
+		}
+
+		// check if word is boolean literal
+		boolean, exists := WordToBool[word]
+		if exists {
+			// fmt.Printf("<%s> - is a boolean\n", word)
+			token.Typ = TokenBool
+			token.Value = boolean
+			return
+		}
+
+		// check if word is an intrinsic
+		// TODO: move to process_file maybe?
+		// intrinsic, exists := WordToIntrinsic[word]
+		// if exists {
+		// 	// fmt.Printf("<%s> - is an intrinsic\n", word)
+		// 	token.Typ = TokenWord
+		// 	token.Value = intrinsic
+		// 	return
+		// }
+
+		// check if word is keyword
+		// fmt.Printf("try to create token as keyword\n")
+		keyword, exists := WordToKeyword[word]
+		if exists {
+			// fmt.Printf("<%s> - is a keyword\n", word)
+			token.Typ = TokenKeyword
+			token.Value = keyword
+			return
+		}
+
+		// word is some name
+		// fmt.Printf("<%s> - is a word\n", word)
+		token.Typ = TokenWord
+		token.Value = word
+		return
+	}
+
+	end = true
 	return
 }
 
@@ -567,11 +713,30 @@ func compile(tokens []Token) (ops []Op) {
 				OpToken: token,
 			})
 		case TokenWord:
-			ops = append(ops, Op{
-				Typ:     OpIntrinsic,
-				Operand: token.Value.(IntrinsicType),
-				OpToken: token,
-			})
+			name := token.Text
+
+			_, exists := WordToIntrinsic[name]
+			if exists {
+				ops = append(ops, Op{
+					Typ:     OpIntrinsic,
+					Operand: token.Value.(IntrinsicType),
+					OpToken: token,
+				})
+				continue
+			}
+
+			ptr, exists := Allocs[name]
+			if exists {
+				ops = append(ops, Op{
+					Typ:     OpPushInt,
+					Operand: ptr,
+					OpToken: token,
+				})
+				continue
+			}
+
+			CompilerFatal(&token.Loc, fmt.Sprintf("Unknown word %s: probably bug in next_token", token.Text))
+
 		case TokenKeyword:
 			kw_type := token.Value.(KeywordType)
 			op := Op{OpToken: token}
@@ -581,7 +746,6 @@ func compile(tokens []Token) (ops []Op) {
 				blocks.push(Block{Addr: len(ops), Tok: token})
 				ops = append(ops, op)
 			case KeywordElse:
-
 				if blocks.size() == 0 {
 					CompilerFatal(&token.Loc, "Unexpected `end` found")
 				}
@@ -722,7 +886,7 @@ func interprete(ops []Op, debug bool) {
 				addr += op.Operand.(int)
 			}
 		case OpIntrinsic:
-			assert(IntrinsicCount == 27, "Unhandled intrinsic in interprete()")
+			assert(IntrinsicCount == 29, "Unhandled intrinsic in interprete()")
 			switch op.Operand {
 			case IntrinsicPlus:
 				b := stack.pop(&op.OpToken)
@@ -846,6 +1010,14 @@ func interprete(ops []Op, debug bool) {
 				index := x.(int)
 				str := StringLiteralsBuffer[index]
 				fmt.Print(str)
+			case IntrinsicLoad8:
+				x := stack.pop(&op.OpToken)
+				ptr := x.(int)
+				stack.push(int(Memory[ptr]))
+			case IntrinsicStore8:
+				ptr := stack.pop(&op.OpToken).(int)
+				x := byte(stack.pop(&op.OpToken).(int))
+				Memory[ptr] = x
 			default:
 				CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: %s", op.OpToken.Text))
 			}
