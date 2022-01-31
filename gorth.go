@@ -37,9 +37,16 @@ const (
 	TokenBool    TokenType = iota
 	TokenWord    TokenType = iota
 	TokenKeyword TokenType = iota
+	TokenString  TokenType = iota
 
 	TokenCount = iota
 )
+
+const (
+	StringLiteralBufferCap = 2 * 1024
+)
+
+var StringLiteralsBuffer = make([]string, 0, StringLiteralBufferCap)
 
 type Token struct {
 	Typ   TokenType
@@ -108,7 +115,8 @@ const (
 	IntrinsicOver IntrinsicType = iota
 	IntrinsicRot  IntrinsicType = iota
 
-	IntrinsicPrint IntrinsicType = iota
+	IntrinsicPrint    IntrinsicType = iota
+	IntrinsicPrintStr IntrinsicType = iota
 
 	IntrinsicCount = iota
 )
@@ -145,7 +153,8 @@ var WordToIntrinsic = map[string]IntrinsicType{
 	"over": IntrinsicOver,
 	"rot":  IntrinsicRot,
 
-	"print": IntrinsicPrint,
+	"print":     IntrinsicPrint,
+	"print_str": IntrinsicPrintStr,
 }
 
 // assert(IntrinsicCount == 4, "Unhandled intrinsic in IntrinsicName")
@@ -173,12 +182,14 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicLogicalOr:  "||",
 	IntrinsicLogicalNot: "!",
 
-	IntrinsicDup:   "dup",
-	IntrinsicSwap:  "swap",
-	IntrinsicDrop:  "drop",
-	IntrinsicOver:  "over",
-	IntrinsicRot:   "rot",
-	IntrinsicPrint: "print",
+	IntrinsicDup:  "dup",
+	IntrinsicSwap: "swap",
+	IntrinsicDrop: "drop",
+	IntrinsicOver: "over",
+	IntrinsicRot:  "rot",
+
+	IntrinsicPrint:    "print",
+	IntrinsicPrintStr: "print_str",
 }
 
 type BoolType int
@@ -202,6 +213,7 @@ type OpType int
 const (
 	OpPushInt   OpType = iota
 	OpPushBool  OpType = iota
+	OpPushStr   OpType = iota
 	OpIntrinsic OpType = iota
 	OpIf        OpType = iota
 	OpElse      OpType = iota
@@ -215,6 +227,7 @@ const (
 var OpName = map[OpType]string{
 	OpPushInt:   "PUSH_INT",
 	OpPushBool:  "PUSH_BOOL",
+	OpPushStr:   "PUSH_STR",
 	OpIntrinsic: "INTRINSIC",
 	OpIf:        "IF",
 	OpElse:      "ELSE",
@@ -232,12 +245,14 @@ type Op struct {
 func (op *Op) str(addr int) (s string) {
 	var operand string
 
-	assert(OpCount == 8, "Unhandled Op in Op.str()")
+	assert(OpCount == 9, "Unhandled Op in Op.str()")
 	switch op.Typ {
 	case OpPushInt:
 		operand = strconv.Itoa(op.Operand.(int))
 	case OpPushBool:
 		operand = BoolName[op.Operand.(BoolType)]
+	case OpPushStr:
+		operand = strconv.Itoa(op.Operand.(int))
 	case OpIntrinsic:
 		operand = IntrinsicName[op.Operand.(IntrinsicType)]
 	case OpIf:
@@ -335,7 +350,7 @@ func read_file(fn string) (lines []string) {
 }
 
 func lex(lines []string, filepath string) (tokens []Token) {
-	assert(TokenCount == 4, "Unhandled Token in lex()")
+	assert(TokenCount == 5, "Unhandled Token in lex()")
 	for line_num, data := range lines {
 		// fmt.Printf("Check line: `%s`\n", data)
 
@@ -354,16 +369,44 @@ func lex(lines []string, filepath string) (tokens []Token) {
 				}
 			}
 
-			i := start
-			for i < len(data) && data[i] != ' ' {
-				i++
+			var word string
+			j := start + 1
+			if data[start] == '"' {
+				for j < len(data) {
+					if data[j] == '\\' {
+						if j < len(data)-1 && data[j+1] == '"' {
+							j += 2
+							continue
+						}
+						j++
+						continue
+					}
+					if data[j] == '"' {
+						j++
+						break
+					}
+					j++
+				}
+			} else {
+				for j < len(data) && data[j] != ' ' {
+					j++
+				}
 			}
-			word := data[start:i]
+			word = data[start:j]
 
 			token := Token{Text: word, Loc: Location{Filepath: filepath, Line: line_num, Column: start}}
-			start = i
+			start = j
 
 			// fmt.Printf("Check word: `%s`\n", word)
+			if word[0] == '"' {
+				if word[len(word)-1] != '"' {
+					CompilerFatal(&token.Loc, "Unclosed string literal")
+				}
+				token.Typ = TokenString
+				token.Value = word[1 : len(word)-1]
+				tokens = append(tokens, token)
+				continue
+			}
 
 			// check if word is int literal
 			number, err := strconv.Atoi(word)
@@ -408,7 +451,7 @@ func lex(lines []string, filepath string) (tokens []Token) {
 }
 
 func compile(tokens []Token) (ops []Op) {
-	assert(TokenCount == 4, "Unhandled Token in compile()")
+	assert(TokenCount == 5, "Unhandled Token in compile()")
 
 	blocks := &Stack{}
 
@@ -419,6 +462,13 @@ func compile(tokens []Token) (ops []Op) {
 			ops = append(ops, Op{
 				Typ:     OpPushInt,
 				Operand: token.Value.(int),
+				OpToken: token,
+			})
+		case TokenString:
+			StringLiteralsBuffer = append(StringLiteralsBuffer, token.Value.(string))
+			ops = append(ops, Op{
+				Typ:     OpPushStr,
+				Operand: len(StringLiteralsBuffer) - 1,
 				OpToken: token,
 			})
 		case TokenBool:
@@ -538,7 +588,7 @@ func interprete(ops []Op, debug bool) {
 		fmt.Println("---------------------------------")
 	}
 
-	assert(OpCount == 8, "Unhandled Op in interprete()")
+	assert(OpCount == 9, "Unhandled Op in interprete()")
 	addr := 0
 	for addr < len(ops) {
 
@@ -557,6 +607,12 @@ func interprete(ops []Op, debug bool) {
 			case BoolTrue:
 				stack.push(true)
 			}
+			addr++
+		case OpPushStr:
+			// size := len(op.OpToken.Value.(string))
+			// stack.push(size)
+			ptr := op.Operand.(int)
+			stack.push(ptr)
 			addr++
 		case OpIf:
 			top := stack.pop(&op.OpToken).(bool)
@@ -579,7 +635,7 @@ func interprete(ops []Op, debug bool) {
 				addr += op.Operand.(int)
 			}
 		case OpIntrinsic:
-			assert(IntrinsicCount == 25, "Unhandled intrinsic in interprete()")
+			assert(IntrinsicCount == 26, "Unhandled intrinsic in interprete()")
 			switch op.Operand {
 			case IntrinsicPlus:
 				b := stack.pop(&op.OpToken)
@@ -695,6 +751,11 @@ func interprete(ops []Op, debug bool) {
 			case IntrinsicPrint:
 				x := stack.pop(&op.OpToken)
 				fmt.Println(x)
+			case IntrinsicPrintStr:
+				x := stack.pop(&op.OpToken)
+				index := x.(int)
+				str := StringLiteralsBuffer[index]
+				fmt.Println(str)
 			default:
 				CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: %s", op.OpToken.Text))
 			}
