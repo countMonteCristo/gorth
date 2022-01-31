@@ -37,7 +37,7 @@ func (t *TestCase) run() (status int) {
 
 	cmd := exec.Command(t.Cmd[0], t.Cmd[1:]...)
 
-	stdout, err := cmd.Output()
+	stdout, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println(err.Error())
 		return

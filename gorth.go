@@ -38,6 +38,7 @@ const (
 	TokenWord    TokenType = iota
 	TokenKeyword TokenType = iota
 	TokenString  TokenType = iota
+	TokenChar    TokenType = iota
 
 	TokenCount = iota
 )
@@ -115,8 +116,9 @@ const (
 	IntrinsicOver IntrinsicType = iota
 	IntrinsicRot  IntrinsicType = iota
 
-	IntrinsicPrint    IntrinsicType = iota
-	IntrinsicPrintStr IntrinsicType = iota
+	IntrinsicPuti IntrinsicType = iota
+	IntrinsicPuts IntrinsicType = iota
+	IntrinsicPutc IntrinsicType = iota
 
 	IntrinsicCount = iota
 )
@@ -153,8 +155,9 @@ var WordToIntrinsic = map[string]IntrinsicType{
 	"over": IntrinsicOver,
 	"rot":  IntrinsicRot,
 
-	"print":     IntrinsicPrint,
-	"print_str": IntrinsicPrintStr,
+	"puti": IntrinsicPuti,
+	"puts": IntrinsicPuts,
+	"putc": IntrinsicPutc,
 }
 
 // assert(IntrinsicCount == 4, "Unhandled intrinsic in IntrinsicName")
@@ -188,8 +191,9 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicOver: "over",
 	IntrinsicRot:  "rot",
 
-	IntrinsicPrint:    "print",
-	IntrinsicPrintStr: "print_str",
+	IntrinsicPuti: "puti",
+	IntrinsicPuts: "puts",
+	IntrinsicPutc: "putc",
 }
 
 type BoolType int
@@ -349,8 +353,35 @@ func read_file(fn string) (lines []string) {
 	return
 }
 
+func ChopChar(data string, pos int) (b byte, escaped bool, e error) {
+	e = nil
+	escaped = false
+	if data[pos] == '\\' {
+		escaped = true
+		if pos+1 == len(data) {
+			e = fmt.Errorf("Unexpected end of char literal")
+			return
+		}
+		switch data[pos+1] {
+		case 'n':
+			b = '\n'
+		case 'r':
+			b = '\r'
+		case 't':
+			b = '\t'
+		case '"':
+			b = '"'
+		default:
+			e = fmt.Errorf("Unknown escape character: %s", data[pos:pos+2])
+		}
+	} else {
+		b = data[pos]
+	}
+	return
+}
+
 func lex(lines []string, filepath string) (tokens []Token) {
-	assert(TokenCount == 5, "Unhandled Token in lex()")
+	assert(TokenCount == 6, "Unhandled Token in lex()")
 	for line_num, data := range lines {
 		// fmt.Printf("Check line: `%s`\n", data)
 
@@ -364,46 +395,78 @@ func lex(lines []string, filepath string) (tokens []Token) {
 
 			if start+1 < len(data) {
 				if data[start:start+2] == "//" {
-					// fmt.Printf("Find comment at line=%d col=%d\n", line_num+1, start+1)
 					break
 				}
 			}
 
+			loc := Location{Filepath: filepath, Line: line_num, Column: start}
+
 			var word string
 			j := start + 1
-			if data[start] == '"' {
+
+			switch data[start] {
+			case '"':
+				// TODO: move to separate function
+				chars := make([]byte, 0)
+				chars = append(chars, '"')
+				closed := false
 				for j < len(data) {
-					if data[j] == '\\' {
-						if j < len(data)-1 && data[j+1] == '"' {
-							j += 2
-							continue
-						}
-						j++
-						continue
-					}
-					if data[j] == '"' {
-						j++
-						break
+					b, escaped, err := ChopChar(data, j)
+					if err != nil {
+						CompilerFatal(&loc, err.Error())
 					}
 					j++
+					if escaped {
+						j++
+					}
+					chars = append(chars, b)
+					if b == '"' && !escaped {
+						closed = true
+						break
+					}
 				}
-			} else {
+				if !closed {
+					CompilerFatal(&loc, fmt.Sprintf("Expecting to find closing \" for string literal, but got <%s>", string(chars[len(chars)-1])))
+				}
+				word = string(chars)
+			case '\'':
+				b, escaped, err := ChopChar(data, j)
+				if err != nil {
+					CompilerFatal(&loc, err.Error())
+				}
+				j++
+				if escaped {
+					j++
+				}
+				if j == len(data) {
+					CompilerFatal(&loc, fmt.Sprintf("Unexpecting end of char literal"))
+				}
+				if data[j] != '\'' {
+					CompilerFatal(&loc, fmt.Sprintf("Expecting to find closing ' for char literal, but got <%s>", string(data[j])))
+				}
+				word = "'" + string(b) + "'"
+				j++
+			default:
 				for j < len(data) && data[j] != ' ' {
 					j++
 				}
+				word = data[start:j]
 			}
-			word = data[start:j]
 
-			token := Token{Text: word, Loc: Location{Filepath: filepath, Line: line_num, Column: start}}
+			token := Token{Text: word, Loc: loc}
 			start = j
 
 			// fmt.Printf("Check word: `%s`\n", word)
 			if word[0] == '"' {
-				if word[len(word)-1] != '"' {
-					CompilerFatal(&token.Loc, "Unclosed string literal")
-				}
 				token.Typ = TokenString
 				token.Value = word[1 : len(word)-1]
+				tokens = append(tokens, token)
+				continue
+			}
+
+			if word[0] == '\'' {
+				token.Typ = TokenChar
+				token.Value = int(word[1])
 				tokens = append(tokens, token)
 				continue
 			}
@@ -451,7 +514,7 @@ func lex(lines []string, filepath string) (tokens []Token) {
 }
 
 func compile(tokens []Token) (ops []Op) {
-	assert(TokenCount == 5, "Unhandled Token in compile()")
+	assert(TokenCount == 6, "Unhandled Token in compile()")
 
 	blocks := &Stack{}
 
@@ -469,6 +532,12 @@ func compile(tokens []Token) (ops []Op) {
 			ops = append(ops, Op{
 				Typ:     OpPushStr,
 				Operand: len(StringLiteralsBuffer) - 1,
+				OpToken: token,
+			})
+		case TokenChar:
+			ops = append(ops, Op{
+				Typ:     OpPushInt,
+				Operand: token.Value.(int),
 				OpToken: token,
 			})
 		case TokenBool:
@@ -635,7 +704,7 @@ func interprete(ops []Op, debug bool) {
 				addr += op.Operand.(int)
 			}
 		case OpIntrinsic:
-			assert(IntrinsicCount == 26, "Unhandled intrinsic in interprete()")
+			assert(IntrinsicCount == 27, "Unhandled intrinsic in interprete()")
 			switch op.Operand {
 			case IntrinsicPlus:
 				b := stack.pop(&op.OpToken)
@@ -748,14 +817,17 @@ func interprete(ops []Op, debug bool) {
 				b := stack.pop(&op.OpToken)
 				a := stack.pop(&op.OpToken)
 				stack.push(a.(int) > b.(int))
-			case IntrinsicPrint:
+			case IntrinsicPuti:
 				x := stack.pop(&op.OpToken)
-				fmt.Println(x)
-			case IntrinsicPrintStr:
+				fmt.Print(x)
+			case IntrinsicPutc:
+				x := stack.pop(&op.OpToken)
+				fmt.Print(string(byte(x.(int))))
+			case IntrinsicPuts:
 				x := stack.pop(&op.OpToken)
 				index := x.(int)
 				str := StringLiteralsBuffer[index]
-				fmt.Println(str)
+				fmt.Print(str)
 			default:
 				CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: %s", op.OpToken.Text))
 			}

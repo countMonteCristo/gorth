@@ -1,14 +1,14 @@
 // b1001 >> 3 == b1 == 1
-9 3 >> print
+9 3 >> puti '\n' putc
 
 // b101 << 3 == b101000 == 40
-5 3 << print
+5 3 << puti '\n' putc
 
 // b101 & b110 == b100 == 4
-5 6 & print
+5 6 & puti '\n' putc
 
 // b11 | b101 == b111 == 7
-3 5 | print
+3 5 | puti '\n' putc
 
 // b101 ^ b111 == b10 == 2
-5 7 ^ print
+5 7 ^ puti '\n' putc

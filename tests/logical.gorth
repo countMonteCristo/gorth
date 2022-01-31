@@ -1,17 +1,17 @@
 1 2 <= 3 4 = && if
-  10 print
+  10 puti '\n' putc
 else
-  20 print
+  20 puti '\n' putc
 end
 
 1 2 <= 3 4 = || if
-  30 print
+  30 puti '\n' putc
 else
-  40 print
+  40 puti '\n' putc
 end
 
 2 3 < ! if
-  50 print
+  50 puti '\n' putc
 else
-  60 print
+  60 puti '\n' putc
 end

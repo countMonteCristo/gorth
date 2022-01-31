@@ -1,41 +1,41 @@
 10 20 < if
-  30 print
+  30 puti '\n' putc
 else
-  40 print
+  40 puti '\n' putc
 end
 
 10 20 > if
-  50 print
+  50 puti '\n' putc
 end
 
 10 20 < if
-  60 print
+  60 puti '\n' putc
 end
 
 10 20 > if
-  70 print
+  70 puti '\n' putc
 else
-  80 print
+  80 puti '\n' putc
 end
 
 10 20 < if
   30 40 <= if
-    90 print
+    90 puti '\n' putc
   else
-    100 print
+    100 puti '\n' putc
   end
 end
 
 10 20 > if
   30 40 <= if
-    90 print
+    90 puti '\n' putc
   else
-    100 print
+    100 puti '\n' putc
   end
 else
   50 60 > if
-    110 print
+    110 puti '\n' putc
   else
-    120 print
+    120 puti '\n' putc
   end
 end

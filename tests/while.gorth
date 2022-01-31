@@ -1,4 +1,4 @@
 0 while dup 10 <= do
-  dup print
+  dup puti '\n' putc
   1 +
 end

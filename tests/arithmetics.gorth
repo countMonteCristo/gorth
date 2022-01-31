@@ -1,29 +1,29 @@
 // Sum
-10 20 + print
--5 7 + print
-5 -7 + print
--5 -7 + print
+10 20 + puti '\n' putc
+-5 7 + puti '\n' putc
+5 -7 + puti '\n' putc
+-5 -7 + puti '\n' putc
 
 // Diff
-40 30 - print
-40 -30 - print
--40 30 - print
--40 -30 - print
+40 30 - puti '\n' putc
+40 -30 - puti '\n' putc
+-40 30 - puti '\n' putc
+-40 -30 - puti '\n' putc
 
 // Mul
-5 7 * print
-5 -7 * print
--5 7 * print
--5 -7 * print
+5 7 * puti '\n' putc
+5 -7 * puti '\n' putc
+-5 7 * puti '\n' putc
+-5 -7 * puti '\n' putc
 
 // Div
-27 6 / print
-27 -6 / print
--27 6 / print
--27 -6 / print
+27 6 / puti '\n' putc
+27 -6 / puti '\n' putc
+-27 6 / puti '\n' putc
+-27 -6 / puti '\n' putc
 
 // Mod
-31 7 % print
-31 -7 % print
--31 7 % print
--31 -7 % print
+31 7 % puti '\n' putc
+31 -7 % puti '\n' putc
+-31 7 % puti '\n' putc
+-31 -7 % puti '\n' putc

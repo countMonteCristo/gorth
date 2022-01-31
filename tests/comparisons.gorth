@@ -1,29 +1,29 @@
 // Equal
-1 2 = print
-2 1 = print
-1 1 = print
+1 2 = puti '\n' putc
+2 1 = puti '\n' putc
+1 1 = puti '\n' putc
 
 // Not Equal
-3 4 != print
-4 3 != print
-3 3 != print
+3 4 != puti '\n' putc
+4 3 != puti '\n' putc
+3 3 != puti '\n' putc
 
 // Less Than or Equal
-5 6 <= print
-6 5 <= print
-5 5 <= print
+5 6 <= puti '\n' putc
+6 5 <= puti '\n' putc
+5 5 <= puti '\n' putc
 
 // Greater Than or Equal
-7 8 >= print
-8 7 >= print
-7 7 >= print
+7 8 >= puti '\n' putc
+8 7 >= puti '\n' putc
+7 7 >= puti '\n' putc
 
 // Greater Than
-9 10 > print
-10 9 > print
-9 9  > print
+9 10 > puti '\n' putc
+10 9 > puti '\n' putc
+9 9  > puti '\n' putc
 
 // Less Than
-11 12 < print
-12 11 < print
-11 11 < print
+11 12 < puti '\n' putc
+12 11 < puti '\n' putc
+11 11 < puti '\n' putc
