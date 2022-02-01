@@ -1,8 +1,10 @@
-alloc array 101 end
-1 array 99 + !8
+const N 100 end
 
-0 while dup 100 < do
-  0 while dup 100 < do
+alloc array 101 end
+1 array N 1 - + !8
+
+0 while dup N < do
+  0 while dup N < do
     dup array + @8
     1 = if '*' else ' ' end
     putc
@@ -10,7 +12,7 @@ alloc array 101 end
   end drop
   '\n' putc
 
-  1 while dup 100 <= do
+  1 while dup N <= do
     dup dup
 
     dup 1 - array + @8 swap
@@ -25,7 +27,7 @@ alloc array 101 end
     1 +
   end drop
 
-  100 while dup 0 > do
+  N while dup 0 > do
     dup dup 1 - array + @8 swap array + !8
     1 -
   end drop

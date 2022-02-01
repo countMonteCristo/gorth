@@ -66,6 +66,7 @@ const (
 	KeywordWhile KeywordType = iota
 	KeywordDo    KeywordType = iota
 
+	KeywordConst KeywordType = iota
 	KeywordAlloc KeywordType = iota
 
 	KeywordCount = iota
@@ -79,6 +80,7 @@ var WordToKeyword = map[string]KeywordType{
 	"while": KeywordWhile,
 	"do":    KeywordDo,
 
+	"const": KeywordConst,
 	"alloc": KeywordAlloc,
 }
 var KeywordName = map[KeywordType]string{
@@ -89,6 +91,7 @@ var KeywordName = map[KeywordType]string{
 	KeywordWhile: "while",
 	KeywordDo:    "do",
 
+	KeywordConst: "const",
 	KeywordAlloc: "alloc",
 }
 
@@ -401,6 +404,8 @@ var MemPtr = 0
 
 var Allocs = make(map[string]int)
 
+var Consts = make(map[string]int)
+
 type Lexer struct {
 	Fn    string
 	Loc   Location
@@ -442,9 +447,36 @@ func (lx *Lexer) process_file(fn string) (tokens []Token) {
 				tokens = append(tokens, token)
 			case KeywordWhile:
 				tokens = append(tokens, token)
+			case KeywordConst:
+				// CompilerFatal(&token.Loc, "Consts are not implemented yet")
+				name_tok, end := lx.next_token()
+				if end {
+					CompilerFatal(&token.Loc, "Expected const name, but got nothing")
+				}
+				if name_tok.Typ != TokenWord {
+					CompilerFatal(&token.Loc, fmt.Sprintf("Expected const name to be a word, but got %s", name_tok.Text))
+				}
+
+				value_tok, end := lx.next_token()
+				if end {
+					CompilerFatal(&token.Loc, "Expected const value, but got nothing")
+				}
+				if value_tok.Typ != TokenInt {
+					CompilerFatal(&token.Loc, fmt.Sprintf("Expected const size to be an int, but got %s", name_tok.Text))
+				}
+				const_value := value_tok.Value.(int)
+
+				end_tok, end := lx.next_token()
+				if end {
+					CompilerFatal(&token.Loc, "Expected const end, but got nothing")
+				}
+				if end_tok.Typ != TokenKeyword || end_tok.Value.(KeywordType) != KeywordEnd {
+					CompilerFatal(&token.Loc, fmt.Sprintf("Expected const to be closed by end, but got %s", end_tok.Text))
+				}
+
+				Consts[name_tok.Text] = const_value
+
 			case KeywordAlloc:
-				// tokens = append(tokens, token)
-				// CompilerFatal(&token.Loc, "Allocs are not implemented yet!")
 				name_tok, end := lx.next_token()
 				if end {
 					CompilerFatal(&token.Loc, "Expected alloc name, but got nothing")
@@ -452,7 +484,6 @@ func (lx *Lexer) process_file(fn string) (tokens []Token) {
 				if name_tok.Typ != TokenWord {
 					CompilerFatal(&token.Loc, fmt.Sprintf("Expected alloc name to be a word, but got %s", name_tok.Text))
 				}
-				// fmt.Printf("Alloc name: %s\n", name_tok.Text)
 
 				size_tok, end := lx.next_token()
 				if end {
@@ -490,6 +521,14 @@ func (lx *Lexer) process_file(fn string) (tokens []Token) {
 			if exists {
 				token.Typ = TokenInt
 				token.Value = ptr
+				tokens = append(tokens, token)
+				continue
+			}
+
+			val, exists := Consts[token.Text]
+			if exists {
+				token.Typ = TokenInt
+				token.Value = val
 				tokens = append(tokens, token)
 				continue
 			}
@@ -764,6 +803,16 @@ func compile(tokens []Token) (ops []Op) {
 				ops = append(ops, Op{
 					Typ:     OpIntrinsic,
 					Operand: token.Value.(IntrinsicType),
+					OpToken: token,
+				})
+				continue
+			}
+
+			val, exists := Consts[name]
+			if exists {
+				ops = append(ops, Op{
+					Typ:     OpPushInt,
+					Operand: val,
 					OpToken: token,
 				})
 				continue

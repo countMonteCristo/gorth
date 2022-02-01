@@ -6,7 +6,9 @@
 //   * 'FizzBuzz' if x is divisible by both 3 and 5
 //   * '' - otherwise
 
-1 while dup 100 <= do
+const N 100 end
+
+1 while dup N <= do
   dup puti ' ' putc
   dup 3 % 0 = over 5 % 0 =
   over over && if

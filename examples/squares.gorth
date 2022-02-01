@@ -1,6 +1,8 @@
 // Print squares for all natural numbers between 1 and 10
 
-1 while dup 10 <= do
+const N 10 end
+
+1 while dup N <= do
   dup dup * puti '\n' putc
   1 +
 end
