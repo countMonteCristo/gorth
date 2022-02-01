@@ -128,8 +128,16 @@ const (
 	IntrinsicPuts IntrinsicType = iota
 	IntrinsicPutc IntrinsicType = iota
 
-	IntrinsicLoad8  IntrinsicType = iota
-	IntrinsicStore8 IntrinsicType = iota
+	IntrinsicDebug IntrinsicType = iota
+
+	IntrinsicLoad8   IntrinsicType = iota
+	IntrinsicStore8  IntrinsicType = iota
+	IntrinsicLoad16  IntrinsicType = iota
+	IntrinsicStore16 IntrinsicType = iota
+	IntrinsicLoad32  IntrinsicType = iota
+	IntrinsicStore32 IntrinsicType = iota
+	IntrinsicLoad64  IntrinsicType = iota
+	IntrinsicStore64 IntrinsicType = iota
 
 	IntrinsicCount = iota
 )
@@ -170,8 +178,16 @@ var WordToIntrinsic = map[string]IntrinsicType{
 	"puts": IntrinsicPuts,
 	"putc": IntrinsicPutc,
 
-	"@8": IntrinsicLoad8,
-	"!8": IntrinsicStore8,
+	"???": IntrinsicDebug,
+
+	"@8":  IntrinsicLoad8,
+	"!8":  IntrinsicStore8,
+	"@16": IntrinsicLoad16,
+	"!16": IntrinsicStore16,
+	"@32": IntrinsicLoad32,
+	"!32": IntrinsicStore32,
+	"@64": IntrinsicLoad64,
+	"!64": IntrinsicStore64,
 }
 
 // assert(IntrinsicCount == 4, "Unhandled intrinsic in IntrinsicName")
@@ -209,8 +225,16 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicPuts: "puts",
 	IntrinsicPutc: "putc",
 
-	IntrinsicLoad8:  "@8",
-	IntrinsicStore8: "!8",
+	IntrinsicDebug: "???",
+
+	IntrinsicLoad8:   "@8",
+	IntrinsicStore8:  "!8",
+	IntrinsicLoad16:  "@16",
+	IntrinsicStore16: "!16",
+	IntrinsicLoad32:  "@32",
+	IntrinsicStore32: "!32",
+	IntrinsicLoad64:  "@64",
+	IntrinsicStore64: "!64",
 }
 
 type BoolType int
@@ -428,7 +452,7 @@ func (lx *Lexer) process_file(fn string) (tokens []Token) {
 				if name_tok.Typ != TokenWord {
 					CompilerFatal(&token.Loc, fmt.Sprintf("Expected alloc name to be a word, but got %s", name_tok.Text))
 				}
-				fmt.Printf("Alloc name: %s\n", name_tok.Text)
+				// fmt.Printf("Alloc name: %s\n", name_tok.Text)
 
 				size_tok, end := lx.next_token()
 				if end {
@@ -476,7 +500,6 @@ func (lx *Lexer) process_file(fn string) (tokens []Token) {
 		}
 
 	}
-	// tokens = lx.lex(lines)
 	return
 }
 
@@ -676,6 +699,27 @@ func (lx *Lexer) next_token() (token Token, end bool) {
 	}
 
 	end = true
+	return
+}
+
+func LoadFromMem(ptr int, size int) (value int) {
+	value = 0
+	n := 0
+	for n < size {
+		value = (value << 8) | int(Memory[ptr+n])
+		n++
+	}
+	return
+}
+
+func StoreToMem(ptr int, value int, size int) {
+	diff := size - 1
+	for diff >= 0 {
+		b := byte(value & 0xFF)
+		Memory[ptr+diff] = b
+		value >>= 8
+		diff--
+	}
 	return
 }
 
@@ -886,7 +930,7 @@ func interprete(ops []Op, debug bool) {
 				addr += op.Operand.(int)
 			}
 		case OpIntrinsic:
-			assert(IntrinsicCount == 29, "Unhandled intrinsic in interprete()")
+			assert(IntrinsicCount == 36, "Unhandled intrinsic in interprete()")
 			switch op.Operand {
 			case IntrinsicPlus:
 				b := stack.pop(&op.OpToken)
@@ -1010,19 +1054,56 @@ func interprete(ops []Op, debug bool) {
 				index := x.(int)
 				str := StringLiteralsBuffer[index]
 				fmt.Print(str)
+			case IntrinsicDebug:
+				fmt.Printf("\tMem: %v\tStack: %v\n", Memory[:MemPtr], stack.Data)
 			case IntrinsicLoad8:
 				x := stack.pop(&op.OpToken)
 				ptr := x.(int)
-				stack.push(int(Memory[ptr]))
+				val := LoadFromMem(ptr, 1)
+				stack.push(val)
 			case IntrinsicStore8:
 				ptr := stack.pop(&op.OpToken).(int)
-				x := byte(stack.pop(&op.OpToken).(int))
-				Memory[ptr] = x
+				x := stack.pop(&op.OpToken).(int)
+				StoreToMem(ptr, x, 1)
+			case IntrinsicLoad16:
+				x := stack.pop(&op.OpToken)
+				ptr := x.(int)
+				value := LoadFromMem(ptr, 2)
+				stack.push(value)
+			case IntrinsicStore16:
+				ptr := stack.pop(&op.OpToken).(int)
+				x := stack.pop(&op.OpToken).(int)
+				StoreToMem(ptr, x, 2)
+			case IntrinsicLoad32:
+				x := stack.pop(&op.OpToken)
+				ptr := x.(int)
+				value := LoadFromMem(ptr, 4)
+				stack.push(value)
+			case IntrinsicStore32:
+				ptr := stack.pop(&op.OpToken).(int)
+				x := stack.pop(&op.OpToken).(int)
+				StoreToMem(ptr, x, 4)
+			case IntrinsicLoad64:
+				x := stack.pop(&op.OpToken)
+				ptr := x.(int)
+				value := LoadFromMem(ptr, 8)
+				stack.push(value)
+			case IntrinsicStore64:
+				ptr := stack.pop(&op.OpToken).(int)
+				x := stack.pop(&op.OpToken).(int)
+				StoreToMem(ptr, x, 8)
 			default:
 				CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: %s", op.OpToken.Text))
 			}
 			addr++
 		}
+	}
+
+	if debug {
+		fmt.Println("---------------------------------")
+		fmt.Printf("Allocated: %d byte(s) total\n", MemPtr)
+		fmt.Printf("Memory: %v\n", Memory[:MemPtr])
+		fmt.Println("---------------------------------")
 	}
 }
 
