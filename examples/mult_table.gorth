@@ -1,0 +1,41 @@
+// Multiplication table
+
+const N 10 end
+const M 10 end
+
+const CHAR_WIDTH M 4 * 3 + end
+
+"   |" puts
+1 while dup M <= do
+  dup 10 < if ' ' putc end
+  dup 100 < if ' ' putc end
+  dup puti
+  ' ' putc
+  1 +
+end
+'\n' putc
+
+0 while dup CHAR_WIDTH < do
+  '-' putc
+  1 +
+end drop
+'\n' putc
+
+
+1 while dup N <= do
+  1 while dup M <= do
+    // i j
+    dup 1 = if over dup 10 < if ' ' putc end puti " |" puts end
+
+    over over *
+    dup 10 < if ' ' putc end
+    dup 100 < if ' ' putc end
+    puti
+    " " puts
+
+
+    1 +
+  end drop
+  '\n' putc
+  1 +
+end drop

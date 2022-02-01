@@ -1,0 +1,19 @@
+// The prime factors of 13195 are 5, 7, 13 and 29.
+//
+// What is the largest prime factor of the number 600851475143 ?
+
+1
+600851475143
+3 while over 1 > do
+  // d n/d
+  over over % 0 = if
+    over over / rot drop swap
+    rot over < if
+      swap over
+    end
+  else
+    2 +
+  end
+end
+
+puti '\n' putc

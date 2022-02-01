@@ -1,0 +1,67 @@
+// 2520 is the smallest number that can be divided by each of the numbers
+// from 1 to 10 without any remainder.
+//
+// What is the smallest positive number that is evenly divisible by all
+// of the numbers from 1 to 20?
+
+const N 20 end
+alloc mults N end
+
+2 while dup N <= do
+
+  0 over 2
+  while over 1 > do
+    over over %
+
+    0 =
+    if
+      rot 1 + rot rot
+      over over / rot drop swap
+    else
+      rot swap
+      dup 1 - mults + @8 rot
+
+      over over <
+      if
+        swap drop swap
+        dup 1 - mults + rot swap !8
+      else
+        drop drop
+      end
+
+      1 +
+      0 rot rot
+    end
+
+  end
+
+  swap drop dup 1 - mults + @8 rot
+
+  over over <
+  if
+    swap drop swap
+    dup 1 - mults + rot swap !8
+  else
+    drop drop
+  end drop
+
+  1 +
+end drop
+
+
+1 1 while dup N < do
+  dup 1 - mults + @8
+
+  dup 0 >
+  if
+    while dup 0 > do
+      rot rot swap over *
+      rot rot swap
+      1 -
+    end
+  end drop
+
+  1 +
+end drop
+
+puti '\n' putc

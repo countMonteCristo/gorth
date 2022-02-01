@@ -1,6 +1,6 @@
 const N 100 end
 
-alloc array 101 end
+alloc array N 1 + end
 1 array N 1 - + !8
 
 0 while dup N < do

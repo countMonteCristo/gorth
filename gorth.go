@@ -319,9 +319,16 @@ func (op *Op) str(addr int) (s string) {
 	return
 }
 
+func Exit(exitcode int) {
+	os.Exit(exitcode)
+}
+
 func CompilerFatal(loc *Location, msg string) {
 	fmt.Printf("%s:%d:%d: ERROR: %s\n", loc.Filepath, loc.Line+1, loc.Column+1, msg)
-	os.Exit(1)
+}
+
+func CompilerInfo(loc *Location, msg string) {
+	fmt.Printf("%s:%d:%d: INFO: %s\n", loc.Filepath, loc.Line+1, loc.Column+1, msg)
 }
 
 func RuntimeFatal(loc *Location, msg string) {
@@ -349,6 +356,7 @@ func (s *Stack) pop(token *Token) (x interface{}) {
 		s.Data = s.Data[:len(s.Data)-1]
 	} else {
 		CompilerFatal(&token.Loc, "Stack underflow")
+		Exit(1)
 	}
 	// fmt.Printf("INFO: stack after pop: %v\n", s.Data)
 	return
@@ -359,6 +367,7 @@ func (s *Stack) top(token *Token) (x interface{}) {
 		x = s.Data[len(s.Data)-1]
 	} else {
 		CompilerFatal(&token.Loc, "Stack underflow")
+		Exit(1)
 	}
 
 	return
@@ -400,11 +409,13 @@ func read_file(fn string) (lines []string) {
 const MemorySize = 640 * 1024
 
 var Memory [MemorySize]byte
-var MemPtr = 0
+var MemPtr = 1 // Make 0 an invalid pointer
 
 var Allocs = make(map[string]int)
 
 var Consts = make(map[string]int)
+
+var Names = make(map[string]Token)
 
 type Lexer struct {
 	Fn    string
@@ -412,6 +423,134 @@ type Lexer struct {
 	Lines []string
 	Row   int
 	Col   int
+}
+
+func const_eval(name_token *Token, tokens *[]Token) (value int) {
+	const_stack := &Stack{}
+	for _, token := range *tokens {
+		switch token.Typ {
+		case TokenInt:
+			const_stack.push(token.Value.(int))
+		case TokenWord:
+			intrinsic, exists := WordToIntrinsic[token.Text]
+			if exists {
+				switch intrinsic {
+				case IntrinsicPlus:
+					b := const_stack.pop(&token).(int)
+					a := const_stack.pop(&token).(int)
+					const_stack.push(a + b)
+				case IntrinsicMinus:
+					b := const_stack.pop(&token).(int)
+					a := const_stack.pop(&token).(int)
+					const_stack.push(a - b)
+				case IntrinsicMul:
+					b := const_stack.pop(&token).(int)
+					a := const_stack.pop(&token).(int)
+					const_stack.push(a * b)
+				case IntrinsicDiv:
+					b := const_stack.pop(&token).(int)
+					if b == 0 {
+						CompilerFatal(&token.Loc, "Division by zero")
+						Exit(1)
+					}
+					a := const_stack.pop(&token).(int)
+					const_stack.push(a / b)
+				case IntrinsicMod:
+					b := const_stack.pop(&token).(int)
+					if b == 0 {
+						CompilerFatal(&token.Loc, "Division by zero")
+						Exit(1)
+					}
+					a := const_stack.pop(&token).(int)
+					const_stack.push(a % b)
+				case IntrinsicShl:
+					b := const_stack.pop(&token).(int)
+					if b < 0 {
+						CompilerFatal(&token.Loc, fmt.Sprintf("Negative shift amount in `<<`: %d", b))
+						Exit(1)
+					}
+					a := const_stack.pop(&token).(int)
+					const_stack.push(a << b)
+				case IntrinsicShr:
+					b := const_stack.pop(&token).(int)
+					if b < 0 {
+						CompilerFatal(&token.Loc, fmt.Sprintf("Negative shift amount in `>>`: %d", b))
+						Exit(1)
+					}
+					a := const_stack.pop(&token).(int)
+					const_stack.push(a >> b)
+
+				default:
+					CompilerFatal(
+						&token.Loc,
+						fmt.Sprintf(
+							"Unexpected intrinsic in const-block compile-time "+
+								"evaluation: %s. Supported: [+, -, *, /, %, >>, <<]",
+							token.Text,
+						),
+					)
+					Exit(1)
+				}
+				continue
+			}
+
+			val, exists := Consts[token.Text]
+			if exists {
+				const_stack.push(val)
+				continue
+			}
+
+			CompilerFatal(&token.Loc, fmt.Sprintf("Unsupported word in compile-time const-block evaluation: %s", token.Text))
+			Exit(1)
+		default:
+			CompilerFatal(&token.Loc, fmt.Sprintf("Unsupported token in compile-time const-block evaluation: %s", token.Text))
+			Exit(1)
+		}
+	}
+
+	if const_stack.size() > 1 {
+		CompilerFatal(&name_token.Loc, fmt.Sprintf("Unhandled data in compile-time const-block evaluation stack"))
+		Exit(1)
+	}
+
+	value = const_stack.pop(name_token).(int)
+	return
+}
+
+func (lx *Lexer) parse_const_block(token *Token, typ string) (tok Token, const_value int) {
+	tok, end := lx.next_token()
+	if end {
+		CompilerFatal(&token.Loc, fmt.Sprintf("Expected `%s` name, but got nothing", typ))
+		Exit(1)
+	}
+	if tok.Typ != TokenWord {
+		CompilerFatal(&token.Loc, fmt.Sprintf("Expected `%s` name to be a word, but got %s", typ, tok.Text))
+		Exit(1)
+	}
+	defined_token, exists := Names[tok.Text]
+	if exists {
+		CompilerFatal(&tok.Loc, fmt.Sprintf("Redefinition of word <%s>", tok.Text))
+		CompilerInfo(&defined_token.Loc, "Previously defined here")
+		Exit(1)
+	}
+
+	const_block := make([]Token, 0)
+	for {
+		tok, end := lx.next_token()
+		if end {
+			CompilerFatal(&token.Loc, fmt.Sprintf("Unexpected end while processing `%s` block", typ))
+			Exit(1)
+		}
+
+		if tok.Typ == TokenKeyword && tok.Value.(KeywordType) == KeywordEnd {
+			break
+		}
+
+		const_block = append(const_block, tok)
+	}
+
+	const_value = const_eval(&tok, &const_block)
+	return
 }
 
 func (lx *Lexer) process_file(fn string) (tokens []Token) {
@@ -448,65 +587,20 @@ func (lx *Lexer) process_file(fn string) (tokens []Token) {
 			case KeywordWhile:
 				tokens = append(tokens, token)
 			case KeywordConst:
-				// CompilerFatal(&token.Loc, "Consts are not implemented yet")
-				name_tok, end := lx.next_token()
-				if end {
-					CompilerFatal(&token.Loc, "Expected const name, but got nothing")
-				}
-				if name_tok.Typ != TokenWord {
-					CompilerFatal(&token.Loc, fmt.Sprintf("Expected const name to be a word, but got %s", name_tok.Text))
-				}
+				tok, const_value := lx.parse_const_block(&token, token.Text)
 
-				value_tok, end := lx.next_token()
-				if end {
-					CompilerFatal(&token.Loc, "Expected const value, but got nothing")
-				}
-				if value_tok.Typ != TokenInt {
-					CompilerFatal(&token.Loc, fmt.Sprintf("Expected const size to be an int, but got %s", name_tok.Text))
-				}
-				const_value := value_tok.Value.(int)
-
-				end_tok, end := lx.next_token()
-				if end {
-					CompilerFatal(&token.Loc, "Expected const end, but got nothing")
-				}
-				if end_tok.Typ != TokenKeyword || end_tok.Value.(KeywordType) != KeywordEnd {
-					CompilerFatal(&token.Loc, fmt.Sprintf("Expected const to be closed by end, but got %s", end_tok.Text))
-				}
-
-				Consts[name_tok.Text] = const_value
-
+				Consts[tok.Text] = const_value
+				Names[tok.Text] = tok
 			case KeywordAlloc:
-				name_tok, end := lx.next_token()
-				if end {
-					CompilerFatal(&token.Loc, "Expected alloc name, but got nothing")
-				}
-				if name_tok.Typ != TokenWord {
-					CompilerFatal(&token.Loc, fmt.Sprintf("Expected alloc name to be a word, but got %s", name_tok.Text))
+				tok, alloc_size := lx.parse_const_block(&token, token.Text)
+				if alloc_size < 0 {
+					CompilerFatal(&tok.Loc, fmt.Sprintf("Negative size for `alloc` block: %d", alloc_size))
+					Exit(1)
 				}
 
-				size_tok, end := lx.next_token()
-				if end {
-					CompilerFatal(&token.Loc, "Expected alloc size, but got nothing")
-				}
-				if size_tok.Typ != TokenInt {
-					CompilerFatal(&token.Loc, fmt.Sprintf("Expected alloc size to be an int, but got %s", name_tok.Text))
-				}
-				alloc_size := size_tok.Value.(int)
-				if alloc_size <= 0 {
-					CompilerFatal(&token.Loc, fmt.Sprintf("Alloc size must be positive, but got %d", alloc_size))
-				}
-
-				end_tok, end := lx.next_token()
-				if end {
-					CompilerFatal(&token.Loc, "Expected alloc end, but got nothing")
-				}
-				if end_tok.Typ != TokenKeyword || end_tok.Value.(KeywordType) != KeywordEnd {
-					CompilerFatal(&token.Loc, fmt.Sprintf("Expected alloc to be closed by end, but got %s", end_tok.Text))
-				}
-
-				Allocs[name_tok.Text] = MemPtr
+				Allocs[tok.Text] = MemPtr
 				MemPtr += alloc_size
+				Names[tok.Text] = tok
 			}
 
 		case TokenWord:
@@ -534,8 +628,10 @@ func (lx *Lexer) process_file(fn string) (tokens []Token) {
 			}
 
 			CompilerFatal(&token.Loc, fmt.Sprintf("Unknown word: %s", token.Text))
+			Exit(1)
 		default:
 			CompilerFatal(&token.Loc, "Unhandled Token.Typ in Lexer.process_file")
+			Exit(1)
 		}
 
 	}
@@ -548,7 +644,7 @@ func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool) {
 		escaped = true
 		if pos+1 == len(data) {
 			CompilerFatal(&lx.Loc, "Unexpected end of escaped char literal")
-			return
+			Exit(1)
 		}
 		switch data[pos+1] {
 		case 'n':
@@ -561,6 +657,7 @@ func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool) {
 			b = '"'
 		default:
 			CompilerFatal(&lx.Loc, fmt.Sprintf("Unknown escape character: %s", data[pos:pos+2]))
+			Exit(1)
 		}
 	} else {
 		b = data[pos]
@@ -606,6 +703,7 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 		}
 		if !closed {
 			CompilerFatal(&lx.Loc, fmt.Sprintf("Expecting to find closing \" for string literal, but got <%s>", string(chars[len(chars)-1])))
+			Exit(1)
 		}
 		word = string(chars)
 	case '\'':
@@ -617,9 +715,11 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 		}
 		if pos == len(data) {
 			CompilerFatal(&lx.Loc, fmt.Sprintf("Unexpecting end of char literal"))
+			Exit(1)
 		}
 		if data[pos] != '\'' {
 			CompilerFatal(&lx.Loc, fmt.Sprintf("Expecting to find closing ' for char literal, but got <%s>", string(data[pos])))
+			Exit(1)
 		}
 		word = "'" + string(b) + "'"
 		pos++
@@ -639,10 +739,6 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 
 	return
 }
-
-// func (lx *Lexer) lex(lines []string) (tokens []Token) {
-
-// }
 
 func (lx *Lexer) next_token() (token Token, end bool) {
 	end = false
@@ -829,6 +925,7 @@ func compile(tokens []Token) (ops []Op) {
 			}
 
 			CompilerFatal(&token.Loc, fmt.Sprintf("Unknown word %s: probably bug in next_token", token.Text))
+			Exit(1)
 
 		case TokenKeyword:
 			kw_type := token.Value.(KeywordType)
@@ -841,10 +938,12 @@ func compile(tokens []Token) (ops []Op) {
 			case KeywordElse:
 				if blocks.size() == 0 {
 					CompilerFatal(&token.Loc, "Unexpected `end` found")
+					Exit(1)
 				}
 				block := blocks.pop(&token).(Block)
 				if block.Tok.Typ != TokenKeyword {
 					CompilerFatal(&token.Loc, fmt.Sprintf("Only keywords may form blocks, but not `%s`. Probably bug in lex()", block.Tok.Text))
+					Exit(1)
 				}
 				block_start_kw := block.Tok.Value.(KeywordType)
 				switch block_start_kw {
@@ -852,12 +951,16 @@ func compile(tokens []Token) (ops []Op) {
 					ops[block.Addr].Operand = len(ops) - block.Addr + 1
 				case KeywordElse:
 					CompilerFatal(&token.Loc, fmt.Sprintf("`else` may only come after `if` block, but got `%s`. Probably bug in lex()", block.Tok.Text))
+					Exit(1)
 				case KeywordEnd:
 					CompilerFatal(&token.Loc, fmt.Sprintf("`else` may only come after `if` block, but got `%s`. Probably bug in lex()", block.Tok.Text))
+					Exit(1)
 				case KeywordWhile:
 					CompilerFatal(&token.Loc, fmt.Sprintf("`else` may only come after `if` block, but got `%s`. Probably bug in lex()", block.Tok.Text))
+					Exit(1)
 				default:
 					CompilerFatal(&token.Loc, "Unhandled block start processing in compile() at KeywordElse")
+					Exit(1)
 				}
 
 				op.Typ = OpElse
@@ -866,10 +969,12 @@ func compile(tokens []Token) (ops []Op) {
 			case KeywordEnd:
 				if blocks.size() == 0 {
 					CompilerFatal(&token.Loc, "Unexpected `end` found")
+					Exit(1)
 				}
 				block := blocks.pop(&token).(Block)
 				if block.Tok.Typ != TokenKeyword {
 					CompilerFatal(&token.Loc, fmt.Sprintf("Only keywords may form blocks, but not `%s`. Probably bug in lex()", block.Tok.Text))
+					Exit(1)
 				}
 				block_start_kw := block.Tok.Value.(KeywordType)
 				op.Operand = 1
@@ -880,13 +985,16 @@ func compile(tokens []Token) (ops []Op) {
 					ops[block.Addr].Operand = len(ops) - block.Addr + 1
 				case KeywordWhile:
 					CompilerFatal(&block.Tok.Loc, "`while` block must contain `do` before `end`")
+					Exit(1)
 				case KeywordDo:
 					op.Operand = ops[block.Addr].Operand.(int) + (block.Addr - len(ops))
 					ops[block.Addr].Operand = len(ops) - block.Addr + 1
 				case KeywordEnd:
 					CompilerFatal(&token.Loc, fmt.Sprintf("`end` may only close `if-else` or `while-do` blocks, but got `%s`. Probably bug in lex()", block.Tok.Text))
+					Exit(1)
 				default:
 					CompilerFatal(&token.Loc, "Unhandled block start processing in compile()")
+					Exit(1)
 				}
 				op.Typ = OpEnd
 				ops = append(ops, op)
@@ -897,13 +1005,16 @@ func compile(tokens []Token) (ops []Op) {
 			case KeywordDo:
 				if blocks.size() == 0 {
 					CompilerFatal(&token.Loc, "Unexpected `do` found")
+					Exit(1)
 				}
 				block := blocks.pop(&token).(Block)
 				if block.Tok.Typ != TokenKeyword {
 					CompilerFatal(&token.Loc, fmt.Sprintf("Only keywords may form blocks, but not `%s`. Probably bug in lex()", block.Tok.Text))
+					Exit(1)
 				}
 				if block.Tok.Value.(KeywordType) != KeywordWhile {
 					CompilerFatal(&token.Loc, fmt.Sprintf("`do` may come only inside `while` block, but not `%s`. Probably bug in lex()", block.Tok.Text))
+					Exit(1)
 				}
 				op.Typ = OpDo
 				op.Operand = block.Addr - len(ops) // save relative address of `while`
@@ -911,15 +1022,18 @@ func compile(tokens []Token) (ops []Op) {
 				ops = append(ops, op)
 			default:
 				CompilerFatal(&token.Loc, fmt.Sprintf("Unhandled KewordType handling in compile(): %s", token.Text))
+				Exit(1)
 			}
 		default:
 			CompilerFatal(&token.Loc, fmt.Sprintf("ERROR: Unhandled token: %s\n", token.Text))
+			Exit(1)
 		}
 	}
 
 	if len(blocks.Data) > 0 {
 		top := blocks.Data[len(blocks.Data)-1].(Block)
 		CompilerFatal(&top.Tok.Loc, fmt.Sprintf("Unclosed %s-block", top.Tok.Text))
+		Exit(1)
 	}
 	return
 }
