@@ -1,0 +1,42 @@
+[] Change if-block semantic:
+  [] now: <{case} if {...} else {...} end>; what i want it to be: <if {case1} do {...} elif {case2} do {..} else {...} end>
+
+[] Change Strings:
+  [] now string is a pointer to a go-string in string literals array
+  [] want a string to be a (`size`, `data`) pair
+  [] store `data` in byte array
+
+[] Functions:
+  [] local allocs
+  [] local consts
+  [] return stack
+  [] inlines
+  [] no function definitions inside function allowed
+  [] recursion limit?
+  [] entry point for executable Gorth script (`main` function)
+
+[] Includes
+  [] packages?
+
+[] Compile-time type checking
+  [] using stack for types
+  [] use function signatures
+  [] generic functions
+
+[] Low-level interaction with OS
+  [] syscalls
+
+[] Collect stdlib for Gorth
+
+[] Testing
+  [] more tests
+  [] implement testing tool:
+    [] test single file, test all files in directory, test all dirs
+    [] support for providing input args and stdin for testcases
+    [] check both return code and stdout/stderr output for testcases
+    [] update testcase expecting output file
+
+[] Split Gorth project into modules
+  [] show compilation statuses and timing
+
+[] Add `break` and `continue` to while loops

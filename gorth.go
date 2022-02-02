@@ -485,7 +485,7 @@ func const_eval(name_token *Token, tokens *[]Token) (value int) {
 						&token.Loc,
 						fmt.Sprintf(
 							"Unexpected intrinsic in const-block compile-time "+
-								"evaluation: %s. Supported: [+, -, *, /, %, >>, <<]",
+								"evaluation: %s. Supported: [+, -, *, /, %%, >>, <<]",
 							token.Text,
 						),
 					)
