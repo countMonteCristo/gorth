@@ -40,7 +40,7 @@
   [] show compilation statuses and timing
 
 [] Add `break` and `continue` to while loops
-  [] break
-  [] continue
+  [*] break
+  [*] continue
   [] Replace some ops (break, continue, else, end) with unconditional jump operation
   [] Replace some other ops (if, do) with conditional jump operation
