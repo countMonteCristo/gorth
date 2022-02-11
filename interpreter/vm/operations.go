@@ -3,6 +3,7 @@ package vm
 import (
 	"GoStudy/Gorth/interpreter/lexer"
 	"GoStudy/Gorth/interpreter/types"
+	"GoStudy/Gorth/interpreter/utils"
 	"fmt"
 	"strconv"
 )
@@ -20,6 +21,7 @@ const (
 	OpWhile     OpType = iota
 	OpDo        OpType = iota
 	OpBreak     OpType = iota
+	OpContinue  OpType = iota
 
 	OpCount = iota
 )
@@ -36,6 +38,7 @@ var OpName = map[OpType]string{
 	OpWhile:     "WHILE",
 	OpDo:        "DO",
 	OpBreak:     "BREAK",
+	OpContinue:  "CONTINUE",
 }
 
 type Op struct {
@@ -71,6 +74,11 @@ func (op *Op) Str(addr int) (s string) {
 		operand = strconv.Itoa(op.Operand.(int))
 	case OpBreak:
 		operand = strconv.Itoa(op.Operand.(int))
+	case OpContinue:
+		operand = strconv.Itoa(op.Operand.(int))
+	default:
+		lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation in op.Str: %s", OpName[op.Typ]))
+		utils.Exit(1)
 	}
 
 	s = fmt.Sprintf("%4d: %s %v", addr, OpName[op.Typ], operand)

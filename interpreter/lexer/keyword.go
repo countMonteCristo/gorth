@@ -9,9 +9,10 @@ const (
 	KeywordElse KeywordType = iota
 	KeywordEnd  KeywordType = iota
 
-	KeywordWhile KeywordType = iota
-	KeywordDo    KeywordType = iota
-	KeywordBreak KeywordType = iota
+	KeywordWhile    KeywordType = iota
+	KeywordDo       KeywordType = iota
+	KeywordBreak    KeywordType = iota
+	KeywordContinue KeywordType = iota
 
 	KeywordConst KeywordType = iota
 	KeywordAlloc KeywordType = iota
@@ -24,9 +25,10 @@ var KeywordName = map[KeywordType]string{
 	KeywordElse: "else",
 	KeywordEnd:  "end",
 
-	KeywordWhile: "while",
-	KeywordDo:    "do",
-	KeywordBreak: "break",
+	KeywordWhile:    "while",
+	KeywordDo:       "do",
+	KeywordBreak:    "break",
+	KeywordContinue: "continue",
 
 	KeywordConst: "const",
 	KeywordAlloc: "alloc",

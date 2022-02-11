@@ -120,7 +120,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 					lexer.CompilerFatal(&token.Loc, fmt.Sprintf("`else` may only come after `if` block, but got `%s`. Probably bug in lex()", block.Tok.Text))
 					utils.Exit(1)
 				default:
-					lexer.CompilerFatal(&token.Loc, "Unhandled block start processing in compile() at KeywordElse")
+					lexer.CompilerFatal(&token.Loc, "Unhandled block start processing in vm.Compile() at KeywordElse")
 					utils.Exit(1)
 				}
 
@@ -149,9 +149,14 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 					utils.Exit(1)
 				case lexer.KeywordDo:
 					for _, jump := range block.Jumps {
-
-						if jump.Text == "break" {
+						switch jump.Keyword {
+						case lexer.KeywordBreak:
 							ops[jump.Addr].Operand = len(ops) - jump.Addr + 1
+						case lexer.KeywordContinue:
+							ops[jump.Addr].Operand = ops[block.Addr].Operand.(int) + (block.Addr - jump.Addr)
+						default:
+							lexer.CompilerFatal(&block.Tok.Loc, fmt.Sprintf("Unhandled jump-keyword in vm.Compile: %s", lexer.KeywordName[jump.Keyword]))
+							utils.Exit(1)
 						}
 					}
 					op.Operand = ops[block.Addr].Operand.(int) + (block.Addr - len(ops))
@@ -163,7 +168,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 					lexer.CompilerFatal(&block.Tok.Loc, "`break` keyword shouldn't be in blocks stack")
 					utils.Exit(1)
 				default:
-					lexer.CompilerFatal(&token.Loc, "Unhandled block start processing in compile()")
+					lexer.CompilerFatal(&token.Loc, "Unhandled block start processing in vm.Compile()")
 					utils.Exit(1)
 				}
 				op.Typ = OpEnd
@@ -201,21 +206,43 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 					cur_block := blocks.Data[i].(lexer.Block)
 
 					if cur_block.Tok.Typ == lexer.TokenKeyword && cur_block.Tok.Value.(lexer.KeywordType) == lexer.KeywordDo {
-						cur_block.Jumps = append(cur_block.Jumps, lexer.Jump{Text: token.Text, Addr: len(ops)})
+						cur_block.Jumps = append(cur_block.Jumps, lexer.Jump{Keyword: lexer.KeywordBreak, Addr: len(ops)})
 						blocks.Data[i] = cur_block
 						break
 					}
 				}
 				if i < 0 {
-					lexer.CompilerFatal(&token.Loc, "Break should close while-loop, but it doesn't")
+					lexer.CompilerFatal(&token.Loc, "Break should be inside while-loop, but it doesn't")
 					utils.Exit(1)
 				}
 
 				op.Typ = OpBreak
-				// blocks.Push(lexer.Block{Addr: len(ops), Tok: token})
+				ops = append(ops, op)
+			case lexer.KeywordContinue:
+				if blocks.Size() == 0 {
+					lexer.CompilerFatal(&token.Loc, "Unexpected `break` found")
+					utils.Exit(1)
+				}
+				var i int
+
+				for i = len(blocks.Data) - 1; i >= 0; i-- {
+					cur_block := blocks.Data[i].(lexer.Block)
+
+					if cur_block.Tok.Typ == lexer.TokenKeyword && cur_block.Tok.Value.(lexer.KeywordType) == lexer.KeywordDo {
+						cur_block.Jumps = append(cur_block.Jumps, lexer.Jump{Keyword: lexer.KeywordContinue, Addr: len(ops)})
+						blocks.Data[i] = cur_block
+						break
+					}
+				}
+				if i < 0 {
+					lexer.CompilerFatal(&token.Loc, "Break should be inside while-loop, but it doesn't")
+					utils.Exit(1)
+				}
+
+				op.Typ = OpContinue
 				ops = append(ops, op)
 			default:
-				lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unhandled KewordType handling in compile(): %s", token.Text))
+				lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unhandled KewordType handling in vm.Compile(): %s", token.Text))
 				utils.Exit(1)
 			}
 		default:
@@ -454,6 +481,8 @@ func (vm *VM) Interprete(ops []Op, debug bool) {
 			}
 			addr++
 		case OpBreak:
+			addr += op.Operand.(int)
+		case OpContinue:
 			addr += op.Operand.(int)
 		default:
 			lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation in vm.Interprete: %s", OpName[op.Typ]))

@@ -368,6 +368,8 @@ func (lx *Lexer) ProcessFile(fn string, ctx *Context) (tokens []Token) {
 				tokens = append(tokens, token)
 			case KeywordBreak:
 				tokens = append(tokens, token)
+			case KeywordContinue:
+				tokens = append(tokens, token)
 			case KeywordConst:
 				tok, const_value := lx.parse_const_block(&token, token.Text, &ctx.Names, &ctx.Consts)
 
