@@ -366,6 +366,8 @@ func (lx *Lexer) ProcessFile(fn string, ctx *Context) (tokens []Token) {
 				tokens = append(tokens, token)
 			case KeywordWhile:
 				tokens = append(tokens, token)
+			case KeywordBreak:
+				tokens = append(tokens, token)
 			case KeywordConst:
 				tok, const_value := lx.parse_const_block(&token, token.Text, &ctx.Names, &ctx.Consts)
 
@@ -381,6 +383,9 @@ func (lx *Lexer) ProcessFile(fn string, ctx *Context) (tokens []Token) {
 				(*ctx).Allocs[tok.Text] = (*ctx).Memory.MemPtr
 				(*ctx).Memory.MemPtr += alloc_size
 				(*ctx).Names[tok.Text] = tok
+			default:
+				CompilerFatal(&token.Loc, fmt.Sprintf("Unhandled keyword `%s` in lexer.ProcessFile", token.Text))
+				utils.Exit(1)
 			}
 
 		case TokenWord:

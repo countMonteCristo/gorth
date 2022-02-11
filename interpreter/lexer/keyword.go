@@ -11,6 +11,7 @@ const (
 
 	KeywordWhile KeywordType = iota
 	KeywordDo    KeywordType = iota
+	KeywordBreak KeywordType = iota
 
 	KeywordConst KeywordType = iota
 	KeywordAlloc KeywordType = iota
@@ -25,10 +26,10 @@ var KeywordName = map[KeywordType]string{
 
 	KeywordWhile: "while",
 	KeywordDo:    "do",
+	KeywordBreak: "break",
 
 	KeywordConst: "const",
 	KeywordAlloc: "alloc",
 }
 
 var WordToKeyword = utils.RevMap(KeywordName).(map[string]KeywordType)
-

@@ -40,3 +40,6 @@
   [] show compilation statuses and timing
 
 [] Add `break` and `continue` to while loops
+  [] break
+  [] continue
+  [] Replace some ops with JUMP operation

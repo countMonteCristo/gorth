@@ -19,11 +19,12 @@ const (
 	OpEnd       OpType = iota
 	OpWhile     OpType = iota
 	OpDo        OpType = iota
+	OpBreak     OpType = iota
 
 	OpCount = iota
 )
 
-var _ uint = OpCount - 9		// compile-time check
+var _ uint = OpCount - 9 // compile-time check
 var OpName = map[OpType]string{
 	OpPushInt:   "PUSH_INT",
 	OpPushBool:  "PUSH_BOOL",
@@ -34,6 +35,7 @@ var OpName = map[OpType]string{
 	OpEnd:       "END",
 	OpWhile:     "WHILE",
 	OpDo:        "DO",
+	OpBreak:     "BREAK",
 }
 
 type Op struct {
@@ -46,7 +48,7 @@ func (op *Op) Str(addr int) (s string) {
 	var operand string
 
 	// assert(OpCount == 9, "Unhandled Op in Op.str()")
-	var _ uint = OpCount - 9	// compile-time check
+	var _ uint = OpCount - 9 // compile-time check
 
 	switch op.Typ {
 	case OpPushInt:
@@ -66,6 +68,8 @@ func (op *Op) Str(addr int) (s string) {
 	case OpDo:
 		operand = strconv.Itoa(op.Operand.(int))
 	case OpEnd:
+		operand = strconv.Itoa(op.Operand.(int))
+	case OpBreak:
 		operand = strconv.Itoa(op.Operand.(int))
 	}
 

@@ -148,10 +148,19 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 					lexer.CompilerFatal(&block.Tok.Loc, "`while` block must contain `do` before `end`")
 					utils.Exit(1)
 				case lexer.KeywordDo:
+					for _, jump := range block.Jumps {
+
+						if jump.Text == "break" {
+							ops[jump.Addr].Operand = len(ops) - jump.Addr + 1
+						}
+					}
 					op.Operand = ops[block.Addr].Operand.(int) + (block.Addr - len(ops))
 					ops[block.Addr].Operand = len(ops) - block.Addr + 1
 				case lexer.KeywordEnd:
 					lexer.CompilerFatal(&token.Loc, fmt.Sprintf("`end` may only close `if-else` or `while-do` blocks, but got `%s`. Probably bug in lex()", block.Tok.Text))
+					utils.Exit(1)
+				case lexer.KeywordBreak:
+					lexer.CompilerFatal(&block.Tok.Loc, "`break` keyword shouldn't be in blocks stack")
 					utils.Exit(1)
 				default:
 					lexer.CompilerFatal(&token.Loc, "Unhandled block start processing in compile()")
@@ -180,6 +189,30 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 				op.Typ = OpDo
 				op.Operand = block.Addr - len(ops) // save relative address of `while`
 				blocks.Push(lexer.Block{Addr: len(ops), Tok: token})
+				ops = append(ops, op)
+			case lexer.KeywordBreak:
+				if blocks.Size() == 0 {
+					lexer.CompilerFatal(&token.Loc, "Unexpected `break` found")
+					utils.Exit(1)
+				}
+				var i int
+
+				for i = len(blocks.Data) - 1; i >= 0; i-- {
+					cur_block := blocks.Data[i].(lexer.Block)
+
+					if cur_block.Tok.Typ == lexer.TokenKeyword && cur_block.Tok.Value.(lexer.KeywordType) == lexer.KeywordDo {
+						cur_block.Jumps = append(cur_block.Jumps, lexer.Jump{Text: token.Text, Addr: len(ops)})
+						blocks.Data[i] = cur_block
+						break
+					}
+				}
+				if i < 0 {
+					lexer.CompilerFatal(&token.Loc, "Break should close while-loop, but it doesn't")
+					utils.Exit(1)
+				}
+
+				op.Typ = OpBreak
+				// blocks.Push(lexer.Block{Addr: len(ops), Tok: token})
 				ops = append(ops, op)
 			default:
 				lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unhandled KewordType handling in compile(): %s", token.Text))
@@ -420,6 +453,11 @@ func (vm *VM) Interprete(ops []Op, debug bool) {
 				lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: %s", op.OpToken.Text))
 			}
 			addr++
+		case OpBreak:
+			addr += op.Operand.(int)
+		default:
+			lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation in vm.Interprete: %s", OpName[op.Typ]))
+			utils.Exit(1)
 		}
 	}
 
