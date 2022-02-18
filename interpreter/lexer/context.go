@@ -41,6 +41,7 @@ type Context struct {
 	Allocs         map[string]int
 	Consts         map[string]int
 	Names          map[string]Token
+	Funcs          map[string]int		// name to absolute intruction address
 	StringLiterals []string
 }
 
@@ -51,6 +52,7 @@ func InitContext(mem_size int, strlit_cap int) *Context {
 		Allocs:         make(map[string]int),
 		Consts:         make(map[string]int),
 		Names:          make(map[string]Token),
+		Funcs:          make(map[string]int),
 		StringLiterals: make([]string, strlit_cap),
 	}
 

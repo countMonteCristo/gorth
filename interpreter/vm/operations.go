@@ -23,6 +23,10 @@ const (
 	OpBreak     OpType = iota
 	OpContinue  OpType = iota
 
+	OpCall      OpType = iota
+	OpFuncBegin OpType = iota
+	OpFuncEnd   OpType = iota
+
 	OpCount = iota
 )
 
@@ -39,6 +43,10 @@ var OpName = map[OpType]string{
 	OpDo:        "DO",
 	OpBreak:     "BREAK",
 	OpContinue:  "CONTINUE",
+
+	OpCall:      "CALL",
+	OpFuncBegin: "FUNC_BEGIN",
+	OpFuncEnd:   "FUNC_END",
 }
 
 type Op struct {
@@ -75,6 +83,12 @@ func (op *Op) Str(addr int) (s string) {
 	case OpBreak:
 		operand = strconv.Itoa(op.Operand.(int))
 	case OpContinue:
+		operand = strconv.Itoa(op.Operand.(int))
+	case OpFuncBegin:
+		operand = op.Operand.(string)
+	case OpFuncEnd:
+		operand = op.Operand.(string)
+	case OpCall:
 		operand = strconv.Itoa(op.Operand.(int))
 	default:
 		lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation in op.Str: %s", OpName[op.Typ]))
