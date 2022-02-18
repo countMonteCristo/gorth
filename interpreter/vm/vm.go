@@ -8,13 +8,13 @@ import (
 )
 
 type VM struct {
-	Ctx Context
+	Ctx            Context
 	RecursionLimit int
 }
 
 func InitVM() *VM {
 	vm := VM{
-		Ctx: *InitContext(640*1024, 2*1024),
+		Ctx:            *InitContext(640*1024, 2*1024),
 		RecursionLimit: 1000,
 	}
 
@@ -361,7 +361,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 					utils.Exit(1)
 				case lexer.KeywordFunc:
 					func_end_op := Op{
-						OpToken: token, Typ: OpFuncEnd,
+						OpToken: token, Typ: OpFuncEnd, Operand: current_function,
 					}
 					current_function = ""
 					ops = append(ops, func_end_op)

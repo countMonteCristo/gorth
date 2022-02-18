@@ -54,7 +54,7 @@ func InitContext(mem_size int, strlit_cap int) *Context {
 		Consts:         make(map[string]int),
 		Names:          make(map[string]lexer.Token),
 		Funcs:          make(map[string]int),
-		StringLiterals: make([]string, strlit_cap),
+		StringLiterals: make([]string, 0, strlit_cap),
 	}
 
 	return ctx
