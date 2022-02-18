@@ -9,11 +9,11 @@
 [] Functions:
   [] local allocs
   [] local consts
-  [] return stack
+  [*] return stack
   [] inlines
-  [] no function definitions inside function allowed
+  [*] no function definitions inside function allowed
   [] recursion limit?
-  [] entry point for executable Gorth script (`main` function)
+  [*] entry point for executable Gorth script (`main` function)
 
 [] Includes
   [] packages?

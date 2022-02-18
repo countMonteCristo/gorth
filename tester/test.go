@@ -37,13 +37,21 @@ func (t *TestCase) run() (status int) {
 
 	cmd := exec.Command(t.Cmd[0], t.Cmd[1:]...)
 
-	stdout, err := cmd.CombinedOutput()
+	var outbuf strings.Builder
+	// var errbuf strings.Builder
+	cmd.Stdout = &outbuf
+	// cmd.Stderr = &errbuf
+
+	err := cmd.Run()
+	stdout := outbuf.String()
+	// stderr := errbuf.String()
+
 	if err != nil {
-		fmt.Println(string(stdout))
+		fmt.Println(stdout)
 		return
 	}
 
-	actual_output := strings.Split(strings.Trim(string(stdout), "\n"), "\n")
+	actual_output := strings.Split(strings.Trim(stdout, "\n"), "\n")
 
 	ok := ChekOutput(actual_output, t.ExpectedOutput)
 	if ok {
