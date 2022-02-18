@@ -89,7 +89,7 @@ func LoadExpected(fn string) (lines []string) {
 		}
 		line = strings.TrimRight(line, "\n")
 		lines = append(lines, line)
-		// fmt.Printf("Append line <%s>\n", line)
+		// fmt.Printf("Append line `%s`\n", line)
 	}
 
 	return

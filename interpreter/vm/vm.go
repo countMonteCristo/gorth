@@ -32,12 +32,12 @@ func (vm *VM) parse_named_block(token *lexer.Token, tokens *[]lexer.Token, typ s
 	tok, *tokens = (*tokens)[0], (*tokens)[1:]
 
 	if tok.Typ != lexer.TokenWord {
-		lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Expected `%s` name to be a word, but got %s", typ, tok.Text))
+		lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Expected `%s` name to be a word, but got `%s`", typ, tok.Text))
 		utils.Exit(1)
 	}
 	defined_token, exists := vm.Ctx.Names[tok.Text]
 	if exists {
-		lexer.CompilerFatal(&tok.Loc, fmt.Sprintf("Redefinition of word <%s>", tok.Text))
+		lexer.CompilerFatal(&tok.Loc, fmt.Sprintf("Redefinition of word `s`", tok.Text))
 		lexer.CompilerInfo(&defined_token.Loc, "Previously defined here")
 		utils.Exit(1)
 	}
@@ -123,7 +123,7 @@ func (vm *VM) const_eval(name_token *lexer.Token, tokens *[]lexer.Token) (value 
 						&token.Loc,
 						fmt.Sprintf(
 							"Unexpected intrinsic in const-block compile-time "+
-								"evaluation: %s. Supported: [+, -, *, /, %%, >>, <<]",
+								"evaluation: `%s`. Supported: [+, -, *, /, %%, >>, <<]",
 							token.Text,
 						),
 					)
@@ -138,10 +138,10 @@ func (vm *VM) const_eval(name_token *lexer.Token, tokens *[]lexer.Token) (value 
 				continue
 			}
 
-			lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unsupported word in compile-time const-block evaluation: %s", token.Text))
+			lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unsupported word in compile-time const-block evaluation: `%s`", token.Text))
 			utils.Exit(1)
 		default:
-			lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unsupported token in compile-time const-block evaluation: %s", token.Text))
+			lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unsupported token in compile-time const-block evaluation: `%s`", token.Text))
 			utils.Exit(1)
 		}
 	}
@@ -164,10 +164,15 @@ func (vm *VM) parse_func_def(token *lexer.Token, tokens *[]lexer.Token) (func_na
 	var name_token lexer.Token
 	name_token, *tokens = (*tokens)[0], (*tokens)[1:]
 
+	if name_token.Typ != lexer.TokenWord {
+		lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Expected `%s` name to be a word, but got `%s`", token.Text, name_token.Text))
+		utils.Exit(1)
+	}
+
 	defined_token, exists := vm.Ctx.Names[name_token.Text]
 	if exists {
 		lexer.CompilerFatal(&name_token.Loc, fmt.Sprintf("Redefinition of word `%s` in function definition", name_token.Text))
-		lexer.CompilerFatal(&defined_token.Loc, "Previously defined here")
+		lexer.CompilerInfo(&defined_token.Loc, "Previously defined here")
 		utils.Exit(1)
 	}
 	func_name = name_token.Text
@@ -345,7 +350,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 						case lexer.KeywordContinue:
 							ops[jump.Addr].Operand = ops[block.Addr].Operand.(int) + (block.Addr - jump.Addr)
 						default:
-							lexer.CompilerFatal(&block.Tok.Loc, fmt.Sprintf("Unhandled jump-keyword in vm.Compile: %s", lexer.KeywordName[jump.Keyword]))
+							lexer.CompilerFatal(&block.Tok.Loc, fmt.Sprintf("Unhandled jump-keyword in vm.Compile: `%s`", lexer.KeywordName[jump.Keyword]))
 							utils.Exit(1)
 						}
 					}
@@ -477,7 +482,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 				ops = append(ops, op)
 
 			default:
-				lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unhandled KewordType handling in vm.Compile(): %s", token.Text))
+				lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unhandled KewordType handling in vm.Compile(): `%s`", token.Text))
 				utils.Exit(1)
 			}
 		default:
@@ -488,7 +493,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 
 	if len(blocks.Data) > 0 {
 		top := blocks.Data[len(blocks.Data)-1].(Block)
-		lexer.CompilerFatal(&top.Tok.Loc, fmt.Sprintf("Unclosed %s-block", top.Tok.Text))
+		lexer.CompilerFatal(&top.Tok.Loc, fmt.Sprintf("Unclosed `%s`-block", top.Tok.Text))
 		utils.Exit(1)
 	}
 
@@ -723,7 +728,7 @@ func (vm *VM) Interprete(ops []Op, debug bool) {
 				x := stack.Pop().(int)
 				vm.Ctx.Memory.StoreToMem(ptr, x, 8)
 			default:
-				lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: %s", op.OpToken.Text))
+				lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: `%s`", op.OpToken.Text))
 			}
 			addr++
 		case OpBreak:
@@ -745,7 +750,7 @@ func (vm *VM) Interprete(ops []Op, debug bool) {
 			}
 			addr = return_stack.Pop().(int) + 1
 		default:
-			lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation in vm.Interprete: %s", OpName[op.Typ]))
+			lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation in vm.Interprete: `%s`", OpName[op.Typ]))
 			utils.Exit(1)
 		}
 	}

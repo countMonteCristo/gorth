@@ -91,7 +91,7 @@ func (op *Op) Str(addr int) (s string) {
 	case OpCall:
 		operand = strconv.Itoa(op.Operand.(int))
 	default:
-		lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation in op.Str: %s", OpName[op.Typ]))
+		lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation in op.Str: `%s`", OpName[op.Typ]))
 		utils.Exit(1)
 	}
 
