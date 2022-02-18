@@ -1,10 +1,9 @@
 package main
 
 import (
-	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -26,12 +25,25 @@ const (
 	StatusSkip    = iota
 )
 
-type TestCase struct {
-	File           string
-	Cmd            []string
-	ExpectedOutput []string
+type TestConfig struct {
+	Argv     []string
+	Stdin    string
+	Stdout   string
+	Stderr   string
+	ExitCode int
 }
 
+func (tc *TestConfig) Argc() int {
+	return len(tc.Argv)
+}
+
+type TestCase struct {
+	File   string
+	Cmd    []string
+	Config TestConfig
+}
+
+// TODO: provide stdin for tested script
 func (t *TestCase) run() (status int) {
 	fmt.Printf("Running testcase %s...\n", t.File)
 	status = StatusFail
@@ -39,34 +51,37 @@ func (t *TestCase) run() (status int) {
 	cmd := exec.Command(t.Cmd[0], t.Cmd[1:]...)
 
 	var outbuf strings.Builder
-	// var errbuf strings.Builder
+	var errbuf strings.Builder
 	cmd.Stdout = &outbuf
-	// cmd.Stderr = &errbuf
+	cmd.Stderr = &errbuf
 
-	err := cmd.Run()
+	cmd.Run()
 	stdout := outbuf.String()
-	// stderr := errbuf.String()
+	stderr := errbuf.String()
+	exit_code := cmd.ProcessState.ExitCode()
 
-	if err != nil {
-		fmt.Println(stdout)
-		return
+	stdout_ok := CheckOutput(stdout, t.Config.Stdout, "STDOUT")
+	stderr_ok := CheckOutput(stderr, t.Config.Stderr, "STDERR")
+	exit_code_ok := (exit_code == t.Config.ExitCode)
+
+	if !exit_code_ok {
+		fmt.Fprintln(os.Stderr, "  EXITCODE differs:")
+		fmt.Fprintf(os.Stderr, "\tActual:   %d\n", exit_code)
+		fmt.Fprintf(os.Stderr, "\tExpected: %d\n", t.Config.ExitCode)
 	}
 
-	actual_output := strings.Split(strings.Trim(stdout, "\n"), "\n")
-
-	ok := ChekOutput(actual_output, t.ExpectedOutput)
-	if ok {
-		fmt.Printf("SUCCESS\n")
+	if stdout_ok && stderr_ok && exit_code_ok {
+		fmt.Fprintln(os.Stderr, "SUCCESS")
 		status = StatusSuccess
 	} else {
-		fmt.Printf("FAILED\n")
+		fmt.Fprintln(os.Stderr, "FAILED")
 		status = StatusFail
 	}
 
 	return
 }
 
-func LoadExpected(fn string) (lines []string) {
+func (t *TestCase) LoadExpected(fn string) {
 	file, err := os.Open(fn)
 	if err != nil {
 		log.Fatal(err)
@@ -77,44 +92,22 @@ func LoadExpected(fn string) (lines []string) {
 		}
 	}()
 
-	reader := bufio.NewReader(file)
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-
-			log.Fatalf("read file line error: %v", err)
-			return
-		}
-		line = strings.TrimRight(line, "\n")
-		lines = append(lines, line)
-		// fmt.Printf("Append line `%s`\n", line)
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&t.Config)
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	return
 }
 
-func ChekOutput(actual, expected []string) (result bool) {
-	result = false
-	if len(actual) != len(expected) {
-		fmt.Printf("INFO: Test failed!\n")
-		fmt.Printf("\tActual:   %v\n", actual)
-		fmt.Printf("\tExpected: %v\n", expected)
-		return
+func CheckOutput(actual, expected, out_desc string) bool {
+	if actual != expected {
+		fmt.Fprintf(os.Stderr, "  %s differs:\n", out_desc)
+		fmt.Fprintf(os.Stderr, "\tActual:   `%v`\n", actual)
+		fmt.Fprintf(os.Stderr, "\tExpected: `%v`\n", expected)
+		return false
 	}
 
-	for idx, line := range actual {
-		if line != expected[idx] {
-			fmt.Printf("INFO: Test failed (actual[%d]=`%s` while expected[%d]=`%s`)\n", idx, actual[idx], idx, expected[idx])
-			fmt.Printf("\tActual:   %v\n", actual)
-			fmt.Printf("\tExpected: %v\n", expected)
-			return
-		}
-	}
-	result = true
-	return
+	return true
 }
 
 func ListDir(dir string) (fns []string) {
@@ -140,15 +133,15 @@ func TestFile(fn string, stats *Stats) {
 	ext := filepath.Ext(fn)
 	name := fn[:len(fn)-len(ext)]
 	expected_output_file := name + ".txt"
-	expected_output := LoadExpected(expected_output_file)
 
 	testcase := TestCase{
 		File: fn,
-		Cmd: []string{
-			"go", "run", "gorth.go", fn,
-		},
-		ExpectedOutput: expected_output,
 	}
+	testcase.LoadExpected(expected_output_file)
+	testcase.Cmd = []string{
+		"go", "run", "gorth.go", fn,
+	}
+	testcase.Cmd = append(testcase.Cmd, testcase.Config.Argv...)
 
 	status := testcase.run()
 	switch status {
