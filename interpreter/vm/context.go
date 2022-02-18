@@ -1,4 +1,6 @@
-package lexer
+package vm
+
+import "GoStudy/Gorth/interpreter/lexer"
 
 type ByteMemory struct {
 	MemorySize int
@@ -40,8 +42,8 @@ type Context struct {
 	Memory         ByteMemory
 	Allocs         map[string]int
 	Consts         map[string]int
-	Names          map[string]Token
-	Funcs          map[string]int		// name to absolute intruction address
+	Names          map[string]lexer.Token
+	Funcs          map[string]int // name to absolute intruction address
 	StringLiterals []string
 }
 
@@ -51,7 +53,7 @@ func InitContext(mem_size int, strlit_cap int) *Context {
 
 		Allocs:         make(map[string]int),
 		Consts:         make(map[string]int),
-		Names:          make(map[string]Token),
+		Names:          make(map[string]lexer.Token),
 		Funcs:          make(map[string]int),
 		StringLiterals: make([]string, strlit_cap),
 	}

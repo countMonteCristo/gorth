@@ -8,13 +8,13 @@ import (
 )
 
 type VM struct {
-	Ctx lexer.Context
+	Ctx Context
 	RecursionLimit int
 }
 
 func InitVM() *VM {
 	vm := VM{
-		Ctx: *lexer.InitContext(640*1024, 2*1024),
+		Ctx: *InitContext(640*1024, 2*1024),
 		RecursionLimit: 1000,
 	}
 

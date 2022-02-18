@@ -205,7 +205,7 @@ func (lx *Lexer) next_token() (token Token, end bool) {
 	return
 }
 
-func (lx *Lexer) ProcessFile(fn string, ctx *Context) (tokens []Token) {
+func (lx *Lexer) ProcessFile(fn string) (tokens []Token) {
 	lx.Fn = fn
 	lx.Row = 0
 	lx.Col = 0
