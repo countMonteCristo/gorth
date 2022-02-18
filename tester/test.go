@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -134,16 +135,24 @@ func TestFile(fn string, stats *Stats) {
 	name := fn[:len(fn)-len(ext)]
 	expected_output_file := name + ".txt"
 
-	testcase := TestCase{
-		File: fn,
+	var status int
+	if _, err := os.Stat(expected_output_file); errors.Is(err, os.ErrNotExist) {
+		status = StatusSkip
+		fmt.Fprintf(os.Stderr, "Running testcase %s...\n", fn)
+		fmt.Fprintf(os.Stderr, "  Config file %s not found, skip testcase\n", expected_output_file)
+		fmt.Println("SKIP")
+	} else {
+		testcase := TestCase{
+			File: fn,
+		}
+		testcase.LoadExpected(expected_output_file)
+		testcase.Cmd = []string{
+			"go", "run", "gorth.go", fn,
+		}
+		testcase.Cmd = append(testcase.Cmd, testcase.Config.Argv...)
+		status = testcase.run()
 	}
-	testcase.LoadExpected(expected_output_file)
-	testcase.Cmd = []string{
-		"go", "run", "gorth.go", fn,
-	}
-	testcase.Cmd = append(testcase.Cmd, testcase.Config.Argv...)
 
-	status := testcase.run()
 	switch status {
 	case StatusSuccess:
 		stats.Success++
@@ -208,7 +217,12 @@ func main() {
 	var input_paths []string
 	if *full_flag {
 		input_paths = make([]string, 0)
-		input_paths = append(input_paths, "Gorth/tests", "Gorth/examples")
+		input_paths = append(
+			input_paths,
+			"Gorth/tests",
+			"Gorth/examples",
+			"Gorth/euler",
+		)
 		if len(flag.Args()) > 0 {
 			fmt.Println("WARNING: Input paths are ignored because of -full flag")
 		}
