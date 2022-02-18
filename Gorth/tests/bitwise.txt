@@ -1,5 +1,1 @@
-1
-40
-4
-7
-2
+{"argv": [], "stdin": "", "stdout": "1\n40\n4\n7\n2\n", "stderr": "", "exitcode": 0}

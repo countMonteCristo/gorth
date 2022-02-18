@@ -1,3 +1,1 @@
-20
-30
-60
+{"argv": [], "stdin": "", "stdout": "20\n30\n60\n", "stderr": "", "exitcode": 0}

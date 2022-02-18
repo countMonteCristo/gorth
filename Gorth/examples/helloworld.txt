@@ -1,1 +1,1 @@
-Hello, world!
+{"argv": [], "stdin": "", "stdout": "Hello, world!\n", "stderr": "", "exitcode": 0}

@@ -1,0 +1,10 @@
+{
+	"argv": [
+		"foo",
+		"bar"
+	],
+	"stdin": "Artem\nJulia\n",
+	"stdout": "Hello, world!\n",
+	"stderr": "",
+	"exitcode": 0
+}

@@ -1,18 +1,1 @@
-false
-false
-true
-true
-true
-false
-true
-false
-true
-false
-true
-true
-false
-true
-false
-true
-false
-false
+{"argv": [], "stdin": "", "stdout": "false\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\nfalse\n", "stderr": "", "exitcode": 0}
