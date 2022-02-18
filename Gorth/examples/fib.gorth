@@ -2,7 +2,9 @@
 
 const N 100 end
 
-1 1 while over N <= do
-  over puti '\n' putc
-  swap over +
+func main do
+  1 1 while over N <= do
+    over puti '\n' putc
+    swap over +
+  end
 end

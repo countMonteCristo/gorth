@@ -2,22 +2,23 @@
 // The sum of these multiples is 23.
 // Find the sum of all the multiples of 3 or 5 below 1000.
 
-0
-1 while dup 1000 < do
-  // sum n
-  over over
+func main do
+  0
+  1 while dup 1000 < do
+    // sum n
+    over over
 
-  dup 3 % 0 = if
-    swap over + swap
-  else
-    dup 5 % 0 = if
+    dup 3 % 0 = if
       swap over + swap
+    else
+      dup 5 % 0 = if
+        swap over + swap
+      end
     end
-  end
 
-  1 +
-end drop
+    1 +
+  end drop
 
-puti
-'\n' putc
-
+  puti
+  '\n' putc
+end

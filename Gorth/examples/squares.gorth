@@ -2,7 +2,9 @@
 
 const N 10 end
 
-1 while dup N <= do
-  dup dup * puti '\n' putc
-  1 +
+func main do
+  1 while dup N <= do
+    dup dup * puti '\n' putc
+    1 +
+  end
 end

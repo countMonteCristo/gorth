@@ -8,24 +8,26 @@
 
 const N 100 end
 
-1 while dup N <= do
-  dup puti ' ' putc
-  dup 3 % 0 = over 5 % 0 =
-  over over && if
-    "FizzBuzz\n" puts
-    drop drop
-  else
-    if
-      "Buzz\n" puts
-      drop
+func main do
+  1 while dup N <= do
+    dup puti ' ' putc
+    dup 3 % 0 = over 5 % 0 =
+    over over && if
+      "FizzBuzz\n" puts
+      drop drop
     else
       if
-        "Fizz\n" puts
+        "Buzz\n" puts
+        drop
       else
-        '\n' putc
+        if
+          "Fizz\n" puts
+        else
+          '\n' putc
+        end
       end
-    end
 
+    end
+    1 +
   end
-  1 +
 end

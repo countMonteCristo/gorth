@@ -1,41 +1,43 @@
-10 20 < if
-  30 puti '\n' putc
-else
-  40 puti '\n' putc
-end
-
-10 20 > if
-  50 puti '\n' putc
-end
-
-10 20 < if
-  60 puti '\n' putc
-end
-
-10 20 > if
-  70 puti '\n' putc
-else
-  80 puti '\n' putc
-end
-
-10 20 < if
-  30 40 <= if
-    90 puti '\n' putc
+func main do
+  10 20 < if
+    30 puti '\n' putc
   else
-    100 puti '\n' putc
+    40 puti '\n' putc
   end
-end
 
-10 20 > if
-  30 40 <= if
-    90 puti '\n' putc
-  else
-    100 puti '\n' putc
+  10 20 > if
+    50 puti '\n' putc
   end
-else
-  50 60 > if
-    110 puti '\n' putc
+
+  10 20 < if
+    60 puti '\n' putc
+  end
+
+  10 20 > if
+    70 puti '\n' putc
   else
-    120 puti '\n' putc
+    80 puti '\n' putc
+  end
+
+  10 20 < if
+    30 40 <= if
+      90 puti '\n' putc
+    else
+      100 puti '\n' putc
+    end
+  end
+
+  10 20 > if
+    30 40 <= if
+      90 puti '\n' putc
+    else
+      100 puti '\n' putc
+    end
+  else
+    50 60 > if
+      110 puti '\n' putc
+    else
+      120 puti '\n' putc
+    end
   end
 end

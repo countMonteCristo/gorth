@@ -6,13 +6,15 @@
 // By considering the terms in the Fibonacci sequence whose values do not exceed
 // four million, find the sum of the even-valued terms.
 
-0
-1 1 while over 4000000 < do
-  // a+s a b
-  over 2 % 0 = if rot rot dup rot + rot rot swap end
-  // b a+b
-  swap over +
-end drop drop
+func main do
+  0
+  1 1 while over 4000000 < do
+    // a+s a b
+    over 2 % 0 = if rot rot dup rot + rot rot swap end
+    // b a+b
+    swap over +
+  end drop drop
 
-puti
-'\n' putc
+  puti
+  '\n' putc
+end

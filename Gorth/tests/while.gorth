@@ -1,4 +1,6 @@
-0 while dup 10 <= do
-  dup puti '\n' putc
-  1 +
+func main do
+  0 while dup 10 <= do
+    dup puti '\n' putc
+    1 +
+  end
 end

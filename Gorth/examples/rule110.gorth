@@ -1,37 +1,40 @@
 const N 100 end
 
 alloc array N 1 + end
-1 array N 1 - + !8
 
-0 while dup N < do
+func main do
+  1 array N 1 - + !8
+
   0 while dup N < do
-    dup array + @8
-    1 = if '*' else ' ' end
-    putc
+    0 while dup N < do
+      dup array + @8
+      1 = if '*' else ' ' end
+      putc
+      1 +
+    end drop
+    '\n' putc
+
+    1 while dup N <= do
+      dup dup
+
+      dup 1 - array + @8 swap
+      dup array + @8 swap
+      dup 1 + array + @8 swap drop
+
+      over over * rot rot + swap rot over * + +
+      2 %
+
+      swap array + 1 - !8
+
+      1 +
+    end drop
+
+    N while dup 0 > do
+      dup dup 1 - array + @8 swap array + !8
+      1 -
+    end drop
+    0 array !8
+
     1 +
   end drop
-  '\n' putc
-
-  1 while dup N <= do
-    dup dup
-
-    dup 1 - array + @8 swap
-    dup array + @8 swap
-    dup 1 + array + @8 swap drop
-
-    over over * rot rot + swap rot over * + +
-    2 %
-
-    swap array + 1 - !8
-
-    1 +
-  end drop
-
-  N while dup 0 > do
-    dup dup 1 - array + @8 swap array + !8
-    1 -
-  end drop
-  0 array !8
-
-  1 +
-end drop
+end

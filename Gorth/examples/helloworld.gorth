@@ -1,3 +1,6 @@
 // `Hello world` example in Gorth
 
-"Hello, world!\n" puts
+
+func main do
+  "Hello, world!\n" puts
+end

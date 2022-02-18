@@ -7,33 +7,35 @@ const N 1000 end
 const x 100 end
 alloc ans 4 end
 
-x while dup N < do
-  dup while dup N < do
-    over over *
+func main do
+  x while dup N < do
+    dup while dup N < do
+      over over *
 
-    dup 0
-    while over 0 > do
-      10 *
-      over 10 %
-      +
-      swap 10 / swap
-    end
-    swap drop over
+      dup 0
+      while over 0 > do
+        10 *
+        over 10 %
+        +
+        swap 10 / swap
+      end
+      swap drop over
 
-    = if
-      dup ans @32 >
-      if
-        ans !32
+      = if
+        dup ans @32 >
+        if
+          ans !32
+        else
+          drop
+        end
       else
         drop
       end
-    else
-      drop
-    end
 
+      1 +
+    end drop
     1 +
   end drop
-  1 +
-end drop
 
-ans @32 puti '\n' putc
+  ans @32 puti '\n' putc
+end

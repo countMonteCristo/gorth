@@ -1,17 +1,19 @@
-1 2 <= 3 4 = && if
-  10 puti '\n' putc
-else
-  20 puti '\n' putc
-end
+func main do
+  1 2 <= 3 4 = && if
+    10 puti '\n' putc
+  else
+    20 puti '\n' putc
+  end
 
-1 2 <= 3 4 = || if
-  30 puti '\n' putc
-else
-  40 puti '\n' putc
-end
+  1 2 <= 3 4 = || if
+    30 puti '\n' putc
+  else
+    40 puti '\n' putc
+  end
 
-2 3 < ! if
-  50 puti '\n' putc
-else
-  60 puti '\n' putc
+  2 3 < ! if
+    50 puti '\n' putc
+  else
+    60 puti '\n' putc
+  end
 end
