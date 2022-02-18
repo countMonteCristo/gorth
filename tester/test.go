@@ -116,45 +116,57 @@ func ChekOutput(actual, expected []string) (result bool) {
 	return
 }
 
-func TestFolder(folder string) {
-	files, err := ioutil.ReadDir(folder)
+func ListDir(dir string) (fns []string) {
+	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	stats := Stats{}
 	for _, f := range files {
 		ext := filepath.Ext(f.Name())
 		if ext != ".gorth" {
 			continue
+		} else {
+			full_name := filepath.Join(dir, f.Name())
+			fns = append(fns, full_name)
 		}
+	}
+	return
+}
 
-		stats.Total++
-		full_name := filepath.Join(folder, f.Name())
+func TestFile(fn string, stats *Stats) {
 
-		name := f.Name()[:len(f.Name())-len(ext)]
-		expected_output_file := name + ".txt"
-		expected_output := LoadExpected(filepath.Join(folder, expected_output_file))
+	ext := filepath.Ext(fn)
+	name := fn[:len(fn)-len(ext)]
+	expected_output_file := name + ".txt"
+	expected_output := LoadExpected(expected_output_file)
 
-		testcase := TestCase{
-			File: full_name,
-			Cmd: []string{
-				"go", "run", "gorth.go", full_name,
-			},
-			ExpectedOutput: expected_output,
-		}
+	testcase := TestCase{
+		File: fn,
+		Cmd: []string{
+			"go", "run", "gorth.go", fn,
+		},
+		ExpectedOutput: expected_output,
+	}
 
-		status := testcase.run()
-		switch status {
-		case StatusSuccess:
-			stats.Success++
-		case StatusFail:
-			stats.Fail++
-		case StatusSkip:
-			stats.Skip++
-		default:
-			panic(fmt.Sprintf("Unhandled testcase status in TestFolder(): %d\n", status))
-		}
+	status := testcase.run()
+	switch status {
+	case StatusSuccess:
+		stats.Success++
+	case StatusFail:
+		stats.Fail++
+	case StatusSkip:
+		stats.Skip++
+	default:
+		panic(fmt.Sprintf("Unhandled testcase status in TestFile(): %d\n", status))
+	}
+}
+
+func TestInputs(gorth_fns []string) {
+	stats := Stats{}
+
+	for _, gorth_fn := range gorth_fns {
+		TestFile(gorth_fn, &stats)
 	}
 
 	fmt.Println()
@@ -164,8 +176,39 @@ func TestFolder(folder string) {
 	fmt.Printf("  skiped:    %d\n", stats.Skip)
 }
 
+func PrepareInputs(in_paths []string) (gorth_fns []string) {
+	for _, path := range in_paths {
+
+		fin, err := os.Open(path)
+		if err != nil {
+			fmt.Printf("WARNING: File or directory `%s` does not exist\n", path)
+			continue
+		}
+
+		fstat, err := fin.Stat()
+		if err != nil {
+			fmt.Printf("WARNING: Can not get stat for file or directory: `%s`\n", path)
+			continue
+		}
+
+		switch {
+		case fstat.IsDir():
+			dir_gorth_fns := ListDir(path)
+			gorth_fns = append(gorth_fns, dir_gorth_fns...)
+		default:
+			ext := filepath.Ext(path)
+			if ext != ".gorth" {
+				continue
+			} else {
+				gorth_fns = append(gorth_fns, path)
+			}
+		}
+	}
+	return
+}
+
 func main() {
-	folder := os.Args[1]
-	fmt.Printf("Run tests from %s\n", folder)
-	TestFolder(folder)
+	input_paths := os.Args[1:]
+	fmt.Printf("Run tests from %v\n", input_paths)
+	TestInputs(PrepareInputs(input_paths))
 }
