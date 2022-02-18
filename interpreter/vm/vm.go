@@ -280,14 +280,14 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 			switch kw_type {
 			case lexer.KeywordIf:
 				op.Typ = OpIf
-				blocks.Push(lexer.Block{Addr: len(ops), Tok: token})
+				blocks.Push(Block{Addr: len(ops), Tok: token})
 				ops = append(ops, op)
 			case lexer.KeywordElse:
 				if blocks.Size() == 0 {
 					lexer.CompilerFatal(&token.Loc, "Unexpected `end` found")
 					utils.Exit(1)
 				}
-				block := blocks.Pop().(lexer.Block)
+				block := blocks.Pop().(Block)
 				if block.Tok.Typ != lexer.TokenKeyword {
 					lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Only keywords may form blocks, but not `%s`. Probably bug in lex()", block.Tok.Text))
 					utils.Exit(1)
@@ -311,14 +311,14 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 				}
 
 				op.Typ = OpElse
-				blocks.Push(lexer.Block{Addr: len(ops), Tok: token})
+				blocks.Push(Block{Addr: len(ops), Tok: token})
 				ops = append(ops, op)
 			case lexer.KeywordEnd:
 				if blocks.Size() == 0 {
 					lexer.CompilerFatal(&token.Loc, "Unexpected `end` found")
 					utils.Exit(1)
 				}
-				block := blocks.Pop().(lexer.Block)
+				block := blocks.Pop().(Block)
 				if block.Tok.Typ != lexer.TokenKeyword {
 					lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Only keywords may form blocks, but not `%s`. Probably bug in lex()", block.Tok.Text))
 					utils.Exit(1)
@@ -371,14 +371,14 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 				}
 			case lexer.KeywordWhile:
 				op.Typ = OpWhile
-				blocks.Push(lexer.Block{Addr: len(ops), Tok: token})
+				blocks.Push(Block{Addr: len(ops), Tok: token})
 				ops = append(ops, op)
 			case lexer.KeywordDo:
 				if blocks.Size() == 0 {
 					lexer.CompilerFatal(&token.Loc, "Unexpected `do` found")
 					utils.Exit(1)
 				}
-				block := blocks.Pop().(lexer.Block)
+				block := blocks.Pop().(Block)
 				if block.Tok.Typ != lexer.TokenKeyword {
 					lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Only keywords may form blocks, but not `%s`. Probably bug in lex()", block.Tok.Text))
 					utils.Exit(1)
@@ -389,7 +389,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 				}
 				op.Typ = OpDo
 				op.Operand = block.Addr - len(ops) // save relative address of `while`
-				blocks.Push(lexer.Block{Addr: len(ops), Tok: token})
+				blocks.Push(Block{Addr: len(ops), Tok: token})
 				ops = append(ops, op)
 			case lexer.KeywordBreak:
 				if blocks.Size() == 0 {
@@ -399,10 +399,10 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 				var i int
 
 				for i = len(blocks.Data) - 1; i >= 0; i-- {
-					cur_block := blocks.Data[i].(lexer.Block)
+					cur_block := blocks.Data[i].(Block)
 
 					if cur_block.Tok.Typ == lexer.TokenKeyword && cur_block.Tok.Value.(lexer.KeywordType) == lexer.KeywordDo {
-						cur_block.Jumps = append(cur_block.Jumps, lexer.Jump{Keyword: lexer.KeywordBreak, Addr: len(ops)})
+						cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: lexer.KeywordBreak, Addr: len(ops)})
 						blocks.Data[i] = cur_block
 						break
 					}
@@ -422,10 +422,10 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 				var i int
 
 				for i = len(blocks.Data) - 1; i >= 0; i-- {
-					cur_block := blocks.Data[i].(lexer.Block)
+					cur_block := blocks.Data[i].(Block)
 
 					if cur_block.Tok.Typ == lexer.TokenKeyword && cur_block.Tok.Value.(lexer.KeywordType) == lexer.KeywordDo {
-						cur_block.Jumps = append(cur_block.Jumps, lexer.Jump{Keyword: lexer.KeywordContinue, Addr: len(ops)})
+						cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: lexer.KeywordContinue, Addr: len(ops)})
 						blocks.Data[i] = cur_block
 						break
 					}
@@ -470,7 +470,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 				current_function = func_name
 
 				vm.Ctx.Funcs[func_name] = len(ops)
-				blocks.Push(lexer.Block{Addr: len(ops), Tok: token})
+				blocks.Push(Block{Addr: len(ops), Tok: token})
 
 				op.Typ = OpFuncBegin
 				op.Operand = func_name
@@ -487,7 +487,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 	}
 
 	if len(blocks.Data) > 0 {
-		top := blocks.Data[len(blocks.Data)-1].(lexer.Block)
+		top := blocks.Data[len(blocks.Data)-1].(Block)
 		lexer.CompilerFatal(&top.Tok.Loc, fmt.Sprintf("Unclosed %s-block", top.Tok.Text))
 		utils.Exit(1)
 	}

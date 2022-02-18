@@ -35,7 +35,6 @@ func (m *ByteMemory) StoreToMem(ptr int, value int, size int) {
 		value >>= 8
 		diff--
 	}
-	return
 }
 
 type Context struct {
