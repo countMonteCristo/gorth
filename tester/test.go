@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -44,19 +45,30 @@ type TestCase struct {
 	Config TestConfig
 }
 
-// TODO: provide stdin for tested script
 func (t *TestCase) run() (status int) {
 	fmt.Printf("Running testcase %s...\n", t.File)
 	status = StatusFail
 
 	cmd := exec.Command(t.Cmd[0], t.Cmd[1:]...)
 
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stdin.Close()
+
+	io.WriteString(stdin, t.Config.Stdin)
+
 	var outbuf strings.Builder
 	var errbuf strings.Builder
 	cmd.Stdout = &outbuf
 	cmd.Stderr = &errbuf
 
-	cmd.Run()
+	if err = cmd.Start(); err != nil {
+		fmt.Fprintf(os.Stderr, "An error occured: %s", err) //replace with logger, or anything you want
+	}
+	cmd.Wait()
+
 	stdout := outbuf.String()
 	stderr := errbuf.String()
 	exit_code := cmd.ProcessState.ExitCode()
