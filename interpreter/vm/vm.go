@@ -9,11 +9,13 @@ import (
 
 type VM struct {
 	Ctx lexer.Context
+	RecursionLimit int
 }
 
 func InitVM() *VM {
 	vm := VM{
 		Ctx: *lexer.InitContext(640*1024, 2*1024),
+		RecursionLimit: 1000,
 	}
 
 	return &vm
@@ -269,7 +271,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 				continue
 			}
 
-			lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unknown word %s: probably bug in next_token", token.Text))
+			lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unknown word: `%s`", token.Text))
 			utils.Exit(1)
 
 		case lexer.TokenKeyword:
@@ -479,7 +481,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 				utils.Exit(1)
 			}
 		default:
-			lexer.CompilerFatal(&token.Loc, fmt.Sprintf("ERROR: Unhandled token: %s\n", token.Text))
+			lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unhandled token: `%s`\n", token.Text))
 			utils.Exit(1)
 		}
 	}
@@ -729,6 +731,9 @@ func (vm *VM) Interprete(ops []Op, debug bool) {
 		case OpContinue:
 			addr += op.Operand.(int)
 		case OpCall:
+			if return_stack.Size() >= vm.RecursionLimit {
+				lexer.RuntimeFatal(&op.OpToken.Loc, "Recursion limit exceeded")
+			}
 			return_stack.Push(addr)
 			addr += op.Operand.(int)
 		case OpFuncBegin:
