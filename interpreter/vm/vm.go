@@ -37,7 +37,7 @@ func (vm *VM) parse_named_block(token *lexer.Token, tokens *[]lexer.Token, typ s
 	}
 	defined_token, exists := vm.Ctx.Names[tok.Text]
 	if exists {
-		lexer.CompilerFatal(&tok.Loc, fmt.Sprintf("Redefinition of word `s`", tok.Text))
+		lexer.CompilerFatal(&tok.Loc, fmt.Sprintf("Redefinition of word `%s`", tok.Text))
 		lexer.CompilerInfo(&defined_token.Loc, "Previously defined here")
 		utils.Exit(1)
 	}

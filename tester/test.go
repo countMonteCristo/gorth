@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -208,7 +209,20 @@ func PrepareInputs(in_paths []string) (gorth_fns []string) {
 }
 
 func main() {
-	input_paths := os.Args[1:]
+	full_flag := flag.Bool("full", false, "run all availiable tests")
+	flag.Parse()
+
+	var input_paths []string
+	if *full_flag {
+		input_paths = make([]string, 0)
+		input_paths = append(input_paths, "Gorth/tests", "Gorth/examples")
+		if len(flag.Args()) > 0 {
+			fmt.Println("WARNING: Input paths are ignored because of -full flag")
+		}
+	} else {
+		input_paths = flag.Args()
+	}
+
 	fmt.Printf("Run tests from %v\n", input_paths)
 	TestInputs(PrepareInputs(input_paths))
 }

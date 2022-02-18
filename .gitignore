@@ -1,4 +1,4 @@
 gorth
 test
-./*.gorth
-./bin/*
+*.gorth
+bin/*
