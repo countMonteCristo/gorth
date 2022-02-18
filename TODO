@@ -31,9 +31,9 @@
 [] Testing
   [] more tests
   [] implement testing tool:
-    [] test single file, test all files in directory, test all dirs
-    [] support for providing input args and stdin for testcases
-    [] check both return code and stdout/stderr output for testcases
+    [*] test single file, test all files in directory, test all dirs
+    [*] support for providing input args and stdin for testcases
+    [*] check both return code and stdout/stderr output for testcases
     [] update testcase expecting output file
 
 [*] Split Gorth project into modules
