@@ -214,10 +214,10 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 				OpToken: token,
 			})
 		case lexer.TokenString:
-			vm.Ctx.StringLiterals = append(vm.Ctx.StringLiterals, token.Value.(string))
+			strlit_index := vm.Ctx.Memory.AddStringLit(token.Value.(string), &token)
 			ops = append(ops, Op{
 				Typ:     OpPushStr,
-				Operand: len(vm.Ctx.StringLiterals) - 1,
+				Operand: strlit_index,
 				OpToken: token,
 			})
 		case lexer.TokenChar:
@@ -462,8 +462,8 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 					utils.Exit(1)
 				}
 
-				vm.Ctx.Allocs[tok.Text] = vm.Ctx.Memory.MemPtr
-				vm.Ctx.Memory.MemPtr += alloc_size
+				vm.Ctx.Allocs[tok.Text] = vm.Ctx.Memory.OperativeMemRegion.Ptr
+				vm.Ctx.Memory.OperativeMemRegion.Ptr += alloc_size
 				vm.Ctx.Names[tok.Text] = tok
 
 			case lexer.KeywordFunc:
@@ -541,8 +541,10 @@ func (vm *VM) Interprete(ops []Op, debug bool) {
 			}
 			addr++
 		case OpPushStr:
-			ptr := op.Operand.(int)
-			stack.Push(ptr)
+			index := op.Operand.(int)
+			gstr := vm.Ctx.Memory.StringLitsBuffer[index]
+			stack.Push(gstr.Size)
+			stack.Push(gstr.Ptr)
 			addr++
 		case OpIf:
 			top := stack.Pop().(bool)
@@ -685,12 +687,12 @@ func (vm *VM) Interprete(ops []Op, debug bool) {
 				x := stack.Pop()
 				fmt.Print(string(byte(x.(int))))
 			case lexer.IntrinsicPuts:
-				x := stack.Pop()
-				index := x.(int)
-				str := vm.Ctx.StringLiterals[index]
+				ptr := stack.Pop().(int)
+				size := stack.Pop().(int)
+				str := string(vm.Ctx.Memory.Data[ptr : ptr+size])
 				fmt.Print(str)
 			case lexer.IntrinsicDebug:
-				fmt.Printf("\tMem: %v\tStack: %v\n", vm.Ctx.Memory.Data[:vm.Ctx.Memory.MemPtr], stack.Data)
+				fmt.Printf("\tMem: %v\tStack: %v\n", vm.Ctx.Memory.Data[vm.Ctx.Memory.OperativeMemRegion.Start:vm.Ctx.Memory.OperativeMemRegion.Ptr], stack.Data)
 			case lexer.IntrinsicLoad8:
 				x := stack.Pop()
 				ptr := x.(int)
@@ -757,8 +759,7 @@ func (vm *VM) Interprete(ops []Op, debug bool) {
 
 	if debug {
 		fmt.Println("---------------------------------")
-		fmt.Printf("Allocated: %d byte(s) total\n", vm.Ctx.Memory.MemPtr)
-		fmt.Printf("Memory: %v\n", vm.Ctx.Memory.Data[:vm.Ctx.Memory.MemPtr])
+		vm.Ctx.Memory.PrintDebug()
 		fmt.Println("---------------------------------")
 	}
 }
