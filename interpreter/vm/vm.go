@@ -506,7 +506,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 	return
 }
 
-func (vm *VM) Interprete(ops []Op, debug bool) {
+func (vm *VM) Interprete(ops []Op, args []string, debug bool) {
 	stack := &utils.Stack{}
 
 	return_stack := utils.Stack{}
@@ -729,8 +729,11 @@ func (vm *VM) Interprete(ops []Op, debug bool) {
 				ptr := stack.Pop().(int)
 				x := stack.Pop().(int)
 				vm.Ctx.Memory.StoreToMem(ptr, x, 8)
+			case lexer.IntrinsicArgc:
+				stack.Push(len(args))
 			default:
 				lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: `%s`", op.OpToken.Text))
+				utils.Exit(1)
 			}
 			addr++
 		case OpBreak:

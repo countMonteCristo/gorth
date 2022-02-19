@@ -11,6 +11,6 @@ func main() {
 
 	gorth_script := flag.Args()[0]
 
-	i := interpreter.InitInterpreter()
+	i := interpreter.InitInterpreter(flag.Args())
 	i.Run(gorth_script, *debugFlag)
 }
