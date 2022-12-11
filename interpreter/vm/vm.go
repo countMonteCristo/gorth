@@ -14,7 +14,7 @@ type VM struct {
 
 func InitVM() *VM {
 	vm := VM{
-		Ctx:            *InitContext(640*1024, 2*1024),
+		Ctx:            *InitContext(640*1024, 2*1024),	// 640k is enough for everybody, huh?
 		RecursionLimit: 1000,
 	}
 
@@ -214,10 +214,16 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 				OpToken: token,
 			})
 		case lexer.TokenString:
-			strlit_index := vm.Ctx.Memory.AddStringLit(token.Value.(string), &token)
+			literal := token.Value.(string)
+			literal_addr := vm.Ctx.Memory.AddStringLiteral(literal, &token)
 			ops = append(ops, Op{
-				Typ:     OpPushStr,
-				Operand: strlit_index,
+				Typ:     OpPushInt,
+				Operand: literal_addr,
+				OpToken: token,
+			})
+			ops = append(ops, Op{
+				Typ:     OpPushInt,
+				Operand: len(literal),
 				OpToken: token,
 			})
 		case lexer.TokenChar:
@@ -540,12 +546,6 @@ func (vm *VM) Interprete(ops []Op, args []string, debug bool) {
 				stack.Push(true)
 			}
 			addr++
-		case OpPushStr:
-			index := op.Operand.(int)
-			gstr := vm.Ctx.Memory.StringLitsBuffer[index]
-			stack.Push(gstr.Size)
-			stack.Push(gstr.Ptr)
-			addr++
 		case OpIf:
 			top := stack.Pop().(bool)
 			if top {
@@ -687,8 +687,8 @@ func (vm *VM) Interprete(ops []Op, args []string, debug bool) {
 				x := stack.Pop()
 				fmt.Print(string(byte(x.(int))))
 			case lexer.IntrinsicPuts:
-				ptr := stack.Pop().(int)
 				size := stack.Pop().(int)
+				ptr := stack.Pop().(int)
 				str := string(vm.Ctx.Memory.Data[ptr : ptr+size])
 				fmt.Print(str)
 			case lexer.IntrinsicDebug:

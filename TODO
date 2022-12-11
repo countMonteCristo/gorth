@@ -1,10 +1,10 @@
 [] Change if-block semantic:
   [] now: <{case} if {...} else {...} end>; what i want it to be: <if {case1} do {...} elif {case2} do {..} else {...} end>
 
-[] Change Strings:
-  [] now string is a pointer to a go-string in string literals array
-  [] want a string to be a (`size`, `data`) pair
-  [] store `data` in byte array
+[*] Change Strings:
+  [*] now string is a pointer to a go-string in string literals array
+  [*] want a string to be a (`size`, `data`) pair
+  [*] store `data` in byte array
 
 [] Functions:
   [] local allocs

@@ -13,7 +13,6 @@ type OpType int
 const (
 	OpPushInt   OpType = iota
 	OpPushBool  OpType = iota
-	OpPushStr   OpType = iota
 	OpIntrinsic OpType = iota
 	OpIf        OpType = iota
 	OpElse      OpType = iota
@@ -34,7 +33,6 @@ var _ uint = OpCount - 9 // compile-time check
 var OpName = map[OpType]string{
 	OpPushInt:   "PUSH_INT",
 	OpPushBool:  "PUSH_BOOL",
-	OpPushStr:   "PUSH_STR",
 	OpIntrinsic: "INTRINSIC",
 	OpIf:        "IF",
 	OpElse:      "ELSE",
@@ -66,8 +64,6 @@ func (op *Op) Str(addr int) (s string) {
 		operand = strconv.Itoa(op.Operand.(int))
 	case OpPushBool:
 		operand = types.BoolName[op.Operand.(types.BoolType)]
-	case OpPushStr:
-		operand = strconv.Itoa(op.Operand.(int))
 	case OpIntrinsic:
 		operand = lexer.IntrinsicName[op.Operand.(lexer.IntrinsicType)]
 	case OpIf:
