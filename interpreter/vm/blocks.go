@@ -1,6 +1,6 @@
 package vm
 
-import "GoStudy/Gorth/interpreter/lexer"
+import "Gorth/interpreter/lexer"
 
 type Jump struct {
 	Keyword lexer.KeywordType

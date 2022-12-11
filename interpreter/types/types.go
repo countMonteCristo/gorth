@@ -1,6 +1,6 @@
 package types
 
-import "GoStudy/Gorth/interpreter/utils"
+import "Gorth/interpreter/utils"
 
 type BoolType int
 

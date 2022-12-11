@@ -1,9 +1,9 @@
 package vm
 
 import (
-	"GoStudy/Gorth/interpreter/lexer"
-	"GoStudy/Gorth/interpreter/types"
-	"GoStudy/Gorth/interpreter/utils"
+	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/types"
+	"Gorth/interpreter/utils"
 	"fmt"
 	"strconv"
 )

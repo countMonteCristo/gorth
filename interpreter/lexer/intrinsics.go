@@ -1,6 +1,6 @@
 package lexer
 
-import "GoStudy/Gorth/interpreter/utils"
+import "Gorth/interpreter/utils"
 
 type IntrinsicType int
 

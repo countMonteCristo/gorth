@@ -1,7 +1,7 @@
 package vm
 
 import (
-	"GoStudy/Gorth/interpreter/lexer"
+	"Gorth/interpreter/lexer"
 )
 
 type Context struct {

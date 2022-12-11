@@ -1,8 +1,8 @@
 package interpreter
 
 import (
-	"GoStudy/Gorth/interpreter/lexer"
-	"GoStudy/Gorth/interpreter/vm"
+	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/vm"
 )
 
 type Interpreter struct {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"GoStudy/Gorth/interpreter"
+	"Gorth/interpreter"
 	"flag"
 )
 

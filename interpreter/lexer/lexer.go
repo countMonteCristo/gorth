@@ -1,8 +1,9 @@
 package lexer
 
 import (
-	"GoStudy/Gorth/interpreter/types"
-	"GoStudy/Gorth/interpreter/utils"
+	"Gorth/interpreter/types"
+	"Gorth/interpreter/utils"
+
 	"fmt"
 	"strconv"
 	"strings"

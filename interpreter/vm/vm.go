@@ -1,9 +1,9 @@
 package vm
 
 import (
-	"GoStudy/Gorth/interpreter/lexer"
-	"GoStudy/Gorth/interpreter/types"
-	"GoStudy/Gorth/interpreter/utils"
+	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/types"
+	"Gorth/interpreter/utils"
 	"fmt"
 )
 
@@ -14,7 +14,7 @@ type VM struct {
 
 func InitVM() *VM {
 	vm := VM{
-		Ctx:            *InitContext(640*1024, 2*1024),	// 640k is enough for everybody, huh?
+		Ctx:            *InitContext(640*1024, 2*1024), // 640k is enough for everybody, huh?
 		RecursionLimit: 1000,
 	}
 
