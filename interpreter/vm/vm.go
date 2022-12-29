@@ -754,6 +754,8 @@ func (vm *VM) Interprete(ops []Op, args []string, debug bool) {
 				vm.Ctx.Memory.StoreToMem(ptr, x, 8)
 			case lexer.IntrinsicArgc:
 				stack.Push(len(args))
+			case lexer.IntrinsicArgv:
+				stack.Push(vm.Ctx.Memory.Argv)
 			default:
 				lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: `%s`", op.OpToken.Text))
 				utils.Exit(1)

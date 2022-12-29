@@ -1,0 +1,1 @@
+{"argv": ["arg1", "arg2", "3", "argument_4"], "stdin": "", "stdout": "Gorth/tests/argv.gorth\narg1\narg2\n3\nargument_4\n", "stderr": "", "exitcode": 0}

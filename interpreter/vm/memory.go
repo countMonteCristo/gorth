@@ -22,6 +22,8 @@ type ByteMemory struct {
 	MemPtr     int
 	Data       []byte
 
+	Argv int		// pointer to the beginning of the input arguments array
+
 	OperativeMemRegion MemoryRegion
 
 	StringsRegion MemoryRegion
@@ -47,7 +49,7 @@ func (m *ByteMemory) Prepare(args []string) {
 	}
 
 	// add input args to string literals as null-terminated strings
-	// TODO: save argv pointer
+	m.Argv = m.StringsRegion.Ptr
 	for _, arg := range args {
 		arg_bytes := []byte(arg)
 		copy(m.Data[m.StringsRegion.Ptr:], arg_bytes)

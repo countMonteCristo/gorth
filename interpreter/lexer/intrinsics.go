@@ -50,6 +50,7 @@ const (
 	IntrinsicStore64 IntrinsicType = iota
 
 	IntrinsicArgc IntrinsicType = iota
+	IntrinsicArgv IntrinsicType = iota
 
 	IntrinsicCount = iota
 )
@@ -100,6 +101,7 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicStore64: "!64",
 
 	IntrinsicArgc: "argc",
+	IntrinsicArgv: "argv",
 }
 
 var WordToIntrinsic = utils.RevMap(IntrinsicName).(map[string]IntrinsicType)
