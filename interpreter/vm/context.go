@@ -12,9 +12,9 @@ type Context struct {
 	Funcs  map[string]int // name to absolute intruction address
 }
 
-func InitContext(mem_size int, strlit_size int) *Context {
+func InitContext(mem_size int) *Context {
 	ctx := &Context{
-		Memory: InitMemory(mem_size, strlit_size),
+		Memory: InitMemory(mem_size,),
 
 		Allocs: make(map[string]int),
 		Consts: make(map[string]int),

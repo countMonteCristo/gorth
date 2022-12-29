@@ -1,8 +1,6 @@
 package vm
 
 import (
-	"Gorth/interpreter/lexer"
-	"Gorth/interpreter/utils"
 	"fmt"
 )
 
@@ -14,11 +12,10 @@ type MemoryRegion struct {
 
 // Memory for the Gorth programm represented as array of bytes.
 // It is divided into several pieces:
-// - String literals buffer: contains all the string literals from Gorth script.
+// - String literals buffer: contains all the string literals from Gorth script, input arguments
 // Strings are stored as byte arrays. When you push string into stack, you actually push
 // the address and the size of the string to stack.
-// - Input arguments buffer - not implemented yet
-// - Environment - not implemented yet
+// - Environment - TODO: add to String literals buffer
 // - Operative memory - the place where all the allocations are stored.
 type ByteMemory struct {
 	MemorySize int
@@ -31,29 +28,39 @@ type ByteMemory struct {
 	StringsMap    map[string]int
 }
 
-func InitMemory(mem_size, str_lit_size int) ByteMemory {
+func InitMemory(mem_size int) ByteMemory {
 	mem := ByteMemory{
-		MemorySize: mem_size + str_lit_size + 1,
+		Data:       make([]byte, mem_size),
+		MemorySize: mem_size,
 		MemPtr:     1,
 
 		StringsMap: make(map[string]int),
 	}
-	mem.Data = make([]byte, mem.MemorySize)
-	mem.StringsRegion = mem.AllocRegion(str_lit_size)
-	mem.OperativeMemRegion = mem.AllocRegion(mem_size)
 
 	return mem
 }
 
-func (m *ByteMemory) AllocRegion(reg_size int) MemoryRegion {
-	reg := MemoryRegion{
-		Start: m.MemPtr,
-		Size:  reg_size,
-		Ptr:   m.MemPtr,
+func (m *ByteMemory) Prepare(args []string) {
+	for literal, addr := range m.StringsMap {
+		literal_bytes := []byte(literal)
+		copy(m.Data[addr:], literal_bytes)
 	}
-	m.MemPtr += reg.Size
 
-	return reg
+	// add input args to string literals as null-terminated strings
+	// TODO: save argv pointer
+	for _, arg := range args {
+		arg_bytes := []byte(arg)
+		copy(m.Data[m.StringsRegion.Ptr:], arg_bytes)
+		m.StringsRegion.Ptr += len(arg_bytes) + 1
+	}
+	m.StringsRegion.Size = m.StringsRegion.Ptr - 1
+
+	op_start := m.StringsRegion.Start + m.StringsRegion.Size
+	m.OperativeMemRegion = MemoryRegion{
+		Start: op_start,
+		Size:  m.MemorySize - op_start,
+		Ptr:   op_start,
+	}
 }
 
 func (m *ByteMemory) LoadFromMem(ptr int, size int) (value int) {
@@ -74,32 +81,6 @@ func (m *ByteMemory) StoreToMem(ptr int, value int, size int) {
 		value >>= 8
 		diff--
 	}
-}
-
-func (m *ByteMemory) AddStringLiteral(literal string, token *lexer.Token) int {
-	addr, exists := m.StringsMap[literal]
-	if exists {
-		return addr
-	}
-
-	new_size := m.StringsRegion.Ptr + len(literal) - m.StringsRegion.Start
-	if new_size > m.StringsRegion.Size {
-		lexer.CompilerFatal(
-			&token.Loc, fmt.Sprintf(
-				"String literals buffer size exceeded: %d > %d",
-				new_size, m.StringsRegion.Size,
-			))
-		utils.Exit(1)
-	}
-
-	addr = m.StringsRegion.Ptr
-
-	literal_bytes := []byte(literal)
-	copy(m.Data[m.StringsRegion.Ptr:], literal_bytes)
-	m.StringsRegion.Ptr += len(literal_bytes)
-
-	m.StringsMap[literal] = addr
-	return addr
 }
 
 func (m *ByteMemory) PrintDebug() {

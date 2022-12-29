@@ -14,7 +14,7 @@ type VM struct {
 
 func InitVM() *VM {
 	vm := VM{
-		Ctx:            *InitContext(640*1024, 2*1024), // 640k is enough for everybody, huh?
+		Ctx:            *InitContext(640 * 1024), // 640k is enough for everybody, huh?
 		RecursionLimit: 1000,
 	}
 
@@ -193,12 +193,35 @@ func (vm *VM) parse_func_def(token *lexer.Token, tokens *[]lexer.Token) (func_na
 	return
 }
 
-func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
+func (vm *VM) preprocess_string_literals(tokens *[]lexer.Token) {
+	address := 1
+	for _, token := range *tokens {
+		if token.Typ == lexer.TokenString {
+			literal := token.Value.(string)
+			_, exists := vm.Ctx.Memory.StringsMap[literal]
+			if !exists {
+				vm.Ctx.Memory.StringsMap[literal] = address
+				address += len(literal)
+			}
+		}
+	}
+
+	vm.Ctx.Memory.StringsRegion = MemoryRegion{
+		Start: 1,
+		Size:  address - 1,
+		Ptr:   address,
+	}
+}
+
+func (vm *VM) Compile(tokens []lexer.Token, args []string) (ops []Op) {
 	// assert(lexer.TokenCount == 6, "Unhandled Token in compile()")
 
 	blocks := &utils.Stack{}
 
 	current_function := ""
+
+	vm.preprocess_string_literals(&tokens)
+	vm.Ctx.Memory.Prepare(args)
 
 	var token lexer.Token
 	for len(tokens) > 0 {
@@ -215,7 +238,7 @@ func (vm *VM) Compile(tokens []lexer.Token) (ops []Op) {
 			})
 		case lexer.TokenString:
 			literal := token.Value.(string)
-			literal_addr := vm.Ctx.Memory.AddStringLiteral(literal, &token)
+			literal_addr := vm.Ctx.Memory.StringsMap[literal]
 			ops = append(ops, Op{
 				Typ:     OpPushInt,
 				Operand: literal_addr,
