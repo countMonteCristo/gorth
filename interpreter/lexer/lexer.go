@@ -168,6 +168,7 @@ func (lx *Lexer) next_token() (token Token, end bool) {
 		}
 
 		// check if word is int literal
+		// TODO: parse as 64-bit integer
 		number, err := strconv.Atoi(word)
 		if err == nil {
 			// fmt.Printf("`%s` - is an int\n", word)

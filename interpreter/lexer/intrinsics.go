@@ -68,6 +68,8 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicBitOr:  "|",
 	IntrinsicBitXor: "^",
 
+	// TODO: BitNot(X) =  ^X
+
 	IntrinsicEq: "=",
 	IntrinsicNe: "!=",
 	IntrinsicLe: "<=",
