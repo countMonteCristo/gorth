@@ -51,3 +51,4 @@
   [] Replace some other ops (if, do) with conditional jump operation
 
 [] Improve error messsages (they should point to the source code as well as to the Gorth script)
+  [] Add debug levels

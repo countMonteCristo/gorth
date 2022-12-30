@@ -1,1 +1,1 @@
-{"argv":[],"stdin":"","stdout":"","stderr":"Gorth/tests/include-from-non-string.gorth:1:1: ERROR: Expected import file path as a string, got '\n'\nexit status 1\n","exit_code":1}
+{"argv":[],"stdin":"","stdout":"","stderr":"interpreter/lexer/lexer.go:226 [ERROR] Expected import file path to be a TokenString, but got TokenChar:\n  Gorth/tests/include-from-non-string.gorth:1:1\nexit status 1\n","exit_code":1}

@@ -23,7 +23,6 @@ func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool) {
 		escaped = true
 		if pos+1 == len(data) {
 			CompilerFatal(&lx.Loc, "Unexpected end of escaped char literal")
-			utils.Exit(1)
 		}
 		switch data[pos+1] {
 		case 'n':
@@ -36,7 +35,6 @@ func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool) {
 			b = '"'
 		default:
 			CompilerFatal(&lx.Loc, fmt.Sprintf("Unknown escape character: `%s`", data[pos:pos+2]))
-			utils.Exit(1)
 		}
 	} else {
 		b = data[pos]
@@ -82,7 +80,6 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 		}
 		if !closed {
 			CompilerFatal(&lx.Loc, fmt.Sprintf("Expecting to find closing \" for string literal, but got `%s`", string(chars[len(chars)-1])))
-			utils.Exit(1)
 		}
 		word = string(chars)
 	case '\'':
@@ -94,11 +91,9 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 		}
 		if pos == len(data) {
 			CompilerFatal(&lx.Loc, "Unexpecting end of char literal")
-			utils.Exit(1)
 		}
 		if data[pos] != '\'' {
 			CompilerFatal(&lx.Loc, fmt.Sprintf("Expecting to find closing ' for char literal, but got `%s`", string(data[pos])))
-			utils.Exit(1)
 		}
 		word = "'" + string(b) + "'"
 		pos++
@@ -225,32 +220,35 @@ func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (to
 			if kw_type == KeywordInclude {
 				next, end := lx.next_token()
 				if end {
-					CompilerFatal(&token.Loc, "Expected import file path as a string, got nothing")
-					utils.Exit(1)
+					CompilerFatal(&token.Loc, "Expected import file path to be a string, but got nothing")
 				}
 				if next.Typ != TokenString {
-					CompilerFatal(&token.Loc, fmt.Sprintf("Expected import file path as a string, got %s", next.Text))
-					utils.Exit(1)
+					CompilerFatal(
+						&token.Loc, fmt.Sprintf(
+							"Expected import file path to be a %s, but got %s",
+							TokenTypeName[TokenString], TokenTypeName[next.Typ],
+					))
 				}
 
 				imported_fn := next.Value.(string)
 				full_imported_fn, exists := imp.Find(imported_fn)
 				if !exists {
-					CompilerFatal(&next.Loc, fmt.Sprintf("Cannot import file %s: not in Paths", full_imported_fn))
-					utils.Exit(1)
+					CompilerFatal(&next.Loc, fmt.Sprintf("Can not import file %s: not in Paths", full_imported_fn))
 				}
 
 				for _, prev_fn := range import_path {
 					if prev_fn == full_imported_fn {
-						CompilerFatal(&next.Loc, "Circular imports detected when trying to include "+imported_fn)
-						utils.Exit(1)
+						CompilerFatal(
+							&next.Loc, fmt.Sprintf(
+								"Circular imports detected when trying to include %s", imported_fn,
+							),
+						)
 					}
 				}
 
 				_, exists = imp.Included[full_imported_fn]
 				if exists {
-					// TODO: Log in info mode
-					CompilerInfo(&next.Loc, fmt.Sprintf("File %s has been already imported, do nothing\n", fn))
+					// TODO: Log abot not importing file only in debug mode
 					continue
 				}
 

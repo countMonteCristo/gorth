@@ -27,6 +27,6 @@ func InitInterpreter(arguments []string) *Interpreter {
 
 func (i *Interpreter) Run(fn string, debug bool) {
 	tokens := i.lx.ProcessFile(fn, []string{}, &i.imp)
-	ops := i.vm.Compile(tokens, i.args)
+	ops := i.vm.Compile(fn, tokens, i.args)
 	i.vm.Interprete(ops, i.args, debug)
 }

@@ -27,3 +27,12 @@ type Token struct {
 	Value interface{}
 	Loc   Location
 }
+
+var TokenTypeName = map[TokenType]string{
+	TokenInt: "TokenInt",
+	TokenBool: "TokenBool",
+	TokenWord: "TokenWord",
+	TokenKeyword: "TokenKeyword",
+	TokenString: "TokenString",
+	TokenChar: "TokenChar",
+}

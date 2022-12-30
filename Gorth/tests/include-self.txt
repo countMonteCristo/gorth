@@ -1,1 +1,1 @@
-{"argv":[],"stdin":"","stdout":"","stderr":"Gorth/tests/include-self.gorth:1:9: ERROR: Circular imports detected when trying to include include-self.gorth\nexit status 1\n","exit_code":1}
+{"argv":[],"stdin":"","stdout":"","stderr":"interpreter/lexer/lexer.go:241 [ERROR] Circular imports detected when trying to include include-self.gorth:\n  Gorth/tests/include-self.gorth:1:9\nexit status 1\n","exit_code":1}
