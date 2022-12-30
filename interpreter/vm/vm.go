@@ -23,7 +23,7 @@ func InitVM() *VM {
 
 // Named block starts with a keyword (const|alloc) and followed by block name
 // Every named block ends with `end` keyword and may contain only consts and instrinsics
-func (vm *VM) parse_named_block(token *lexer.Token, tokens *[]lexer.Token, typ string) (tok lexer.Token, const_value int) {
+func (vm *VM) parse_named_block(token *lexer.Token, tokens *[]lexer.Token, typ string) (tok lexer.Token, const_value types.IntType) {
 	if len(*tokens) == 0 {
 		lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Expected `%s` name, but got nothing", typ))
 	}
@@ -60,55 +60,47 @@ func (vm *VM) parse_named_block(token *lexer.Token, tokens *[]lexer.Token, typ s
 	return
 }
 
-func (vm *VM) const_eval(name_token *lexer.Token, tokens *[]lexer.Token) (value int) {
+func (vm *VM) const_eval(name_token *lexer.Token, tokens *[]lexer.Token) (value types.IntType) {
 	const_stack := &utils.Stack{}
 	for _, token := range *tokens {
 		switch token.Typ {
 		case lexer.TokenInt:
-			const_stack.Push(token.Value.(int))
+			const_stack.Push(token.Value.(types.IntType))
 		case lexer.TokenWord:
 			intrinsic, exists := lexer.WordToIntrinsic[token.Text]
 			if exists {
 				switch intrinsic {
-				case lexer.IntrinsicPlus:
-					b := const_stack.Pop().(int)
-					a := const_stack.Pop().(int)
-					const_stack.Push(a + b)
-				case lexer.IntrinsicMinus:
-					b := const_stack.Pop().(int)
-					a := const_stack.Pop().(int)
-					const_stack.Push(a - b)
-				case lexer.IntrinsicMul:
-					b := const_stack.Pop().(int)
-					a := const_stack.Pop().(int)
-					const_stack.Push(a * b)
+				case lexer.IntrinsicPlus, lexer.IntrinsicMinus, lexer.IntrinsicMul:
+					b := const_stack.Pop().(types.IntType)
+					a := const_stack.Pop().(types.IntType)
+					const_stack.Push(SafeArithmeticFunctions[intrinsic](a, b))
 				case lexer.IntrinsicDiv:
-					b := const_stack.Pop().(int)
+					b := const_stack.Pop().(types.IntType)
 					if b == 0 {
 						lexer.CompilerFatal(&token.Loc, "Division by zero")
 					}
-					a := const_stack.Pop().(int)
+					a := const_stack.Pop().(types.IntType)
 					const_stack.Push(a / b)
 				case lexer.IntrinsicMod:
-					b := const_stack.Pop().(int)
+					b := const_stack.Pop().(types.IntType)
 					if b == 0 {
 						lexer.CompilerFatal(&token.Loc, "Division by zero")
 					}
-					a := const_stack.Pop().(int)
+					a := const_stack.Pop().(types.IntType)
 					const_stack.Push(a % b)
 				case lexer.IntrinsicShl:
-					b := const_stack.Pop().(int)
+					b := const_stack.Pop().(types.IntType)
 					if b < 0 {
 						lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Negative shift amount in `<<`: %d", b))
 					}
-					a := const_stack.Pop().(int)
+					a := const_stack.Pop().(types.IntType)
 					const_stack.Push(a << b)
 				case lexer.IntrinsicShr:
-					b := const_stack.Pop().(int)
+					b := const_stack.Pop().(types.IntType)
 					if b < 0 {
 						lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Negative shift amount in `>>`: %d", b))
 					}
-					a := const_stack.Pop().(int)
+					a := const_stack.Pop().(types.IntType)
 					const_stack.Push(a >> b)
 
 				default:
@@ -140,7 +132,7 @@ func (vm *VM) const_eval(name_token *lexer.Token, tokens *[]lexer.Token) (value 
 		lexer.CompilerFatal(&name_token.Loc, "Unhandled data in compile-time const-block evaluation stack")
 	}
 
-	value = const_stack.Pop().(int)
+	value, _ = const_stack.Pop().(types.IntType)
 	return
 }
 
@@ -179,14 +171,14 @@ func (vm *VM) parse_func_def(token *lexer.Token, tokens *[]lexer.Token) (func_na
 }
 
 func (vm *VM) preprocess_string_literals(tokens *[]lexer.Token) {
-	address := 1
+	address := types.IntType(1)
 	for _, token := range *tokens {
 		if token.Typ == lexer.TokenString {
 			literal := token.Value.(string)
 			_, exists := vm.Ctx.Memory.StringsMap[literal]
 			if !exists {
 				vm.Ctx.Memory.StringsMap[literal] = address
-				address += len(literal) + 1 // save literals as null-terminated strings
+				address += types.IntType(len(literal) + 1) // save literals as null-terminated strings
 			}
 		}
 	}
@@ -218,7 +210,7 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 		case lexer.TokenInt:
 			ops = append(ops, Op{
 				Typ:     OpPushInt,
-				Operand: token.Value.(int),
+				Operand: token.Value.(types.IntType),
 				OpToken: token,
 			})
 		case lexer.TokenString:
@@ -231,13 +223,13 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 			})
 			ops = append(ops, Op{
 				Typ:     OpPushInt,
-				Operand: len(literal),
+				Operand: types.IntType(len(literal)),
 				OpToken: token,
 			})
 		case lexer.TokenChar:
 			ops = append(ops, Op{
 				Typ:     OpPushInt,
-				Operand: token.Value.(int),
+				Operand: token.Value.(types.IntType),
 				OpToken: token,
 			})
 		case lexer.TokenBool:
@@ -281,7 +273,7 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 
 			func_addr, exists := vm.Ctx.Funcs[name]
 			if exists {
-				ops_count := len(ops)
+				ops_count := types.IntType(len(ops))
 				ops = append(ops, Op{
 					Typ:     OpCall,
 					Operand: func_addr - ops_count,
@@ -295,10 +287,11 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 		case lexer.TokenKeyword:
 			kw_type := token.Value.(lexer.KeywordType)
 			op := Op{OpToken: token}
+			len_ops := types.IntType(len(ops))
 			switch kw_type {
 			case lexer.KeywordIf:
 				op.Typ = OpIf
-				blocks.Push(Block{Addr: len(ops), Tok: token})
+				blocks.Push(Block{Addr: len_ops, Tok: token})
 				ops = append(ops, op)
 			case lexer.KeywordElse:
 				if blocks.Size() == 0 {
@@ -311,7 +304,7 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 				block_start_kw := block.Tok.Value.(lexer.KeywordType)
 				switch block_start_kw {
 				case lexer.KeywordIf:
-					ops[block.Addr].Operand = len(ops) - block.Addr + 1
+					ops[block.Addr].Operand = len_ops - block.Addr + 1
 				case lexer.KeywordElse, lexer.KeywordEnd, lexer.KeywordWhile:
 					lexer.CompilerFatal(&token.Loc, fmt.Sprintf("`else` may only come after `if` block, but got `%s`", block.Tok.Text))
 				default:
@@ -319,7 +312,7 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 				}
 
 				op.Typ = OpElse
-				blocks.Push(Block{Addr: len(ops), Tok: token})
+				blocks.Push(Block{Addr: len_ops, Tok: token})
 				ops = append(ops, op)
 			case lexer.KeywordEnd:
 				if blocks.Size() == 0 {
@@ -330,14 +323,14 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 					lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Only keywords may form blocks, but not `%s`. Probably bug in lex()", block.Tok.Text))
 				}
 				block_start_kw := block.Tok.Value.(lexer.KeywordType)
-				op.Operand = 1
+				op.Operand = types.IntType(1)
 				switch block_start_kw {
 				case lexer.KeywordIf:
-					ops[block.Addr].Operand = len(ops) - block.Addr + 1
+					ops[block.Addr].Operand = len_ops - block.Addr + 1
 					op.Typ = OpEnd
 					ops = append(ops, op)
 				case lexer.KeywordElse:
-					ops[block.Addr].Operand = len(ops) - block.Addr + 1
+					ops[block.Addr].Operand = len_ops - block.Addr + 1
 					op.Typ = OpEnd
 					ops = append(ops, op)
 				case lexer.KeywordWhile:
@@ -346,15 +339,15 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 					for _, jump := range block.Jumps {
 						switch jump.Keyword {
 						case lexer.KeywordBreak:
-							ops[jump.Addr].Operand = len(ops) - jump.Addr + 1
+							ops[jump.Addr].Operand = len_ops - jump.Addr + 1
 						case lexer.KeywordContinue:
-							ops[jump.Addr].Operand = ops[block.Addr].Operand.(int) + (block.Addr - jump.Addr)
+							ops[jump.Addr].Operand = ops[block.Addr].Operand.(types.IntType) + (block.Addr - jump.Addr)
 						default:
 							lexer.CompilerFatal(&block.Tok.Loc, fmt.Sprintf("Unhandled jump-keyword: `%s`", lexer.KeywordName[jump.Keyword]))
 						}
 					}
-					op.Operand = ops[block.Addr].Operand.(int) + (block.Addr - len(ops))
-					ops[block.Addr].Operand = len(ops) - block.Addr + 1
+					op.Operand = ops[block.Addr].Operand.(types.IntType) + (block.Addr - len_ops)
+					ops[block.Addr].Operand = len_ops - block.Addr + 1
 					op.Typ = OpEnd
 					ops = append(ops, op)
 				case lexer.KeywordEnd:
@@ -372,7 +365,7 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 				}
 			case lexer.KeywordWhile:
 				op.Typ = OpWhile
-				blocks.Push(Block{Addr: len(ops), Tok: token})
+				blocks.Push(Block{Addr: len_ops, Tok: token})
 				ops = append(ops, op)
 			case lexer.KeywordDo:
 				if blocks.Size() == 0 {
@@ -386,8 +379,8 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 					lexer.CompilerFatal(&token.Loc, fmt.Sprintf("`do` may come only inside `while` block, but not `%s`", block.Tok.Text))
 				}
 				op.Typ = OpDo
-				op.Operand = block.Addr - len(ops) // save relative address of `while`
-				blocks.Push(Block{Addr: len(ops), Tok: token})
+				op.Operand = block.Addr - len_ops // save relative address of `while`
+				blocks.Push(Block{Addr: len_ops, Tok: token})
 				ops = append(ops, op)
 			case lexer.KeywordBreak:
 				if blocks.Size() == 0 {
@@ -399,7 +392,7 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 					cur_block := blocks.Data[i].(Block)
 
 					if cur_block.Tok.Typ == lexer.TokenKeyword && cur_block.Tok.Value.(lexer.KeywordType) == lexer.KeywordDo {
-						cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: lexer.KeywordBreak, Addr: len(ops)})
+						cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: lexer.KeywordBreak, Addr: len_ops})
 						blocks.Data[i] = cur_block
 						break
 					}
@@ -420,7 +413,7 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 					cur_block := blocks.Data[i].(Block)
 
 					if cur_block.Tok.Typ == lexer.TokenKeyword && cur_block.Tok.Value.(lexer.KeywordType) == lexer.KeywordDo {
-						cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: lexer.KeywordContinue, Addr: len(ops)})
+						cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: lexer.KeywordContinue, Addr: len_ops})
 						blocks.Data[i] = cur_block
 						break
 					}
@@ -459,8 +452,8 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 				func_name := vm.parse_func_def(&token, &tokens)
 				current_function = func_name
 
-				vm.Ctx.Funcs[func_name] = len(ops)
-				blocks.Push(Block{Addr: len(ops), Tok: token})
+				vm.Ctx.Funcs[func_name] = len_ops
+				blocks.Push(Block{Addr: len_ops, Tok: token})
 
 				op.Typ = OpFuncBegin
 				op.Operand = func_name
@@ -502,118 +495,72 @@ func (vm *VM) Interprete(ops []Op, args []string, debug bool) {
 		fmt.Println("---------------------------------")
 	}
 
-	// assert(OpCount == 9, "Unhandled Op in interprete()")
 	addr := vm.Ctx.Funcs["main"]
-	return_stack.Push(len(ops))
+	len_ops := types.IntType(len(ops))
+	return_stack.Push(len_ops)
 
-	for addr < len(ops) {
+	for addr < len_ops {
 
 		op := ops[addr]
 		// fmt.Printf("Process addr=%d stack=%v ret_stack=%v\n", addr, stack.Data, return_stack.Data)
 
 		switch op.Typ {
-		case OpPushInt:
-			n := op.Operand.(int)
-			stack.Push(n)
+		case OpPushInt, OpPushBool:
+			stack.Push(op.Operand)
 			addr++
-		case OpPushBool:
-			switch op.Operand {
-			case types.BoolFalse:
-				stack.Push(false)
-			case types.BoolTrue:
-				stack.Push(true)
-			}
-			addr++
-		case OpIf:
-			top := stack.Pop().(bool)
+		case OpIf, OpDo:
+			top := stack.Pop().(types.BoolType)
 			if top {
 				addr++
 			} else {
-				addr += op.Operand.(int)
+				addr += op.Operand.(types.IntType)
 			}
-		case OpElse:
-			addr += op.Operand.(int)
-		case OpEnd:
-			addr += op.Operand.(int)
+		case OpElse, OpEnd, OpBreak, OpContinue:
+			addr += op.Operand.(types.IntType)
 		case OpWhile:
 			addr++
-		case OpDo:
-			top := stack.Pop().(bool)
-			if top {
-				addr++
-			} else {
-				addr += op.Operand.(int)
-			}
 		case OpIntrinsic:
-			// assert(lexer.IntrinsicCount == 36, "Unhandled intrinsic in interprete()")
-			switch op.Operand {
-			case lexer.IntrinsicPlus:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(int) + b.(int))
-			case lexer.IntrinsicMinus:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(int) - b.(int))
-			case lexer.IntrinsicMul:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(int) * b.(int))
+			intrinsic := op.Operand.(lexer.IntrinsicType)
+			switch intrinsic {
+			case lexer.IntrinsicPlus, lexer.IntrinsicMinus, lexer.IntrinsicMul, lexer.IntrinsicBitAnd, lexer.IntrinsicBitOr, lexer.IntrinsicBitXor:
+				b := stack.Pop().(types.IntType)
+				a := stack.Pop().(types.IntType)
+				stack.Push(SafeArithmeticFunctions[intrinsic](a, b))
 			case lexer.IntrinsicDiv:
-				b := stack.Pop()
-				b_arg := b.(int)
-				if b_arg == 0 {
+				b := stack.Pop().(types.IntType)
+				if b == 0 {
 					lexer.RuntimeFatal(&op.OpToken.Loc, "Division by zero")
 				}
-				a := stack.Pop()
-				stack.Push(a.(int) / b_arg)
+				a := stack.Pop().(types.IntType)
+				stack.Push(a / b)
 			case lexer.IntrinsicMod:
-				b := stack.Pop()
-				b_arg := b.(int)
-				if b_arg == 0 {
+				b := stack.Pop().(types.IntType)
+				if b == 0 {
 					lexer.RuntimeFatal(&op.OpToken.Loc, "Division by zero")
 				}
-				a := stack.Pop()
-				stack.Push(a.(int) % b_arg)
+				a := stack.Pop().(types.IntType)
+				stack.Push(a % b)
 			case lexer.IntrinsicShl:
-				b := stack.Pop()
-				b_arg := b.(int)
-				if b_arg < 0 {
-					lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Negative shift amount in `<<`: %d", b_arg))
+				b := stack.Pop().(types.IntType)
+				if b < 0 {
+					lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Negative shift amount in `<<`: %d", b))
 				}
-				a := stack.Pop()
-				stack.Push(a.(int) << b_arg)
+				a := stack.Pop().(types.IntType)
+				stack.Push(a << b)
 			case lexer.IntrinsicShr:
-				b := stack.Pop()
-				b_arg := b.(int)
-				if b_arg < 0 {
-					lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Negative shift amount in `>>`: %d", b_arg))
+				b := stack.Pop().(types.IntType)
+				if b < 0 {
+					lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Negative shift amount in `>>`: %d", b))
 				}
-				a := stack.Pop()
-				stack.Push(a.(int) >> b_arg)
-			case lexer.IntrinsicLogicalAnd:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(bool) && b.(bool))
-			case lexer.IntrinsicLogicalOr:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(bool) || b.(bool))
+				a := stack.Pop().(types.IntType)
+				stack.Push(a >> b)
+			case lexer.IntrinsicLogicalAnd, lexer.IntrinsicLogicalOr:
+				b := stack.Pop().(types.BoolType)
+				a := stack.Pop().(types.BoolType)
+				stack.Push(LogicalFunctions[intrinsic](a, b))
 			case lexer.IntrinsicLogicalNot:
 				x := stack.Pop()
-				stack.Push(!x.(bool))
-			case lexer.IntrinsicBitAnd:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(int) & b.(int))
-			case lexer.IntrinsicBitOr:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(int) | b.(int))
-			case lexer.IntrinsicBitXor:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(int) ^ b.(int))
+				stack.Push(!x.(types.BoolType))
 			case lexer.IntrinsicDup:
 				x := stack.Top()
 				stack.Push(x)
@@ -623,7 +570,7 @@ func (vm *VM) Interprete(ops []Op, args []string, debug bool) {
 				stack.Push(b)
 				stack.Push(a)
 			case lexer.IntrinsicDrop:
-				_ = stack.Pop()
+				stack.Pop()
 			case lexer.IntrinsicOver:
 				x := stack.Data[len(stack.Data)-2]
 				stack.Push(x)
@@ -634,104 +581,56 @@ func (vm *VM) Interprete(ops []Op, args []string, debug bool) {
 				stack.Push(b)
 				stack.Push(c)
 				stack.Push(a)
-			case lexer.IntrinsicEq:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(int) == b.(int))
-			case lexer.IntrinsicNe:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(int) != b.(int))
-			case lexer.IntrinsicLe:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(int) <= b.(int))
-			case lexer.IntrinsicGe:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(int) >= b.(int))
-			case lexer.IntrinsicLt:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(int) < b.(int))
-			case lexer.IntrinsicGt:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(a.(int) > b.(int))
+			case lexer.IntrinsicEq, lexer.IntrinsicNe, lexer.IntrinsicLe, lexer.IntrinsicGe, lexer.IntrinsicLt, lexer.IntrinsicGt:
+				b := stack.Pop().(types.IntType)
+				a := stack.Pop().(types.IntType)
+				stack.Push(ComparableFunctions[intrinsic](a, b))
 			case lexer.IntrinsicPuti:
 				x := stack.Pop()
 				fmt.Print(x)
 			case lexer.IntrinsicPutc:
 				x := stack.Pop()
-				fmt.Print(string(byte(x.(int))))
+				fmt.Print(string(byte(x.(types.IntType))))
 			case lexer.IntrinsicPuts:
-				size := stack.Pop().(int)
-				ptr := stack.Pop().(int)
+				size := stack.Pop().(types.IntType)
+				ptr := stack.Pop().(types.IntType)
 				str := string(vm.Ctx.Memory.Data[ptr : ptr+size])
 				fmt.Print(str)
 			case lexer.IntrinsicDebug:
 				fmt.Printf("\tMem: %v\tStack: %v\n", vm.Ctx.Memory.Data[vm.Ctx.Memory.OperativeMemRegion.Start:vm.Ctx.Memory.OperativeMemRegion.Ptr], stack.Data)
-			case lexer.IntrinsicLoad8:
+
+			case lexer.IntrinsicLoad8, lexer.IntrinsicLoad16, lexer.IntrinsicLoad32, lexer.IntrinsicLoad64:
 				x := stack.Pop()
-				ptr := x.(int)
-				val := vm.Ctx.Memory.LoadFromMem(ptr, 1)
+				ptr := x.(types.IntType)
+				val := vm.Ctx.Memory.LoadFromMem(ptr, LoadSizes[intrinsic])
 				stack.Push(val)
-			case lexer.IntrinsicStore8:
-				ptr := stack.Pop().(int)
-				x := stack.Pop().(int)
-				vm.Ctx.Memory.StoreToMem(ptr, x, 1)
-			case lexer.IntrinsicLoad16:
-				x := stack.Pop()
-				ptr := x.(int)
-				value := vm.Ctx.Memory.LoadFromMem(ptr, 2)
-				stack.Push(value)
-			case lexer.IntrinsicStore16:
-				ptr := stack.Pop().(int)
-				x := stack.Pop().(int)
-				vm.Ctx.Memory.StoreToMem(ptr, x, 2)
-			case lexer.IntrinsicLoad32:
-				x := stack.Pop()
-				ptr := x.(int)
-				value := vm.Ctx.Memory.LoadFromMem(ptr, 4)
-				stack.Push(value)
-			case lexer.IntrinsicStore32:
-				ptr := stack.Pop().(int)
-				x := stack.Pop().(int)
-				vm.Ctx.Memory.StoreToMem(ptr, x, 4)
-			case lexer.IntrinsicLoad64:
-				x := stack.Pop()
-				ptr := x.(int)
-				value := vm.Ctx.Memory.LoadFromMem(ptr, 8)
-				stack.Push(value)
-			case lexer.IntrinsicStore64:
-				ptr := stack.Pop().(int)
-				x := stack.Pop().(int)
-				vm.Ctx.Memory.StoreToMem(ptr, x, 8)
+
+			case lexer.IntrinsicStore8, lexer.IntrinsicStore16, lexer.IntrinsicStore32, lexer.IntrinsicStore64:
+				ptr := stack.Pop().(types.IntType)
+				x := stack.Pop().(types.IntType)
+				vm.Ctx.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic])
+
 			case lexer.IntrinsicArgc:
-				stack.Push(len(args))
+				stack.Push(types.IntType(len(args)))
 			case lexer.IntrinsicArgv:
 				stack.Push(vm.Ctx.Memory.Argv)
 			default:
 				lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: `%s`", op.OpToken.Text))
 			}
 			addr++
-		case OpBreak:
-			addr += op.Operand.(int)
-		case OpContinue:
-			addr += op.Operand.(int)
 		case OpCall:
 			if return_stack.Size() >= vm.RecursionLimit {
 				lexer.RuntimeFatal(&op.OpToken.Loc, "Recursion limit exceeded")
 			}
 			return_stack.Push(addr)
-			addr += op.Operand.(int)
+			addr += op.Operand.(types.IntType)
 		case OpFuncBegin:
 			addr++
 		case OpFuncEnd:
 			if return_stack.Size() == 0 {
 				lexer.RuntimeFatal(&op.OpToken.Loc, "Return stack is empty")
 			}
-			addr = return_stack.Pop().(int) + 1
+			addr = return_stack.Pop().(types.IntType) + 1
 		default:
 			lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation: `%s`", OpName[op.Typ]))
 		}

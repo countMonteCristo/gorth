@@ -14,23 +14,26 @@ type Importer struct {
 
 func (i *Importer) Find(fn string) (string, bool) {
 	results := make([]string, 0)
-	err := filepath.Walk(".",
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if strings.HasSuffix(path, fn) {
-				results = append(results, path)
-			}
-			return nil
-		})
-	if err != nil {
-		// TODO: proper error message
-		log.Fatal(err)
-	}
 
-	if len(results) > 0 {
-		return results[0], true
+	for _, include_path := range i.Paths {
+		err := filepath.Walk(include_path,
+			func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if strings.HasSuffix(path, fn) && len(path) > len(include_path) + len(fn){
+					results = append(results, path)
+				}
+				return nil
+			})
+		if err != nil {
+			// TODO: proper error message
+			log.Fatal(err)
+		}
+
+		if len(results) > 0 {
+			return results[0], true
+		}
 	}
 	return fn, false
 }

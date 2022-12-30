@@ -4,7 +4,6 @@ import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/types"
 	"fmt"
-	"strconv"
 )
 
 type OpType int
@@ -60,31 +59,19 @@ func (op *Op) Str(addr int) (s string) {
 
 	switch op.Typ {
 	case OpPushInt:
-		operand = strconv.Itoa(op.Operand.(int))
+		res, _ := op.Operand.(types.IntType)
+		operand = fmt.Sprint(res)
 	case OpPushBool:
 		operand = types.BoolName[op.Operand.(types.BoolType)]
 	case OpIntrinsic:
 		operand = lexer.IntrinsicName[op.Operand.(lexer.IntrinsicType)]
-	case OpIf:
-		operand = strconv.Itoa(op.Operand.(int))
-	case OpElse:
-		operand = strconv.Itoa(op.Operand.(int))
+	case OpIf, OpElse, OpDo, OpEnd, OpBreak, OpContinue, OpCall:
+		res, _ := op.Operand.(types.IntType)
+		operand = fmt.Sprint(res)
 	case OpWhile:
 		operand = ""
-	case OpDo:
-		operand = strconv.Itoa(op.Operand.(int))
-	case OpEnd:
-		operand = strconv.Itoa(op.Operand.(int))
-	case OpBreak:
-		operand = strconv.Itoa(op.Operand.(int))
-	case OpContinue:
-		operand = strconv.Itoa(op.Operand.(int))
-	case OpFuncBegin:
+	case OpFuncBegin, OpFuncEnd:
 		operand = op.Operand.(string)
-	case OpFuncEnd:
-		operand = op.Operand.(string)
-	case OpCall:
-		operand = strconv.Itoa(op.Operand.(int))
 	default:
 		lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation: `%s`", OpName[op.Typ]))
 	}

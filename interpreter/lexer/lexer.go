@@ -158,17 +158,7 @@ func (lx *Lexer) next_token() (token Token, end bool) {
 		if word[0] == '\'' {
 			// fmt.Printf("`%s` - is a char\n", word)
 			token.Typ = TokenChar
-			token.Value = int(word[1])
-			return
-		}
-
-		// check if word is int literal
-		// TODO: parse as 64-bit integer
-		number, err := strconv.Atoi(word)
-		if err == nil {
-			// fmt.Printf("`%s` - is an int\n", word)
-			token.Typ = TokenInt
-			token.Value = number
+			token.Value = types.IntType(word[1])
 			return
 		}
 
@@ -188,6 +178,15 @@ func (lx *Lexer) next_token() (token Token, end bool) {
 			// fmt.Printf("`%s` - is a keyword\n", word)
 			token.Typ = TokenKeyword
 			token.Value = keyword
+			return
+		}
+
+		// check if word is int literal
+		number, err := strconv.ParseInt(word, 10, 64)
+		if err == nil {
+			// fmt.Printf("`%s` - is an int\n", word)
+			token.Typ = TokenInt
+			token.Value = number
 			return
 		}
 

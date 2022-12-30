@@ -1,13 +1,14 @@
 package vm
 
 import (
+	"Gorth/interpreter/types"
 	"fmt"
 )
 
 type MemoryRegion struct {
-	Start int
-	Size  int
-	Ptr   int
+	Start types.IntType
+	Size  types.IntType
+	Ptr   types.IntType
 }
 
 // Memory for the Gorth programm represented as array of bytes.
@@ -18,25 +19,25 @@ type MemoryRegion struct {
 // - Environment - TODO: add to String literals buffer
 // - Operative memory - the place where all the allocations are stored.
 type ByteMemory struct {
-	MemorySize int
-	MemPtr     int
+	MemorySize types.IntType
+	MemPtr     types.IntType
 	Data       []byte
 
-	Argv int		// pointer to the beginning of the input arguments array
+	Argv types.IntType // pointer to the beginning of the input arguments array
 
 	OperativeMemRegion MemoryRegion
 
 	StringsRegion MemoryRegion
-	StringsMap    map[string]int
+	StringsMap    map[string]types.IntType
 }
 
-func InitMemory(mem_size int) ByteMemory {
+func InitMemory(mem_size types.IntType) ByteMemory {
 	mem := ByteMemory{
 		Data:       make([]byte, mem_size),
 		MemorySize: mem_size,
 		MemPtr:     1,
 
-		StringsMap: make(map[string]int),
+		StringsMap: make(map[string]types.IntType),
 	}
 
 	return mem
@@ -49,11 +50,11 @@ func (m *ByteMemory) Prepare(args []string) {
 	}
 
 	// add input args to string literals as null-terminated strings
-	m.Argv = m.StringsRegion.Ptr
+	m.Argv = types.IntType(m.StringsRegion.Ptr)
 	for _, arg := range args {
 		arg_bytes := []byte(arg)
 		copy(m.Data[m.StringsRegion.Ptr:], arg_bytes)
-		m.StringsRegion.Ptr += len(arg_bytes) + 1
+		m.StringsRegion.Ptr += types.IntType(len(arg_bytes) + 1)
 	}
 	m.StringsRegion.Size = m.StringsRegion.Ptr - 1
 
@@ -65,18 +66,18 @@ func (m *ByteMemory) Prepare(args []string) {
 	}
 }
 
-func (m *ByteMemory) LoadFromMem(ptr int, size int) (value int) {
-	value = 0
+func (m *ByteMemory) LoadFromMem(ptr types.IntType, size int) (value types.IntType) {
+	value = types.IntType(0)
 	n := 0
 	for n < size {
-		value = (value << 8) | int(m.Data[ptr+n])
+		value = (value << 8) | types.IntType(m.Data[ptr+types.IntType(n)])
 		n++
 	}
 	return
 }
 
-func (m *ByteMemory) StoreToMem(ptr int, value int, size int) {
-	diff := size - 1
+func (m *ByteMemory) StoreToMem(ptr types.IntType, value types.IntType, size int) {
+	diff := types.IntType(size - 1)
 	for diff >= 0 {
 		b := byte(value & 0xFF)
 		m.Data[ptr+diff] = b

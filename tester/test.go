@@ -61,7 +61,7 @@ func (t *TestCase) GetExpectedFilePath() string {
 }
 
 func (t *TestCase) run() TestOutput {
-	fmt.Printf("Running testcase %s...\n", t.File)
+	fmt.Printf("Running testcase %s\n", t.File)
 
 	cmd := exec.Command(t.Cmd[0], t.Cmd[1:]...)
 
@@ -171,7 +171,7 @@ func TestFile(fn string, stats *Stats) {
 	exists := testcase.LoadExpected(expected_output_file)
 	if !exists {
 		status = StatusSkip
-		fmt.Fprintf(os.Stderr, "Running testcase %s...\n", fn)
+		fmt.Fprintf(os.Stderr, "Running testcase %s\n", fn)
 		fmt.Fprintf(os.Stderr, "  Config file %s not found, skip testcase\n", expected_output_file)
 		fmt.Println("SKIP")
 	} else {

@@ -2,11 +2,11 @@ package types
 
 import "Gorth/interpreter/utils"
 
-type BoolType int
+type BoolType = bool
 
 const (
-	BoolTrue  BoolType = iota
-	BoolFalse BoolType = iota
+	BoolTrue  BoolType = true
+	BoolFalse BoolType = false
 )
 
 var BoolName = map[BoolType]string{
@@ -15,3 +15,5 @@ var BoolName = map[BoolType]string{
 }
 
 var WordToBool = utils.RevMap(BoolName).(map[string]BoolType)
+
+type IntType = int64
