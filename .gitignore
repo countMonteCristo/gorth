@@ -2,3 +2,4 @@ gorth
 test
 *.gorth
 bin/*
+.vscode

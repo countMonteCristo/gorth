@@ -31,11 +31,12 @@
 
 [] Testing
   [] more tests
-  [] implement testing tool:
+  [] run tests asynchronously
+  [*] implement testing tool:
     [*] test single file, test all files in directory, test all dirs
     [*] support for providing input args and stdin for testcases
     [*] check both return code and stdout/stderr output for testcases
-    [] update testcase expecting output file
+    [*] update testcase expecting output file
 
 [*] Split Gorth project into modules
   [] show compilation statuses and timing

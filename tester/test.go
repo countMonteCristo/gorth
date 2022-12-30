@@ -3,10 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -15,28 +13,27 @@ import (
 )
 
 type Stats struct {
-	Total   int
-	Success int
-	Fail    int
-	Skip    int
+	Total    int
+	Detailed map[int]int
 }
 
 const (
 	StatusSuccess = iota
-	StatusFail    = iota
-	StatusSkip    = iota
+	StatusFail
+	StatusSkip
 )
 
 type TestConfig struct {
-	Argv     []string
-	Stdin    string
-	Stdout   string
-	Stderr   string
-	ExitCode int
+	Argv     []string `json:"argv"`
+	Stdin    string   `json:"stdin"`
+	Stdout   string   `json:"stdout"`
+	Stderr   string   `json:"stderr"`
+	ExitCode int      `json:"exit_code"`
 }
 
-func (tc *TestConfig) Argc() int {
-	return len(tc.Argv)
+type TestOutput struct {
+	Stdout, Stderr string
+	ExitCode       int
 }
 
 type TestCase struct {
@@ -45,9 +42,26 @@ type TestCase struct {
 	Config TestConfig
 }
 
-func (t *TestCase) run() (status int) {
+func NewTestCase(fn string) TestCase {
+	return TestCase{
+		File: fn,
+		Config: TestConfig{
+			Argv: make([]string, 0), Stdin: "", Stdout: "", Stderr: "", ExitCode: 0,
+		},
+		Cmd: []string{
+			"go", "run", "gorth.go", fn,
+		},
+	}
+}
+
+func (t *TestCase) GetExpectedFilePath() string {
+	ext := filepath.Ext(t.File)
+	name := t.File[:len(t.File)-len(ext)]
+	return name + ".txt"
+}
+
+func (t *TestCase) run() TestOutput {
 	fmt.Printf("Running testcase %s...\n", t.File)
-	status = StatusFail
 
 	cmd := exec.Command(t.Cmd[0], t.Cmd[1:]...)
 
@@ -59,42 +73,25 @@ func (t *TestCase) run() (status int) {
 
 	io.WriteString(stdin, t.Config.Stdin)
 
-	var outbuf strings.Builder
-	var errbuf strings.Builder
-	cmd.Stdout = &outbuf
-	cmd.Stderr = &errbuf
+	var outbuf, errbuf strings.Builder
+	cmd.Stdout, cmd.Stderr = &outbuf, &errbuf
 
 	if err = cmd.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "An error occured: %s", err) //replace with logger, or anything you want
 	}
 	cmd.Wait()
 
-	stdout := outbuf.String()
-	stderr := errbuf.String()
-	exit_code := cmd.ProcessState.ExitCode()
-
-	stdout_ok := CheckOutput(stdout, t.Config.Stdout, "STDOUT")
-	stderr_ok := CheckOutput(stderr, t.Config.Stderr, "STDERR")
-	exit_code_ok := (exit_code == t.Config.ExitCode)
-
-	if !exit_code_ok {
-		fmt.Fprintln(os.Stderr, "  EXITCODE differs:")
-		fmt.Fprintf(os.Stderr, "\tActual:   %d\n", exit_code)
-		fmt.Fprintf(os.Stderr, "\tExpected: %d\n", t.Config.ExitCode)
+	return TestOutput{
+		Stdout: outbuf.String(), Stderr: errbuf.String(), ExitCode: cmd.ProcessState.ExitCode(),
 	}
-
-	if stdout_ok && stderr_ok && exit_code_ok {
-		fmt.Fprintln(os.Stderr, "SUCCESS")
-		status = StatusSuccess
-	} else {
-		fmt.Fprintln(os.Stderr, "FAILED")
-		status = StatusFail
-	}
-
-	return
 }
 
-func (t *TestCase) LoadExpected(fn string) {
+func (t *TestCase) LoadExpected(fn string) (exists bool) {
+	if _, err := os.Stat(fn); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	exists = true
+
 	file, err := os.Open(fn)
 	if err != nil {
 		log.Fatal(err)
@@ -110,6 +107,31 @@ func (t *TestCase) LoadExpected(fn string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	t.Cmd = append(t.Cmd, t.Config.Argv...)
+	return
+}
+
+func (t *TestCase) Check(output TestOutput) (status int) {
+	status = StatusFail
+
+	stdout_ok := CheckOutput(output.Stdout, t.Config.Stdout, "STDOUT")
+	stderr_ok := CheckOutput(output.Stderr, t.Config.Stderr, "STDERR")
+	exit_code_ok := (output.ExitCode == t.Config.ExitCode)
+
+	if !exit_code_ok {
+		fmt.Fprintln(os.Stderr, "  EXITCODE differs:")
+		fmt.Fprintf(os.Stderr, "\tActual:   %d\n", output.ExitCode)
+		fmt.Fprintf(os.Stderr, "\tExpected: %d\n", t.Config.ExitCode)
+	}
+
+	if stdout_ok && stderr_ok && exit_code_ok {
+		fmt.Fprintln(os.Stderr, "SUCCESS")
+		status = StatusSuccess
+	} else {
+		fmt.Fprintln(os.Stderr, "FAILED")
+		status = StatusFail
+	}
+	return
 }
 
 func CheckOutput(actual, expected, out_desc string) bool {
@@ -124,7 +146,7 @@ func CheckOutput(actual, expected, out_desc string) bool {
 }
 
 func ListDir(dir string) (fns []string) {
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -142,43 +164,27 @@ func ListDir(dir string) (fns []string) {
 }
 
 func TestFile(fn string, stats *Stats) {
-
-	ext := filepath.Ext(fn)
-	name := fn[:len(fn)-len(ext)]
-	expected_output_file := name + ".txt"
+	testcase := NewTestCase(fn)
+	expected_output_file := testcase.GetExpectedFilePath()
 
 	var status int
-	if _, err := os.Stat(expected_output_file); errors.Is(err, os.ErrNotExist) {
+	exists := testcase.LoadExpected(expected_output_file)
+	if !exists {
 		status = StatusSkip
 		fmt.Fprintf(os.Stderr, "Running testcase %s...\n", fn)
 		fmt.Fprintf(os.Stderr, "  Config file %s not found, skip testcase\n", expected_output_file)
 		fmt.Println("SKIP")
 	} else {
-		testcase := TestCase{
-			File: fn,
-		}
-		testcase.LoadExpected(expected_output_file)
-		testcase.Cmd = []string{
-			"go", "run", "gorth.go", fn,
-		}
-		testcase.Cmd = append(testcase.Cmd, testcase.Config.Argv...)
-		status = testcase.run()
+		output := testcase.run()
+		status = testcase.Check(output)
 	}
 
-	switch status {
-	case StatusSuccess:
-		stats.Success++
-	case StatusFail:
-		stats.Fail++
-	case StatusSkip:
-		stats.Skip++
-	default:
-		panic(fmt.Sprintf("Unhandled testcase status in TestFile(): %d\n", status))
-	}
+	stats.Total++
+	stats.Detailed[status]++
 }
 
 func TestInputs(gorth_fns []string) {
-	stats := Stats{}
+	stats := Stats{Detailed: map[int]int{StatusSuccess: 0, StatusSkip: 0, StatusFail: 0}}
 
 	for _, gorth_fn := range gorth_fns {
 		TestFile(gorth_fn, &stats)
@@ -186,9 +192,9 @@ func TestInputs(gorth_fns []string) {
 
 	fmt.Println()
 	fmt.Printf("Total tests: %d:\n", stats.Total)
-	fmt.Printf("  succeeded: %d\n", stats.Success)
-	fmt.Printf("  failed:    %d\n", stats.Fail)
-	fmt.Printf("  skiped:    %d\n", stats.Skip)
+	fmt.Printf("  succeeded: %d\n", stats.Detailed[StatusSuccess])
+	fmt.Printf("  failed:    %d\n", stats.Detailed[StatusFail])
+	fmt.Printf("  skiped:    %d\n", stats.Detailed[StatusSkip])
 }
 
 func PrepareInputs(in_paths []string) (gorth_fns []string) {
@@ -222,26 +228,81 @@ func PrepareInputs(in_paths []string) (gorth_fns []string) {
 	return
 }
 
+func RecordTestOutputs(gorth_fns []string) {
+	for _, gorth_fn := range gorth_fns {
+		RecordOutput(gorth_fn)
+	}
+}
+
+func RecordOutput(fn string) {
+	testcase := NewTestCase(fn)
+	expected_output_file := testcase.GetExpectedFilePath()
+
+	testcase.LoadExpected(expected_output_file)
+	output := testcase.run()
+
+	new_config := TestConfig{
+		Argv: testcase.Config.Argv, Stdin: testcase.Config.Stdin,
+		Stdout:   output.Stdout,
+		Stderr:   output.Stderr,
+		ExitCode: output.ExitCode,
+	}
+
+	fmt.Printf("  Save test config to %s\n", expected_output_file)
+	SaveExpected(expected_output_file, new_config)
+}
+
+func SaveExpected(fn string, config TestConfig) {
+	ostream, err := os.Create(fn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err = ostream.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	encoder := json.NewEncoder(ostream)
+	err = encoder.Encode(&config)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func usage() {
+	fmt.Println("Usage:")
+	fmt.Println("    gorth_test test|record [path]")
+	fmt.Println()
+	fmt.Println("Arguments:")
+	fmt.Println("    path - if full - process all dirs. Othwewise it is treated as path to file or directory")
+}
+
 func main() {
-	full_flag := flag.Bool("full", false, "run all availiable tests")
-	flag.Parse()
+	if len(os.Args) < 2 {
+		usage()
+		os.Exit(1)
+	}
+	command := os.Args[1]
 
 	var input_paths []string
-	if *full_flag {
-		input_paths = make([]string, 0)
-		input_paths = append(
-			input_paths,
+	if len(os.Args) == 2 {
+		input_paths = []string{
 			"Gorth/tests",
 			"Gorth/examples",
 			"Gorth/euler",
-		)
-		if len(flag.Args()) > 0 {
-			fmt.Println("WARNING: Input paths are ignored because of -full flag")
 		}
 	} else {
-		input_paths = flag.Args()
+		input_paths = os.Args[2:]
 	}
 
-	fmt.Printf("Run tests from %v\n", input_paths)
-	TestInputs(PrepareInputs(input_paths))
+	switch command {
+	case "test":
+		fmt.Printf("Run tests from %v\n", input_paths)
+		TestInputs(PrepareInputs(input_paths))
+	case "record":
+		RecordTestOutputs(PrepareInputs(input_paths))
+	default:
+		panic(fmt.Sprintf("Unknown command: %s\n", command))
+	}
 }
