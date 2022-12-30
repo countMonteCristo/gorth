@@ -1,0 +1,73 @@
+// Consumes pointer to the null-terminated string, returns its length (exclude terminated \0)
+func strlen do // int -> int
+  // p p+len
+  dup
+  while dup @8 0 != do
+    1 +
+  end
+  swap -
+end
+
+// Consumes number of the input argument and returns pointer to it
+func argv_n do
+  argv swap 0
+  while over over - 0 > do
+    rot
+    dup strlen + 1 +
+    rot rot
+    1 +
+  end
+  drop drop
+end
+
+// Consumes two numbers and pushes minimum value
+func min do
+  over over > if swap end drop
+end
+
+// Consumes two numbers and pushes maximum value
+func max do
+  over over < if swap end drop
+end
+
+// Consumes one number and pushes its absolute value
+func abs do
+  dup 0 < if -1 * end
+end
+
+// Consumes one number and pushes its sign
+func sign do
+  dup 0 < if
+    drop -1
+  else
+    dup 0 > if drop 1 else drop 0 end
+  end
+end
+
+// Consumes two pointers to null-terminated strings, pushes 1 if the first string is
+// lexicografically bigger than the second, -1 if it is smaller and 0 if they are equal
+func strcmp do
+  while over @8 over @8 over over = rot rot drop 0 != && do
+    1 + swap 1 + swap
+  end
+
+  over @8 over @8 over over > if
+    drop drop drop drop 1
+  else
+    < if
+      drop drop -1
+    else
+      drop drop 0
+    end
+  end
+end
+
+// Prints number and one new line
+func p_int do
+  puti '\n' putc
+end
+
+// Prints string and one new line
+func p_str do
+  puts '\n' putc
+end

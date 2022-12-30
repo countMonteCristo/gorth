@@ -18,7 +18,7 @@ end
 
 ### Print all input arguments:
 ```gorth
-func cstrlen do
+func strlen do
   dup
   while dup @8 0 != do
     1 +
@@ -29,7 +29,7 @@ end
 func main do
   argv 0
   while dup argc < do
-    over cstrlen over over puts '\n' putc
+    over strlen over over puts '\n' putc
     + rot drop 1 + swap
     1 +
   end
@@ -203,7 +203,7 @@ all inluded files, so it won't include file if it has been already inlcuded some
 
 ### Functions
 ```gorth
-func cstrlen do
+func strlen do
   dup
   while dup @8 0 != do
     1 +
@@ -214,7 +214,7 @@ end
 func main do
   argv 0
   while dup argc < do
-    over cstrlen over over puts '\n' putc
+    over strlen over over puts '\n' putc
     + rot drop 1 + swap
     1 +
   end

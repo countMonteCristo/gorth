@@ -1,0 +1,11 @@
+func foo do
+  "foo\n" puts
+end
+
+func foo do
+  "bar\n" puts
+end
+
+func main do
+  foo
+end

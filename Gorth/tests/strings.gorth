@@ -1,0 +1,13 @@
+include "std/std.gorth"
+
+func main do
+  "hello" drop "hello" drop strcmp p_int
+  "hello" drop "hell" drop strcmp p_int
+  "hello" drop "helloworld" drop strcmp p_int
+  "hello" drop "help" drop strcmp p_int
+  "her" drop "hell" drop strcmp p_int
+
+  "Hello, wolrd" p_str
+
+  "Hello, world" drop strlen p_int
+end

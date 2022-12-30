@@ -27,6 +27,9 @@
   [] use function signatures
   [] generic functions
 
+[] Improve interpreter
+  [] Add debugger mode (run by step, go in, go out, continue, etc)
+
 [] Low-level interaction with OS
   [] syscalls
 
@@ -35,6 +38,7 @@
 [] Testing
   [] more tests
   [] run tests asynchronously
+  [] add asserts
   [*] implement testing tool:
     [*] test single file, test all files in directory, test all dirs
     [*] support for providing input args and stdin for testcases

@@ -1,0 +1,9 @@
+include "std/std.gorth"
+
+func main do
+  0 while dup argc < do
+    dup argv_n
+    dup strlen p_str
+    1 +
+  end
+end

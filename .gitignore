@@ -1,5 +1,5 @@
 gorth
 test
-*.gorth
+/*.gorth
 bin/*
 .vscode
