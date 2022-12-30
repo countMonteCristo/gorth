@@ -206,7 +206,7 @@ func (lx *Lexer) next_token() (token Token, end bool) {
 	return
 }
 
-func (lx *Lexer) ProcessFile(fn string) (tokens []Token) {
+func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (tokens []Token) {
 	lx.Fn = fn
 	lx.Row = 0
 	lx.Col = 0
@@ -219,9 +219,54 @@ func (lx *Lexer) ProcessFile(fn string) (tokens []Token) {
 			break
 		}
 
-		// TODO: `include` keyword should be processed here
+		if token.Typ == TokenKeyword {
+			kw_type := token.Value.(KeywordType)
+			if kw_type == KeywordInclude {
+				next, end := lx.next_token()
+				if end {
+					CompilerFatal(&token.Loc, "Expected import file path as a string, got nothing")
+					utils.Exit(1)
+				}
+				if next.Typ != TokenString {
+					CompilerFatal(&token.Loc, fmt.Sprintf("Expected import file path as a string, got %s", next.Text))
+					utils.Exit(1)
+				}
+
+				imported_fn := next.Value.(string)
+				full_imported_fn, exists := imp.Find(imported_fn)
+				if !exists {
+					CompilerFatal(&next.Loc, fmt.Sprintf("Cannot import file %s: not in Paths", full_imported_fn))
+					utils.Exit(1)
+				}
+
+				for _, prev_fn := range import_path {
+					if prev_fn == full_imported_fn {
+						CompilerFatal(&next.Loc, "Circular imports detected when trying to include "+imported_fn)
+						utils.Exit(1)
+					}
+				}
+
+				_, exists = imp.Included[full_imported_fn]
+				if exists {
+					// TODO: Log in info mode
+					CompilerInfo(&next.Loc, fmt.Sprintf("File %s has been already imported, do nothing\n", fn))
+					continue
+				}
+
+				new_path := append([]string{}, import_path...)
+				new_path = append(new_path, fn)
+				new_lexer := Lexer{}
+				included_tokens := new_lexer.ProcessFile(full_imported_fn, new_path, imp)
+
+				tokens = append(tokens, included_tokens...)
+				continue
+			}
+		}
 
 		tokens = append(tokens, token)
 	}
+
+	imp.Included[fn] = true
+
 	return
 }

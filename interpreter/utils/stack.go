@@ -31,7 +31,6 @@ func (s *Stack) Top() (x interface{}) {
 		fmt.Println("Stack underflow")
 		Exit(1)
 	}
-
 	return
 }
 

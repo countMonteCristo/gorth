@@ -510,6 +510,8 @@ func (vm *VM) Compile(tokens []lexer.Token, args []string) (ops []Op) {
 				op.Operand = func_name
 				ops = append(ops, op)
 
+			case lexer.KeywordInclude:
+				panic("include keyword should not appear in here, probably there is a bug in a lexer")
 			default:
 				lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Unhandled KewordType handling in vm.Compile(): `%s`", token.Text))
 				utils.Exit(1)

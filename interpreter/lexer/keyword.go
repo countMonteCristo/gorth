@@ -19,6 +19,8 @@ const (
 
 	KeywordFunc KeywordType = iota
 
+	KeywordInclude KeywordType = iota
+
 	KeywordCount = iota
 )
 
@@ -36,6 +38,8 @@ var KeywordName = map[KeywordType]string{
 	KeywordAlloc: "alloc",
 
 	KeywordFunc: "func",
+
+	KeywordInclude: "include",
 }
 
 var WordToKeyword = utils.RevMap(KeywordName).(map[string]KeywordType)
