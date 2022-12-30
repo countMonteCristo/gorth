@@ -201,7 +201,7 @@ func (vm *VM) preprocess_string_literals(tokens *[]lexer.Token) {
 			_, exists := vm.Ctx.Memory.StringsMap[literal]
 			if !exists {
 				vm.Ctx.Memory.StringsMap[literal] = address
-				address += len(literal)
+				address += len(literal) + 1 // save literals as null-terminated strings
 			}
 		}
 	}
