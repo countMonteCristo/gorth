@@ -17,6 +17,9 @@
   [*] entry point for executable Gorth script (`main` function)
 
 [] Includes
+  [*] `include` keyword
+  [*] check for circular includes
+  [*] do not import already imported files
   [] packages?
 
 [] Compile-time type checking
