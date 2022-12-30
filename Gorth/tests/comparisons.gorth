@@ -1,31 +1,33 @@
+include "std/std.gorth"
+
 func main do
   // Equal
-  1 2 = puti '\n' putc
-  2 1 = puti '\n' putc
-  1 1 = puti '\n' putc
+  1 2 = p_int
+  2 1 = p_int
+  1 1 = p_int
 
   // Not Equal
-  3 4 != puti '\n' putc
-  4 3 != puti '\n' putc
-  3 3 != puti '\n' putc
+  3 4 != p_int
+  4 3 != p_int
+  3 3 != p_int
 
   // Less Than or Equal
-  5 6 <= puti '\n' putc
-  6 5 <= puti '\n' putc
-  5 5 <= puti '\n' putc
+  5 6 <= p_int
+  6 5 <= p_int
+  5 5 <= p_int
 
   // Greater Than or Equal
-  7 8 >= puti '\n' putc
-  8 7 >= puti '\n' putc
-  7 7 >= puti '\n' putc
+  7 8 >= p_int
+  8 7 >= p_int
+  7 7 >= p_int
 
   // Greater Than
-  9 10 > puti '\n' putc
-  10 9 > puti '\n' putc
-  9 9  > puti '\n' putc
+  9 10 > p_int
+  10 9 > p_int
+  9 9  > p_int
 
   // Less Than
-  11 12 < puti '\n' putc
-  12 11 < puti '\n' putc
-  11 11 < puti '\n' putc
+  11 12 < p_int
+  12 11 < p_int
+  11 11 < p_int
 end

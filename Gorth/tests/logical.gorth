@@ -1,19 +1,21 @@
+include "std/std.gorth"
+
 func main do
   1 2 <= 3 4 = && if
-    10 puti '\n' putc
+    10 p_int
   else
-    20 puti '\n' putc
+    20 p_int
   end
 
   1 2 <= 3 4 = || if
-    30 puti '\n' putc
+    30 p_int
   else
-    40 puti '\n' putc
+    40 p_int
   end
 
   2 3 < ! if
-    50 puti '\n' putc
+    50 p_int
   else
-    60 puti '\n' putc
+    60 p_int
   end
 end

@@ -1,31 +1,33 @@
+include "std/std.gorth"
+
 func main do
   // Sum
-  10 20 + puti '\n' putc
-  -5 7 + puti '\n' putc
-  5 -7 + puti '\n' putc
-  -5 -7 + puti '\n' putc
+  10 20 + p_int
+  -5 7 + p_int
+  5 -7 + p_int
+  -5 -7 + p_int
 
   // Diff
-  40 30 - puti '\n' putc
-  40 -30 - puti '\n' putc
-  -40 30 - puti '\n' putc
-  -40 -30 - puti '\n' putc
+  40 30 - p_int
+  40 -30 - p_int
+  -40 30 - p_int
+  -40 -30 - p_int
 
   // Mul
-  5 7 * puti '\n' putc
-  5 -7 * puti '\n' putc
-  -5 7 * puti '\n' putc
-  -5 -7 * puti '\n' putc
+  5 7 * p_int
+  5 -7 * p_int
+  -5 7 * p_int
+  -5 -7 * p_int
 
   // Div
-  27 6 / puti '\n' putc
-  27 -6 / puti '\n' putc
-  -27 6 / puti '\n' putc
-  -27 -6 / puti '\n' putc
+  27 6 / p_int
+  27 -6 / p_int
+  -27 6 / p_int
+  -27 -6 / p_int
 
   // Mod
-  31 7 % puti '\n' putc
-  31 -7 % puti '\n' putc
-  -31 7 % puti '\n' putc
-  -31 -7 % puti '\n' putc
+  31 7 % p_int
+  31 -7 % p_int
+  -31 7 % p_int
+  -31 -7 % p_int
 end

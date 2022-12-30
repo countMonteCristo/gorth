@@ -1,6 +1,8 @@
+include "std/std.gorth"
+
 func main do
   0 while dup 10 <= do
-    dup puti '\n' putc
+    dup p_int
     1 +
   end
 end

@@ -1,6 +1,7 @@
+include "std/std.gorth"
+
 // `Hello world` example in Gorth
 
-
 func main do
-  "Hello, world!\n" puts
+  "Hello, world!" p_str
 end

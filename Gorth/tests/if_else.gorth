@@ -1,43 +1,45 @@
+include "std/std.gorth"
+
 func main do
   10 20 < if
-    30 puti '\n' putc
+    30 p_int
   else
-    40 puti '\n' putc
+    40 p_int
   end
 
   10 20 > if
-    50 puti '\n' putc
+    50 p_int
   end
 
   10 20 < if
-    60 puti '\n' putc
+    60 p_int
   end
 
   10 20 > if
-    70 puti '\n' putc
+    70 p_int
   else
-    80 puti '\n' putc
+    80 p_int
   end
 
   10 20 < if
     30 40 <= if
-      90 puti '\n' putc
+      90 p_int
     else
-      100 puti '\n' putc
+      100 p_int
     end
   end
 
   10 20 > if
     30 40 <= if
-      90 puti '\n' putc
+      90 p_int
     else
-      100 puti '\n' putc
+      100 p_int
     end
   else
     50 60 > if
-      110 puti '\n' putc
+      110 p_int
     else
-      120 puti '\n' putc
+      120 p_int
     end
   end
 end

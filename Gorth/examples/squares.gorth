@@ -1,10 +1,12 @@
+include "std/std.gorth"
+
 // Print squares for all natural numbers between 1 and 10
 
 const N 10 end
 
 func main do
   1 while dup N <= do
-    dup dup * puti '\n' putc
+    dup dup * p_int
     1 +
   end
 end

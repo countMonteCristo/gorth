@@ -12,13 +12,13 @@ type Interpreter struct {
 	imp  lexer.Importer
 }
 
-func InitInterpreter(arguments []string) *Interpreter {
+func InitInterpreter(arguments []string, pkg_dir string) *Interpreter {
 	i := &Interpreter{
 		lx:   lexer.Lexer{},
 		vm:   *vm.InitVM(),
 		args: arguments,
 		imp: lexer.Importer{
-			Paths:    []string{"."},
+			Paths:    []string{pkg_dir},
 			Included: make(map[string]bool),
 		},
 	}
