@@ -1,8 +1,11 @@
-# gorth
+# Gorth
 **Gorth is like Forth, but in Go**
-Inspired by [Porth](https://gitlab.com/tsoding/porth) project of Tsoding. **It is not finised yet, so everything may change!**
 
-Gorth is a Concatenative Stack-Oriented Programming Language.
+*Inspired by [Porth](https://gitlab.com/tsoding/porth) project of Tsoding.*
+
+**IMPORTANT: Language is not finished. Use it on your own risks**
+
+**Gorth** is a Concatenative Stack-Oriented Programming Language.
 
 ## Examples
 
@@ -136,16 +139,16 @@ Only two types are supported for now: `int` and `bool`.
 | ---   | ---                                  | ---              |
 | `>>`  | `[a: int] [b: int] -- [a >> b: int]` | right bit shift. |
 | `<<`  | `[a: int] [b: int] -- [a << b: int]` | left bit shift.  |
-| `|`   | `[a: int] [b: int] -- [a \| b: int]` | bit `or`.        |
+| `\|`  | `[a: int] [b: int] -- [a \| b: int]` | bit `or`.        |
 | `&`   | `[a: int] [b: int] -- [a & b: int]`  | bit `and`.       |
 | `^`   | `[a: int] -- [^a: int]`              | bit `xor`.       |
 
 ### Logical
-| Name  | Signature                               | Description |
-| ---   | ---                                     | ---         |
-| `&&`  | `[a: bool] [b: bool] -- [a && b: bool]` | logical AND |
-| `||`  | `[a: bool] [b: bool] -- [a || b: bool]` | logical OR  |
-| `!`   | `[a: bool] -- [!a: bool]`               | logical NOT |
+| Name   | Signature                                 | Description |
+| ---    | ---                                       | ---         |
+| `&&`   | `[a: bool] [b: bool] -- [a && b: bool]`   | logical AND |
+| `\|\|` | `[a: bool] [b: bool] -- [a \|\| b: bool]` | logical OR  |
+| `!`    | `[a: bool] -- [!a: bool]`                 | logical NOT |
 
 ### Memory
 | Name         | Signature                      |Description                                         |
@@ -165,7 +168,7 @@ Only two types are supported for now: `int` and `bool`.
 - `argv` - pushes the pointer to the first input argument
 
 ## Control Flow
-### if-else-end
+### If-else-end
 ```gorth
 10 20 < if
   30 puti '\n' putc
@@ -173,7 +176,7 @@ else
   40 puti '\n' putc
 end
 ```
-### while loop
+### While loop
 ```gorth
 0 while dup 10 <= do
   dup 2 = if
@@ -191,7 +194,7 @@ end
   end
 end
 ```
-### `include`
+### Include
 ```gorth
 include "foo.gorth"
 ```
