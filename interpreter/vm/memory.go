@@ -86,11 +86,22 @@ func (m *ByteMemory) StoreToMem(ptr types.IntType, value types.IntType, size int
 	}
 }
 
+var EscapedCharToString = map[byte]string{
+	'\n': "'\\n'", '\r': "'\\r'", '\t': "'\\t'", 0: "'\\0'",
+}
+
 func (m *ByteMemory) PrintDebug() {
 	fmt.Printf("Totally Allocated: %d byte(s) total\n", m.MemPtr)
-	fmt.Printf("NULL pointer value: %d\n", m.Data[0])
 	fmt.Printf("String Literals (cap=%d, size=%d):\n", m.StringsRegion.Size, m.StringsRegion.Ptr-m.StringsRegion.Start)
-	fmt.Printf("  %v\n", m.Data[m.StringsRegion.Start:m.StringsRegion.Ptr])
+	data := make([]string, 0, m.StringsRegion.Ptr-m.StringsRegion.Start)
+	for _, b := range m.Data[m.StringsRegion.Start:m.StringsRegion.Ptr] {
+		char, exists := EscapedCharToString[b]
+		if !exists {
+			char = "'" + string(b) + "'"
+		}
+		data = append(data, char)
+	}
+	fmt.Printf("  %v\n", data)
 	fmt.Printf("Operative memory (cap=%d, size=%d):\n", m.OperativeMemRegion.Size, m.OperativeMemRegion.Ptr-m.OperativeMemRegion.Start)
 	fmt.Printf("  %v\n", m.Data[m.OperativeMemRegion.Start:m.OperativeMemRegion.Ptr])
 }

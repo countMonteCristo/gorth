@@ -483,162 +483,227 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 	return
 }
 
-func (vm *VM) Interprete(ops []Op, args []string, debug bool) {
-	stack := &utils.Stack{}
+type ScriptContext struct {
+	Stack       utils.Stack
+	ReturnStack utils.Stack
+	Addr        int64
+	Args        []string
+}
 
-	return_stack := utils.Stack{}
-
-	if debug {
-		for addr, op := range ops {
-			fmt.Println(op.Str(addr))
-		}
-		fmt.Println("---------------------------------")
+func NewScriptContext(len_ops types.IntType, args []string) *ScriptContext {
+	ctx := &ScriptContext{
+		Stack: utils.Stack{}, ReturnStack: utils.Stack{},
+		Addr: 0, Args: args,
 	}
+	ctx.ReturnStack.Push(len_ops)
+	return ctx
+}
 
-	addr := vm.Ctx.Funcs["main"]
-	len_ops := types.IntType(len(ops))
-	return_stack.Push(len_ops)
-
-	for addr < len_ops {
-
-		op := ops[addr]
-		// fmt.Printf("Process addr=%d stack=%v ret_stack=%v\n", addr, stack.Data, return_stack.Data)
-
-		switch op.Typ {
-		case OpPushInt, OpPushBool:
-			stack.Push(op.Operand)
-			addr++
-		case OpIf, OpDo:
-			top := stack.Pop().(types.BoolType)
-			if top {
-				addr++
-			} else {
-				addr += op.Operand.(types.IntType)
+func (vm *VM) Step(ops []Op, ctx *ScriptContext) {
+	op := ops[ctx.Addr]
+	switch op.Typ {
+	case OpPushInt, OpPushBool:
+		ctx.Stack.Push(op.Operand)
+		ctx.Addr++
+	case OpIf, OpDo:
+		top := ctx.Stack.Pop().(types.BoolType)
+		if top {
+			ctx.Addr++
+		} else {
+			ctx.Addr += op.Operand.(types.IntType)
+		}
+	case OpElse, OpEnd, OpBreak, OpContinue:
+		ctx.Addr += op.Operand.(types.IntType)
+	case OpWhile:
+		ctx.Addr++
+	case OpIntrinsic:
+		intrinsic := op.Operand.(lexer.IntrinsicType)
+		switch intrinsic {
+		case lexer.IntrinsicPlus, lexer.IntrinsicMinus, lexer.IntrinsicMul, lexer.IntrinsicBitAnd, lexer.IntrinsicBitOr, lexer.IntrinsicBitXor:
+			b := ctx.Stack.Pop().(types.IntType)
+			a := ctx.Stack.Pop().(types.IntType)
+			ctx.Stack.Push(SafeArithmeticFunctions[intrinsic](a, b))
+		case lexer.IntrinsicDiv:
+			b := ctx.Stack.Pop().(types.IntType)
+			if b == 0 {
+				lexer.RuntimeFatal(&op.OpToken.Loc, "Division by zero")
 			}
-		case OpElse, OpEnd, OpBreak, OpContinue:
-			addr += op.Operand.(types.IntType)
-		case OpWhile:
-			addr++
-		case OpIntrinsic:
-			intrinsic := op.Operand.(lexer.IntrinsicType)
-			switch intrinsic {
-			case lexer.IntrinsicPlus, lexer.IntrinsicMinus, lexer.IntrinsicMul, lexer.IntrinsicBitAnd, lexer.IntrinsicBitOr, lexer.IntrinsicBitXor:
-				b := stack.Pop().(types.IntType)
-				a := stack.Pop().(types.IntType)
-				stack.Push(SafeArithmeticFunctions[intrinsic](a, b))
-			case lexer.IntrinsicDiv:
-				b := stack.Pop().(types.IntType)
-				if b == 0 {
-					lexer.RuntimeFatal(&op.OpToken.Loc, "Division by zero")
-				}
-				a := stack.Pop().(types.IntType)
-				stack.Push(a / b)
-			case lexer.IntrinsicMod:
-				b := stack.Pop().(types.IntType)
-				if b == 0 {
-					lexer.RuntimeFatal(&op.OpToken.Loc, "Division by zero")
-				}
-				a := stack.Pop().(types.IntType)
-				stack.Push(a % b)
-			case lexer.IntrinsicShl:
-				b := stack.Pop().(types.IntType)
-				if b < 0 {
-					lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Negative shift amount in `<<`: %d", b))
-				}
-				a := stack.Pop().(types.IntType)
-				stack.Push(a << b)
-			case lexer.IntrinsicShr:
-				b := stack.Pop().(types.IntType)
-				if b < 0 {
-					lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Negative shift amount in `>>`: %d", b))
-				}
-				a := stack.Pop().(types.IntType)
-				stack.Push(a >> b)
-			case lexer.IntrinsicLogicalAnd, lexer.IntrinsicLogicalOr:
-				b := stack.Pop().(types.BoolType)
-				a := stack.Pop().(types.BoolType)
-				stack.Push(LogicalFunctions[intrinsic](a, b))
-			case lexer.IntrinsicLogicalNot:
-				x := stack.Pop()
-				stack.Push(!x.(types.BoolType))
-			case lexer.IntrinsicDup:
-				x := stack.Top()
-				stack.Push(x)
-			case lexer.IntrinsicSwap:
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(b)
-				stack.Push(a)
-			case lexer.IntrinsicDrop:
-				stack.Pop()
-			case lexer.IntrinsicOver:
-				x := stack.Data[len(stack.Data)-2]
-				stack.Push(x)
-			case lexer.IntrinsicRot:
-				c := stack.Pop()
-				b := stack.Pop()
-				a := stack.Pop()
-				stack.Push(b)
-				stack.Push(c)
-				stack.Push(a)
-			case lexer.IntrinsicEq, lexer.IntrinsicNe, lexer.IntrinsicLe, lexer.IntrinsicGe, lexer.IntrinsicLt, lexer.IntrinsicGt:
-				b := stack.Pop().(types.IntType)
-				a := stack.Pop().(types.IntType)
-				stack.Push(ComparableFunctions[intrinsic](a, b))
-			case lexer.IntrinsicPuti:
-				x := stack.Pop()
-				fmt.Print(x)
-			case lexer.IntrinsicPutc:
-				x := stack.Pop()
-				fmt.Print(string(byte(x.(types.IntType))))
-			case lexer.IntrinsicPuts:
-				size := stack.Pop().(types.IntType)
-				ptr := stack.Pop().(types.IntType)
-				str := string(vm.Ctx.Memory.Data[ptr : ptr+size])
-				fmt.Print(str)
-			case lexer.IntrinsicDebug:
-				fmt.Printf("\tMem: %v\tStack: %v\n", vm.Ctx.Memory.Data[vm.Ctx.Memory.OperativeMemRegion.Start:vm.Ctx.Memory.OperativeMemRegion.Ptr], stack.Data)
-
-			case lexer.IntrinsicLoad8, lexer.IntrinsicLoad16, lexer.IntrinsicLoad32, lexer.IntrinsicLoad64:
-				x := stack.Pop()
-				ptr := x.(types.IntType)
-				val := vm.Ctx.Memory.LoadFromMem(ptr, LoadSizes[intrinsic])
-				stack.Push(val)
-
-			case lexer.IntrinsicStore8, lexer.IntrinsicStore16, lexer.IntrinsicStore32, lexer.IntrinsicStore64:
-				ptr := stack.Pop().(types.IntType)
-				x := stack.Pop().(types.IntType)
-				vm.Ctx.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic])
-
-			case lexer.IntrinsicArgc:
-				stack.Push(types.IntType(len(args)))
-			case lexer.IntrinsicArgv:
-				stack.Push(vm.Ctx.Memory.Argv)
-			default:
-				lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: `%s`", op.OpToken.Text))
+			a := ctx.Stack.Pop().(types.IntType)
+			ctx.Stack.Push(a / b)
+		case lexer.IntrinsicMod:
+			b := ctx.Stack.Pop().(types.IntType)
+			if b == 0 {
+				lexer.RuntimeFatal(&op.OpToken.Loc, "Division by zero")
 			}
-			addr++
-		case OpCall:
-			if return_stack.Size() >= vm.RecursionLimit {
-				lexer.RuntimeFatal(&op.OpToken.Loc, "Recursion limit exceeded")
+			a := ctx.Stack.Pop().(types.IntType)
+			ctx.Stack.Push(a % b)
+		case lexer.IntrinsicShl:
+			b := ctx.Stack.Pop().(types.IntType)
+			if b < 0 {
+				lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Negative shift amount in `<<`: %d", b))
 			}
-			return_stack.Push(addr)
-			addr += op.Operand.(types.IntType)
-		case OpFuncBegin:
-			addr++
-		case OpFuncEnd:
-			if return_stack.Size() == 0 {
-				lexer.RuntimeFatal(&op.OpToken.Loc, "Return stack is empty")
+			a := ctx.Stack.Pop().(types.IntType)
+			ctx.Stack.Push(a << b)
+		case lexer.IntrinsicShr:
+			b := ctx.Stack.Pop().(types.IntType)
+			if b < 0 {
+				lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Negative shift amount in `>>`: %d", b))
 			}
-			addr = return_stack.Pop().(types.IntType) + 1
+			a := ctx.Stack.Pop().(types.IntType)
+			ctx.Stack.Push(a >> b)
+		case lexer.IntrinsicLogicalAnd, lexer.IntrinsicLogicalOr:
+			b := ctx.Stack.Pop().(types.BoolType)
+			a := ctx.Stack.Pop().(types.BoolType)
+			ctx.Stack.Push(LogicalFunctions[intrinsic](a, b))
+		case lexer.IntrinsicLogicalNot:
+			x := ctx.Stack.Pop()
+			ctx.Stack.Push(!x.(types.BoolType))
+		case lexer.IntrinsicDup:
+			x := ctx.Stack.Top()
+			ctx.Stack.Push(x)
+		case lexer.IntrinsicSwap:
+			b := ctx.Stack.Pop()
+			a := ctx.Stack.Pop()
+			ctx.Stack.Push(b)
+			ctx.Stack.Push(a)
+		case lexer.IntrinsicDrop:
+			ctx.Stack.Pop()
+		case lexer.IntrinsicOver:
+			x := ctx.Stack.Data[len(ctx.Stack.Data)-2]
+			ctx.Stack.Push(x)
+		case lexer.IntrinsicRot:
+			c := ctx.Stack.Pop()
+			b := ctx.Stack.Pop()
+			a := ctx.Stack.Pop()
+			ctx.Stack.Push(b)
+			ctx.Stack.Push(c)
+			ctx.Stack.Push(a)
+		case lexer.IntrinsicEq, lexer.IntrinsicNe, lexer.IntrinsicLe, lexer.IntrinsicGe, lexer.IntrinsicLt, lexer.IntrinsicGt:
+			b := ctx.Stack.Pop().(types.IntType)
+			a := ctx.Stack.Pop().(types.IntType)
+			ctx.Stack.Push(ComparableFunctions[intrinsic](a, b))
+		case lexer.IntrinsicPuti:
+			x := ctx.Stack.Pop()
+			fmt.Print(x)
+		case lexer.IntrinsicPutc:
+			x := ctx.Stack.Pop()
+			fmt.Print(string(byte(x.(types.IntType))))
+		case lexer.IntrinsicPuts:
+			size := ctx.Stack.Pop().(types.IntType)
+			ptr := ctx.Stack.Pop().(types.IntType)
+			str := string(vm.Ctx.Memory.Data[ptr : ptr+size])
+			fmt.Print(str)
+		case lexer.IntrinsicDebug:
+			fmt.Printf("\tMem: %v\tStack: %v\n", vm.Ctx.Memory.Data[vm.Ctx.Memory.OperativeMemRegion.Start:vm.Ctx.Memory.OperativeMemRegion.Ptr], ctx.Stack.Data)
+
+		case lexer.IntrinsicLoad8, lexer.IntrinsicLoad16, lexer.IntrinsicLoad32, lexer.IntrinsicLoad64:
+			x := ctx.Stack.Pop()
+			ptr := x.(types.IntType)
+			val := vm.Ctx.Memory.LoadFromMem(ptr, LoadSizes[intrinsic])
+			ctx.Stack.Push(val)
+
+		case lexer.IntrinsicStore8, lexer.IntrinsicStore16, lexer.IntrinsicStore32, lexer.IntrinsicStore64:
+			ptr := ctx.Stack.Pop().(types.IntType)
+			x := ctx.Stack.Pop().(types.IntType)
+			vm.Ctx.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic])
+
+		case lexer.IntrinsicArgc:
+			ctx.Stack.Push(types.IntType(len(ctx.Args)))
+		case lexer.IntrinsicArgv:
+			ctx.Stack.Push(vm.Ctx.Memory.Argv)
 		default:
-			lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation: `%s`", OpName[op.Typ]))
+			lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: `%s`", op.OpToken.Text))
 		}
+		ctx.Addr++
+	case OpCall:
+		if ctx.ReturnStack.Size() >= vm.RecursionLimit {
+			lexer.RuntimeFatal(&op.OpToken.Loc, "Recursion limit exceeded")
+		}
+		ctx.ReturnStack.Push(ctx.Addr)
+		ctx.Addr += op.Operand.(types.IntType)
+	case OpFuncBegin:
+		ctx.Addr++
+	case OpFuncEnd:
+		if ctx.ReturnStack.Size() == 0 {
+			lexer.RuntimeFatal(&op.OpToken.Loc, "Return stack is empty")
+		}
+		ctx.Addr = ctx.ReturnStack.Pop().(types.IntType) + 1
+	default:
+		lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation: `%s`", OpName[op.Typ]))
 	}
+}
 
-	if debug {
-		fmt.Println("---------------------------------")
-		vm.Ctx.Memory.PrintDebug()
-		fmt.Println("---------------------------------")
+func (vm *VM) Interprete(ops []Op, args []string) {
+	len_ops := types.IntType(len(ops))
+	ctx := NewScriptContext(len_ops, args)
+	ctx.Addr = vm.Ctx.Funcs["main"]
+
+	for ctx.Addr < len_ops {
+		vm.Step(ops, ctx)
+	}
+}
+
+func (vm *VM) InterpreteDebug(ops []Op, args []string, cmd <-chan string, resp chan<- string) {
+	len_ops := types.IntType(len(ops))
+	ctx := NewScriptContext(len_ops, args)
+	ctx.Addr = vm.Ctx.Funcs["main"]
+
+loop:
+	for {
+		command := <-cmd
+
+		switch command {
+		case "s": // print stack
+			fmt.Println(ctx.Stack.Data)
+			resp <- "ok"
+		case "m": // print memory
+			vm.Ctx.Memory.PrintDebug()
+			resp <- "ok"
+		case "q": // quit
+			resp <- "ok"
+			break loop
+		case "n": // step
+			if ctx.Addr >= len_ops {
+				fmt.Printf("Script finished\n")
+				resp <- "failed"
+			} else {
+				vm.Step(ops, ctx)
+				resp <- "ok"
+			}
+		case "c": // continue
+			if ctx.Addr >= len_ops {
+				fmt.Printf("Script finished\n")
+				resp <- "failed"
+			} else {
+				for ctx.Addr < len_ops {
+					vm.Step(ops, ctx)
+				}
+				resp <- "ok"
+			}
+		case "t": // token
+			if ctx.Addr >= len_ops {
+				fmt.Printf("Script finished\n")
+				resp <- "failed"
+			} else {
+				token := ops[ctx.Addr].OpToken
+				fmt.Printf("%s:%d:%d Token(%s)\n", token.Loc.Filepath, token.Loc.Line+1, token.Loc.Column+1, token.Text)
+				resp <- "ok"
+			}
+		case "o": // operation
+			if ctx.Addr >= len_ops {
+				fmt.Printf("Script finished\n")
+				resp <- "failed"
+			} else {
+				op := ops[ctx.Addr]
+				fmt.Printf(
+					"%s:%d:%d %s\n", op.OpToken.Loc.Filepath, op.OpToken.Loc.Line+1,
+					op.OpToken.Loc.Column+1, op.Str(ctx.Addr),
+				)
+				resp <- "ok"
+			}
+		default:
+			fmt.Printf("Unknown command: '%s'\n", command)
+			resp <- "failed"
+		}
 	}
 }

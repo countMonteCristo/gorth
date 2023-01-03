@@ -51,7 +51,7 @@ type Op struct {
 	OpToken lexer.Token
 }
 
-func (op *Op) Str(addr int) (s string) {
+func (op *Op) Str(addr int64) (s string) {
 	var operand string
 
 	// assert(OpCount == 9, "Unhandled Op in Op.str()")
