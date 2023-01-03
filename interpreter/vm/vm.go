@@ -530,6 +530,15 @@ func (vm *VM) ProcessSyscall(ctx *ScriptContext) {
 		)
 		ctx.Stack.Push(types.IntType(r1))
 		ctx.Stack.Push(types.IntType(err))
+	case unix.SYS_WRITE:
+		count := ctx.Stack.Pop().(types.IntType)
+		ptr := ctx.Stack.Pop().(types.IntType)
+		fd := ctx.Stack.Pop().(types.IntType)
+		r1, _, err := unix.Syscall(
+			unix.SYS_WRITE, uintptr(fd), uintptr(unsafe.Pointer(&vm.Ctx.Memory.Data[ptr])), uintptr(count),
+		)
+		ctx.Stack.Push(types.IntType(r1))
+		ctx.Stack.Push(types.IntType(err))
 	default:
 		panic(fmt.Sprintf("Syscall #%d is not implemented yet\n", syscall_id))
 	}

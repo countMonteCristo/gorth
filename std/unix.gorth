@@ -1,19 +1,64 @@
+// system call identifiers
 const SYS_READ  0 end
 const SYS_WRITE 1 end
 const SYS_OPEN  2 end
 const SYS_CLOSE 3 end
 
+// flags for open syscall
+const O_RDONLY 0    end
+const O_WRONLY 1    end
+const O_RDWR   2    end
+const O_CREAT  64   end
+const O_TRUNC  512  end
+const O_APPEND 1024 end
+
+// flags for create new files
+const S_IXOTH  1     end
+const S_IWOTH  2     end
+const S_IROTH  4     end
+const S_IRWXO  7     end
+const S_IXGRP  8     end
+const S_IWGRP  16    end
+const S_IRGRP  32    end
+const S_IRWXG  56    end
+const S_IXUSR  64    end
+const S_IWUSR  128   end
+const S_IRUSR  256   end
+const S_IRWXU  448   end
+const S_ISVTX  512   end
+const S_ISGID  1024  end
+const S_ISUID  2048  end
+const S_IFIFO  4096  end
+const S_IFCHR  8192  end
+const S_IFDIR  16384 end
+const S_IFREG  32768 end
+const S_IFBLK  24576 end
+const S_IFLNK  40960 end
+const S_IFSOCK 49152 end
+const S_IFMT   61440 end
+
+// Execute `open` system call
 // ptr flags mode -> fd errno
 func open do
   SYS_OPEN syscall
 end
 
+// Execute `read` system call
 // fd ptr count -> actual_count errno
 func read do
   SYS_READ syscall
 end
 
+// Execute `write` system call
+// fd ptr count -> actual_count errno
+func write do
+  SYS_READ syscall
+end
+
+// Execute `close` system call
 // fd -> result errno
 func close do
   SYS_CLOSE syscall
 end
+
+// TODO: add errno messages

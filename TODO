@@ -13,13 +13,14 @@
   [*] return stack
   [] inlines
   [*] no function definitions inside function allowed
-  [] recursion limit?
+  [*] recursion limit?
   [*] entry point for executable Gorth script (`main` function)
 
 [] Includes
   [*] `include` keyword
   [*] check for circular includes
   [*] do not import already imported files
+  [] support -I flag for providing additional include paths
   [] packages?
 
 [] Compile-time type checking

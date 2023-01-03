@@ -62,7 +62,7 @@ Run tests from directory:
 ```
 Run single test:
 ```console
-> ./bin/gorth_test test Gorth/examples/helloworld.go
+> ./bin/gorth_test test Gorth/examples/helloworld.gorth
 ```
 Record test outputs:
 ```console
@@ -71,7 +71,7 @@ Record test outputs:
 
 ## Usage
 ```console
-> ./bin/gorth Gorth/examples/helloworld.go
+> ./bin/gorth Gorth/examples/helloworld.gorth
 ```
 
 # Language Reference
@@ -166,6 +166,11 @@ Only two types are supported for now: `int` and `bool`.
 - `???` - prints stack state
 - `argc` - pushes count of input arguments onto the stack
 - `argv` - pushes the pointer to the first input argument
+
+### System calls:
+- `syscall` - perform system call (description: ```man 2 syscalls```)
+
+For now only 4 system calls are supported: `open`, `read`, `write` and `close`. See [cat.gorth](https://github.com/countMonteCristo/gorth/tree/main/Gorth/examples/cat.gorth) as an example.
 
 ## Control Flow
 ### If-else-end
