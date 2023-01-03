@@ -9,20 +9,20 @@ import (
 type OpType int
 
 const (
-	OpPushInt   OpType = iota
-	OpPushBool  OpType = iota
-	OpIntrinsic OpType = iota
-	OpIf        OpType = iota
-	OpElse      OpType = iota
-	OpEnd       OpType = iota
-	OpWhile     OpType = iota
-	OpDo        OpType = iota
-	OpBreak     OpType = iota
-	OpContinue  OpType = iota
+	OpPushInt OpType = iota
+	OpPushBool
+	OpIntrinsic
+	OpIf
+	OpElse
+	OpEnd
+	OpWhile
+	OpDo
+	OpBreak
+	OpContinue
 
-	OpCall      OpType = iota
-	OpFuncBegin OpType = iota
-	OpFuncEnd   OpType = iota
+	OpCall
+	OpFuncBegin
+	OpFuncEnd
 
 	OpCount = iota
 )

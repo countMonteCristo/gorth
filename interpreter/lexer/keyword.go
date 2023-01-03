@@ -5,21 +5,21 @@ import "Gorth/interpreter/utils"
 type KeywordType int
 
 const (
-	KeywordIf   KeywordType = iota
-	KeywordElse KeywordType = iota
-	KeywordEnd  KeywordType = iota
+	KeywordIf KeywordType = iota
+	KeywordElse
+	KeywordEnd
 
-	KeywordWhile    KeywordType = iota
-	KeywordDo       KeywordType = iota
-	KeywordBreak    KeywordType = iota
-	KeywordContinue KeywordType = iota
+	KeywordWhile
+	KeywordDo
+	KeywordBreak
+	KeywordContinue
 
-	KeywordConst KeywordType = iota
-	KeywordAlloc KeywordType = iota
+	KeywordConst
+	KeywordAlloc
 
-	KeywordFunc KeywordType = iota
+	KeywordFunc
 
-	KeywordInclude KeywordType = iota
+	KeywordInclude
 
 	KeywordCount = iota
 )

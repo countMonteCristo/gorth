@@ -5,12 +5,12 @@ type TokenType int
 
 // Gorth tokens constants
 const (
-	TokenInt     TokenType = iota
-	TokenBool    TokenType = iota
-	TokenWord    TokenType = iota
-	TokenKeyword TokenType = iota
-	TokenString  TokenType = iota
-	TokenChar    TokenType = iota
+	TokenInt TokenType = iota
+	TokenBool
+	TokenWord
+	TokenKeyword
+	TokenString
+	TokenChar
 
 	TokenCount = iota
 )
