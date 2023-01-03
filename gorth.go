@@ -38,6 +38,7 @@ func main() {
 			if input == "h" || input == "help" {
 				fmt.Println("Availavle commands:")
 				fmt.Println(" * n - step (process singe instruction)")
+				fmt.Println(" * c - continue (process all instructions until the end)")
 				fmt.Println(" * t - print current token")
 				fmt.Println(" * o - print current operation")
 				fmt.Println(" * s - print current stack state")

@@ -5,6 +5,9 @@ import (
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 	"fmt"
+	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 type VM struct {
@@ -499,6 +502,39 @@ func NewScriptContext(len_ops types.IntType, args []string) *ScriptContext {
 	return ctx
 }
 
+func (vm *VM) ProcessSyscall(ctx *ScriptContext) {
+	syscall_id := ctx.Stack.Pop().(types.IntType)
+	switch syscall_id {
+	case unix.SYS_OPEN:
+		mode := ctx.Stack.Pop().(types.IntType)
+		flags := ctx.Stack.Pop().(types.IntType)
+		ptr := ctx.Stack.Pop().(types.IntType)
+		r1, _, err := unix.Syscall(
+			unix.SYS_OPEN, uintptr(unsafe.Pointer(&vm.Ctx.Memory.Data[ptr])), uintptr(flags), uintptr(mode),
+		)
+		ctx.Stack.Push(types.IntType(r1))
+		ctx.Stack.Push(types.IntType(err))
+	case unix.SYS_READ:
+		count := ctx.Stack.Pop().(types.IntType)
+		ptr := ctx.Stack.Pop().(types.IntType)
+		fd := ctx.Stack.Pop().(types.IntType)
+		r1, _, err := unix.Syscall(
+			unix.SYS_READ, uintptr(fd), uintptr(unsafe.Pointer(&vm.Ctx.Memory.Data[ptr])), uintptr(count),
+		)
+		ctx.Stack.Push(types.IntType(r1))
+		ctx.Stack.Push(types.IntType(err))
+	case unix.SYS_CLOSE:
+		fd := ctx.Stack.Pop().(types.IntType)
+		r1, _, err := unix.Syscall(
+			unix.SYS_CLOSE, uintptr(fd), 0, 0,
+		)
+		ctx.Stack.Push(types.IntType(r1))
+		ctx.Stack.Push(types.IntType(err))
+	default:
+		panic(fmt.Sprintf("Syscall #%d is not implemented yet\n", syscall_id))
+	}
+}
+
 func (vm *VM) Step(ops []Op, ctx *ScriptContext) {
 	op := ops[ctx.Addr]
 	switch op.Typ {
@@ -611,6 +647,8 @@ func (vm *VM) Step(ops []Op, ctx *ScriptContext) {
 			ctx.Stack.Push(types.IntType(len(ctx.Args)))
 		case lexer.IntrinsicArgv:
 			ctx.Stack.Push(vm.Ctx.Memory.Argv)
+		case lexer.IntrinsicSyscall:
+			vm.ProcessSyscall(ctx)
 		default:
 			lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: `%s`", op.OpToken.Text))
 		}

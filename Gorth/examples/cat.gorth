@@ -1,0 +1,24 @@
+include "std.gorth"
+
+const N 64 end
+alloc buf N end
+
+func main do
+  argc 2 < if
+    "No file provided to cat" p_str
+  else
+    1 argv_n 0 0 open               // open file
+    0 != if
+      "Can not open file: " puts
+      1 argv_n dup strlen p_str
+    else
+      true
+      while dup do
+        over buf N read drop        // read chunk
+        dup 0 = if drop break end   // break if read 0 bytes
+        buf swap puts               // print readed bytes
+      end
+      drop close                    // close file
+    end
+  end
+end

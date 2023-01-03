@@ -1,3 +1,5 @@
+include "unix.gorth"
+
 // Consumes pointer to the null-terminated string, returns its length (exclude terminated \0)
 func strlen do // int -> int
   // p p+len

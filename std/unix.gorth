@@ -1,0 +1,19 @@
+const SYS_READ  0 end
+const SYS_WRITE 1 end
+const SYS_OPEN  2 end
+const SYS_CLOSE 3 end
+
+// ptr flags mode -> fd errno
+func open do
+  SYS_OPEN syscall
+end
+
+// fd ptr count -> actual_count errno
+func read do
+  SYS_READ syscall
+end
+
+// fd -> result errno
+func close do
+  SYS_CLOSE syscall
+end

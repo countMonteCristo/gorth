@@ -5,52 +5,54 @@ import "Gorth/interpreter/utils"
 type IntrinsicType int
 
 const (
-	IntrinsicPlus  IntrinsicType = iota
-	IntrinsicMinus IntrinsicType = iota
-	IntrinsicMul   IntrinsicType = iota
-	IntrinsicDiv   IntrinsicType = iota
-	IntrinsicMod   IntrinsicType = iota
+	IntrinsicPlus IntrinsicType = iota
+	IntrinsicMinus
+	IntrinsicMul
+	IntrinsicDiv
+	IntrinsicMod
 
-	IntrinsicShl    IntrinsicType = iota
-	IntrinsicShr    IntrinsicType = iota
-	IntrinsicBitAnd IntrinsicType = iota
-	IntrinsicBitOr  IntrinsicType = iota
-	IntrinsicBitXor IntrinsicType = iota
+	IntrinsicShl
+	IntrinsicShr
+	IntrinsicBitAnd
+	IntrinsicBitOr
+	IntrinsicBitXor
 
-	IntrinsicLogicalAnd IntrinsicType = iota
-	IntrinsicLogicalOr  IntrinsicType = iota
-	IntrinsicLogicalNot IntrinsicType = iota
+	IntrinsicLogicalAnd
+	IntrinsicLogicalOr
+	IntrinsicLogicalNot
 
-	IntrinsicEq IntrinsicType = iota
-	IntrinsicNe IntrinsicType = iota
-	IntrinsicLe IntrinsicType = iota
-	IntrinsicGe IntrinsicType = iota
-	IntrinsicLt IntrinsicType = iota
-	IntrinsicGt IntrinsicType = iota
+	IntrinsicEq
+	IntrinsicNe
+	IntrinsicLe
+	IntrinsicGe
+	IntrinsicLt
+	IntrinsicGt
 
-	IntrinsicDup  IntrinsicType = iota
-	IntrinsicSwap IntrinsicType = iota
-	IntrinsicDrop IntrinsicType = iota
-	IntrinsicOver IntrinsicType = iota
-	IntrinsicRot  IntrinsicType = iota
+	IntrinsicDup
+	IntrinsicSwap
+	IntrinsicDrop
+	IntrinsicOver
+	IntrinsicRot
 
-	IntrinsicPuti IntrinsicType = iota
-	IntrinsicPuts IntrinsicType = iota
-	IntrinsicPutc IntrinsicType = iota
+	IntrinsicPuti
+	IntrinsicPuts
+	IntrinsicPutc
 
-	IntrinsicDebug IntrinsicType = iota
+	IntrinsicDebug
 
-	IntrinsicLoad8   IntrinsicType = iota
-	IntrinsicStore8  IntrinsicType = iota
-	IntrinsicLoad16  IntrinsicType = iota
-	IntrinsicStore16 IntrinsicType = iota
-	IntrinsicLoad32  IntrinsicType = iota
-	IntrinsicStore32 IntrinsicType = iota
-	IntrinsicLoad64  IntrinsicType = iota
-	IntrinsicStore64 IntrinsicType = iota
+	IntrinsicLoad8
+	IntrinsicStore8
+	IntrinsicLoad16
+	IntrinsicStore16
+	IntrinsicLoad32
+	IntrinsicStore32
+	IntrinsicLoad64
+	IntrinsicStore64
 
-	IntrinsicArgc IntrinsicType = iota
-	IntrinsicArgv IntrinsicType = iota
+	IntrinsicArgc
+	IntrinsicArgv
+
+	IntrinsicSyscall
 
 	IntrinsicCount = iota
 )
@@ -104,6 +106,8 @@ var IntrinsicName = map[IntrinsicType]string{
 
 	IntrinsicArgc: "argc",
 	IntrinsicArgv: "argv",
+
+	IntrinsicSyscall: "syscall",
 }
 
 var WordToIntrinsic = utils.RevMap(IntrinsicName).(map[string]IntrinsicType)

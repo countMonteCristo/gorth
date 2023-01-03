@@ -29,9 +29,12 @@
 
 [] Improve interpreter
   [] Add debugger mode (run by step, go in, go out, continue, etc)
+    [*] Add simple debugger
 
 [] Low-level interaction with OS
   [] syscalls
+    [*] read, write, open, close
+    [] other syscalls
 
 [] Collect stdlib for Gorth
 
