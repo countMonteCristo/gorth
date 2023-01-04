@@ -1,0 +1,7 @@
+alloc f 4 end
+
+func f do end
+
+func main do
+  f
+end

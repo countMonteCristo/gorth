@@ -1,0 +1,17 @@
+alloc x 4 end
+
+func f do
+  alloc x 4 end
+  5678 x !32
+
+  x @32 puti '\n' putc
+end
+
+func main do
+  1234 x !32
+
+  x @32 puti '\n' putc
+  f
+  x @32 puti '\n' putc
+
+end

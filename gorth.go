@@ -37,14 +37,15 @@ func main() {
 
 			if input == "h" || input == "help" {
 				fmt.Println("Availavle commands:")
-				fmt.Println(" * n - step (process singe instruction)")
-				fmt.Println(" * c - continue (process all instructions until the end)")
-				fmt.Println(" * t - print current token")
-				fmt.Println(" * o - print current operation")
-				fmt.Println(" * s - print current stack state")
-				fmt.Println(" * m - print current memory state")
-				fmt.Println(" * h - print help")
-				fmt.Println(" * q - exit debugger")
+				fmt.Println(" * n -  step (process singe instruction)")
+				fmt.Println(" * c -  continue (process all instructions until the end)")
+				fmt.Println(" * t -  print current token")
+				fmt.Println(" * o -  print current operation")
+				fmt.Println(" * ol - print operations list")
+				fmt.Println(" * s -  print current stack state")
+				fmt.Println(" * m -  print current memory state")
+				fmt.Println(" * h -  print help")
+				fmt.Println(" * q -  exit debugger")
 				continue
 			}
 

@@ -1,0 +1,10 @@
+const x 1 end
+
+func main do
+  const y x 1 + end
+  alloc z y x + 1 + end
+  y puti '\n' putc
+  x puti '\n' putc
+  98765 z !32
+  z @32 puti '\n' putc
+end

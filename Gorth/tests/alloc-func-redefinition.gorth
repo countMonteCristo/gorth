@@ -1,0 +1,3 @@
+func main do
+  alloc main 4 end
+end

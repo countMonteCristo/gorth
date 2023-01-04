@@ -1,0 +1,5 @@
+func main do
+  alloc x 20 end
+  const x 5 end
+  x puti
+end

@@ -1,0 +1,4 @@
+func main do
+  const main 10 end
+  main puti
+end

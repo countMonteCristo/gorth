@@ -1,0 +1,1 @@
+{"argv":[],"stdin":"","stdout":"2\n1\n98765\n","stderr":"","exit_code":0}

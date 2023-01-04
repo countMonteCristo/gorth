@@ -91,7 +91,7 @@ var EscapedCharToString = map[byte]string{
 }
 
 func (m *ByteMemory) PrintDebug() {
-	fmt.Printf("Totally Allocated: %d byte(s) total\n", m.MemPtr)
+	fmt.Printf("Allocated: %d byte(s) total\n", m.OperativeMemRegion.Ptr-m.OperativeMemRegion.Start)
 	fmt.Printf("String Literals (cap=%d, size=%d):\n", m.StringsRegion.Size, m.StringsRegion.Ptr-m.StringsRegion.Start)
 	data := make([]string, 0, m.StringsRegion.Ptr-m.StringsRegion.Start)
 	for _, b := range m.Data[m.StringsRegion.Start:m.StringsRegion.Ptr] {
@@ -102,6 +102,11 @@ func (m *ByteMemory) PrintDebug() {
 		data = append(data, char)
 	}
 	fmt.Printf("  %v\n", data)
-	fmt.Printf("Operative memory (cap=%d, size=%d):\n", m.OperativeMemRegion.Size, m.OperativeMemRegion.Ptr-m.OperativeMemRegion.Start)
+	fmt.Printf(
+		"Operative memory (cap=%d size=%d start=%d):\n",
+		m.OperativeMemRegion.Size,
+		m.OperativeMemRegion.Ptr-m.OperativeMemRegion.Start,
+		m.OperativeMemRegion.Start,
+	)
 	fmt.Printf("  %v\n", m.Data[m.OperativeMemRegion.Start:m.OperativeMemRegion.Ptr])
 }

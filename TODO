@@ -8,8 +8,8 @@
   [*] add argv
 
 [] Functions:
-  [] local allocs
-  [] local consts
+  [*] local allocs
+  [*] local consts
   [*] return stack
   [] inlines
   [*] no function definitions inside function allowed
