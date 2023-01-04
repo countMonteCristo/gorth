@@ -10,6 +10,26 @@ func strlen do // int -> int
   swap -
 end
 
+// Converts string to unsigned number
+// Returns -1 if convertion failed
+func atou do  // ptr len -> uint
+  alloc result 8 end    // allocate memory for result
+  0 result !64          // clear memory
+
+  over + swap           // ptr len -> ptr_end ptr_begin
+  while over over > do
+    dup @8 '0' -        // load digit
+    dup 10 > if         // if char is not a digit - break and return -1
+      drop -1 result !64 break
+    end
+    result @64 10 * +   // update result number
+    result !64          // store result number in memory
+    1 +
+  end
+  drop drop
+  result @64
+end
+
 // Consumes number of the input argument and returns pointer to it
 func argv_n do
   argv swap 0
