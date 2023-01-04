@@ -234,12 +234,39 @@ const M 10 end
 const CHAR_WIDTH M 4 * 3 + end
 ```
 Defines constant with given name and given value. Simple arithmetic operations can be used to calculate const value.
-All constants are global for now and cannot be defined inside functions.
+Constants may be delcared inside functions. Local constants hide global ones with the same name.
+
+For example:
+```gorth
+const N 10 end
+
+func main do
+  N puti ' ' putc
+  const N 20 end
+  N puti '\n' putc
+end
+```
+this code prints `10 20`, because local constant `N` (=20) in function `main` hides global constant `N` (=10).
 
 ### Memory Allocations
 ```gorth
 const N 100 end
 alloc array N 1 + end
 ```
-Allocates the region of memory of the given size. Simple arithmetic operations can be used to calculate allocated region size.
-All allocs are global for now and cannot be defined inside functions.
+Allocates the region of memory of the given size. Simple arithmetic operations can be used to calculate allocated region size. Allocations can be declared inside functions.
+
+If local alloctaion has the same name as global, it hides global one.
+
+For example:
+```gorth
+alloc x 1 end
+
+func main do
+  13 x !8
+  x @8 puti ' ' putc
+  alloc x 1 end
+  15 x !8
+  x @8 puti ' ' putc
+end
+```
+this code prints `13 15`, because local allocation `x` in function `main` hides global allocation `x`.
