@@ -26,23 +26,31 @@ func InitVM() *VM {
 
 // Named block starts with a keyword (const|alloc) and followed by block name
 // Every named block ends with `end` keyword and may contain only consts and instrinsics
-func (vm *VM) parse_named_block(token *lexer.Token, tokens *[]lexer.Token, typ string, ctx *FuncContext) (tok lexer.Token, const_value types.IntType) {
+func (vm *VM) parse_named_block(token *lexer.Token, tokens *[]lexer.Token, typ string, ctx *FuncContext) (name_token lexer.Token, const_value types.IntType) {
 	if len(*tokens) == 0 {
 		lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Expected `%s` name, but got nothing", typ))
 	}
 
-	tok, *tokens = (*tokens)[0], (*tokens)[1:]
+	name_token, *tokens = (*tokens)[0], (*tokens)[1:]
 
-	if tok.Typ != lexer.TokenWord {
-		lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Expected `%s` name to be a word, but got `%s`", typ, tok.Text))
+	if name_token.Typ != lexer.TokenWord {
+		lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Expected `%s` name to be a word, but got `%s`", typ, name_token.Text))
 	}
-	defined_token, exists := ctx.Names[tok.Text]
+	defined_token, exists := ctx.Names[name_token.Text]
 	if exists {
-		lexer.CompilerInfo(&tok.Loc, fmt.Sprintf("Redefinition of word `%s`", tok.Text))
+		lexer.CompilerInfo(&name_token.Loc, fmt.Sprintf("Redefinition of word `%s`", name_token.Text))
 		lexer.CompilerInfo(&defined_token.Loc, "Previously defined here")
 		utils.Exit(1)
 	}
-	ctx.Names[tok.Text] = tok
+	defined_token, exists = vm.Ctx.LocalContexts[""].Names[name_token.Text]
+	_, func_exists := vm.Ctx.Funcs[name_token.Text]
+	if exists && func_exists {
+		lexer.CompilerInfo(&name_token.Loc, fmt.Sprintf("Redefinition of word `%s`", name_token.Text))
+		lexer.CompilerInfo(&defined_token.Loc, "Previously defined here")
+		utils.Exit(1)
+	}
+
+	ctx.Names[name_token.Text] = name_token
 
 	const_block := make([]lexer.Token, 0)
 	for {
@@ -59,7 +67,7 @@ func (vm *VM) parse_named_block(token *lexer.Token, tokens *[]lexer.Token, typ s
 		const_block = append(const_block, btok)
 	}
 
-	const_value = vm.const_eval(&tok, &const_block, ctx)
+	const_value = vm.const_eval(&name_token, &const_block, ctx)
 	return
 }
 
@@ -138,12 +146,11 @@ func (vm *VM) const_eval(name_token *lexer.Token, tokens *[]lexer.Token, ctx *Fu
 	return
 }
 
-func (vm *VM) parse_func_def(token *lexer.Token, tokens *[]lexer.Token, global_ctx *FuncContext) (tok lexer.Token, func_name string) {
+func (vm *VM) parse_func_def(token *lexer.Token, tokens *[]lexer.Token, global_ctx *FuncContext) (name_token lexer.Token, func_name string) {
 	if len(*tokens) == 0 {
 		lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Expected `%s` name, but got nothing", token.Text))
 	}
 
-	var name_token lexer.Token
 	name_token, *tokens = (*tokens)[0], (*tokens)[1:]
 
 	if name_token.Typ != lexer.TokenWord {
@@ -157,9 +164,7 @@ func (vm *VM) parse_func_def(token *lexer.Token, tokens *[]lexer.Token, global_c
 		utils.Exit(1)
 	}
 
-	tok = name_token
 	func_name = name_token.Text
-
 	global_ctx.Names[func_name] = name_token
 
 	var do_token lexer.Token
