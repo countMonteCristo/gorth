@@ -606,6 +606,9 @@ func (vm *VM) Step(ops []Op, ctx *ScriptContext) {
 			}
 			a := ctx.Stack.Pop().(types.IntType)
 			ctx.Stack.Push(a >> b)
+		case lexer.IntrinsicBitNot:
+			a := ctx.Stack.Pop().(types.IntType)
+			ctx.Stack.Push(^a)
 		case lexer.IntrinsicLogicalAnd, lexer.IntrinsicLogicalOr:
 			b := ctx.Stack.Pop().(types.BoolType)
 			a := ctx.Stack.Pop().(types.BoolType)

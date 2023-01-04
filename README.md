@@ -102,7 +102,7 @@ Example:
 This code pushes 1 and 2 onto the stack, pops two numbers and pushes their sum back. So, afterall, there will be 3 on top of the stack.
 
 ### Strings
-String literal is a sequence of characters enclosed by double quotes ("). Multilined strings are not supported, but it is possible to ues escaped characters like '\n' inside the string. String literals are stored in a specific memory region as null-terminated strings. When string literal is encountered the interpreter pushes pointer to it and size of the string onto the stack.
+String literal is a sequence of characters enclosed by double quotes (`"`). Multilined strings are not supported, but it is possible to ues escaped characters like `'\n'` inside the string. String literals are stored in a specific memory region as null-terminated strings. When string literal is encountered the interpreter pushes pointer to it and size of the string onto the stack.
 
 Example:
 ```gorth
@@ -142,22 +142,23 @@ Only two types are supported for now: `int` and `bool`.
 | `<=` | `[a: int] [b: int] -- [a <= b : bool]` | applies the greater or equal comparison on top two elements. |
 
 ### Arithmetic
-| Name     | Signature                                        | Description                                              |
-| ---      | ---                                              | ---                                                      |
-| `+`      | `[a: int] [b: int] -- [a + b: int]`              | sums up two elements on the top of the stack.            |
-| `-`      | `[a: int] [b: int] -- [a - b: int]`              | subtracts two elements on the top of the stack           |
-| `*`      | `[a: int] [b: int] -- [a * b: int]`              | multiples two elements on top of the stack               |
-| `/`      | `[a: int] [b: int] -- [a / b: int]`              | integer division of two elements on the top of the stack |
-| `%`      | `[a: int] [b: int] -- [a / b: int]`              | gets the reminder after integer diviion `a` by `b`       |
+| Name | Signature                           | Description                                              |
+| ---  | ---                                 | ---                                                      |
+| `+`  | `[a: int] [b: int] -- [a + b: int]` | sums up two elements on the top of the stack.            |
+| `-`  | `[a: int] [b: int] -- [a - b: int]` | subtracts two elements on the top of the stack           |
+| `*`  | `[a: int] [b: int] -- [a * b: int]` | multiples two elements on top of the stack               |
+| `/`  | `[a: int] [b: int] -- [a / b: int]` | integer division of two elements on the top of the stack |
+| `%`  | `[a: int] [b: int] -- [a / b: int]` | gets the reminder after integer diviion `a` by `b`       |
 
 ### Bitwise
-| Name  | Signature                            | Description      |
-| ---   | ---                                  | ---              |
-| `>>`  | `[a: int] [b: int] -- [a >> b: int]` | right bit shift. |
-| `<<`  | `[a: int] [b: int] -- [a << b: int]` | left bit shift.  |
-| `\|`  | `[a: int] [b: int] -- [a \| b: int]` | bit `or`.        |
-| `&`   | `[a: int] [b: int] -- [a & b: int]`  | bit `and`.       |
-| `^`   | `[a: int] -- [^a: int]`              | bit `xor`.       |
+| Name | Signature                            | Description     |
+| ---  | ---                                  | ---             |
+| `>>` | `[a: int] [b: int] -- [a >> b: int]` | right bit shift |
+| `<<` | `[a: int] [b: int] -- [a << b: int]` | left bit shift  |
+| `\|` | `[a: int] [b: int] -- [a \| b: int]` | bit `or`        |
+| `&`  | `[a: int] [b: int] -- [a & b: int]`  | bit `and`       |
+| `^`  | `[a: int] [b: int] -- [a ^ b: int]`  | bit `xor`       |
+| `~`  | `[a: int]          -- [~b: int]`     | bit `not`       |
 
 ### Logical
 | Name   | Signature                                 | Description |
@@ -167,16 +168,16 @@ Only two types are supported for now: `int` and `bool`.
 | `!`    | `[a: bool] -- [!a: bool]`                 | logical NOT |
 
 ### Memory
-| Name         | Signature                      |Description                                         |
-| ---          | ---                            | ---                                                |
-| `!8`         | `[byte: int] [place: ptr] -- ` | store a given byte at the address on the stack.    |
-| `@8`         | `[place: ptr] -- [byte: int]`  | load a byte from the address on the stack.         |
-| `!16`        | `[byte: int] [place: ptr] --`  | store an 2-byte word at the address on the stack.  |
-| `@16`        | `[place: ptr] -- [byte: int]`  | load an 2-byte word from the address on the stack. |
-| `!32`        | `[byte: int] [place: ptr] --`  | store an 4-byte word at the address on the stack.  |
-| `@32`        | `[place: ptr] -- [byte: int]`  | load an 4-byte word from the address on the stack. |
-| `!64`        | `[byte: int] [place: ptr] --`  | store an 8-byte word at the address on the stack.  |
-| `@64`        | `[place: ptr] -- [byte: int]`  | load an 8-byte word from the address on the stack. |
+| Name         | Signature                      |Description                                        |
+| ---          | ---                            | ---                                               |
+| `!8`         | `[byte: int] [place: ptr] -- ` | store a given byte at the address on the stack    |
+| `@8`         | `[place: ptr] -- [byte: int]`  | load a byte from the address on the stack         |
+| `!16`        | `[byte: int] [place: ptr] --`  | store an 2-byte word at the address on the stack  |
+| `@16`        | `[place: ptr] -- [byte: int]`  | load an 2-byte word from the address on the stack |
+| `!32`        | `[byte: int] [place: ptr] --`  | store an 4-byte word at the address on the stack  |
+| `@32`        | `[place: ptr] -- [byte: int]`  | load an 4-byte word from the address on the stack |
+| `!64`        | `[byte: int] [place: ptr] --`  | store an 8-byte word at the address on the stack  |
+| `@64`        | `[place: ptr] -- [byte: int]`  | load an 8-byte word from the address on the stack |
 
 ### Misc
 - `???` - prints stack state

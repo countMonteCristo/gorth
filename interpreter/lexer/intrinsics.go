@@ -16,6 +16,7 @@ const (
 	IntrinsicBitAnd
 	IntrinsicBitOr
 	IntrinsicBitXor
+	IntrinsicBitNot
 
 	IntrinsicLogicalAnd
 	IntrinsicLogicalOr
@@ -69,8 +70,7 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicBitAnd: "&",
 	IntrinsicBitOr:  "|",
 	IntrinsicBitXor: "^",
-
-	// TODO: BitNot(X) =  ^X
+	IntrinsicBitNot: "~",
 
 	IntrinsicEq: "=",
 	IntrinsicNe: "!=",
