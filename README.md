@@ -74,6 +74,22 @@ Record test outputs:
 > ./bin/gorth Gorth/examples/helloworld.gorth
 ```
 
+## Debugger
+Run script with debugger.
+```console
+> ./bin/gorth -debug Gorth/examples/helloworld.gorth
+```
+Availavle commands:
+ * n -  step (process singe instruction)
+ * c -  continue (process all instructions until the end)
+ * t -  print current token
+ * o -  print current operation
+ * ol - print operations list
+ * s -  print current stack state
+ * m -  print current memory state
+ * h -  print help
+ * q -  exit debugger
+
 # Language Reference
 ## Literals
 ### Integers
