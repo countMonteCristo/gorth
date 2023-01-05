@@ -1,0 +1,1 @@
+{"argv":["-123","-1f","1-f","f-2","+23","+2d4","+f321","32","5f6"],"stdin":"","stdout":"-123 \u003cerror\u003e \u003cerror\u003e \u003cerror\u003e 23 \u003cerror\u003e \u003cerror\u003e 32 \u003cerror\u003e \n","stderr":"","exit_code":0}

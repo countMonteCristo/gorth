@@ -15,6 +15,7 @@
   [*] no function definitions inside function allowed
   [*] recursion limit?
   [*] entry point for executable Gorth script (`main` function)
+  [] `return` keyword
 
 [] Includes
   [*] `include` keyword

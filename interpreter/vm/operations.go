@@ -24,6 +24,8 @@ const (
 	OpFuncBegin
 	OpFuncEnd
 
+	OpPushAlloc
+
 	OpCount = iota
 )
 
@@ -43,6 +45,8 @@ var OpName = map[OpType]string{
 	OpCall:      "CALL",
 	OpFuncBegin: "FUNC_BEGIN",
 	OpFuncEnd:   "FUNC_END",
+
+	OpPushAlloc: "PUSH_ALLOC",
 }
 
 type Op struct {
@@ -70,7 +74,7 @@ func (op *Op) Str(addr int64) (s string) {
 		operand = fmt.Sprint(res)
 	case OpWhile:
 		operand = ""
-	case OpFuncBegin, OpFuncEnd:
+	case OpFuncBegin, OpFuncEnd, OpPushAlloc:
 		operand = op.Operand.(string)
 	default:
 		lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation: `%s`", OpName[op.Typ]))

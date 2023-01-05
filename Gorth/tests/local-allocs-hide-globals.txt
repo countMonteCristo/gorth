@@ -1,1 +1,1 @@
-{"argv":[],"stdin":"","stdout":"1234\n5678\n1234\n","stderr":"","exit_code":0}
+{"argv":[],"stdin":"","stdout":"1234 5678 42 87654321 42 5678 1234","stderr":"","exit_code":0}

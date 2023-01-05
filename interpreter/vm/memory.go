@@ -2,6 +2,8 @@ package vm
 
 import (
 	"Gorth/interpreter/types"
+	"bytes"
+	"encoding/binary"
 	"fmt"
 )
 
@@ -20,7 +22,6 @@ type MemoryRegion struct {
 // - Operative memory - the place where all the allocations are stored.
 type ByteMemory struct {
 	MemorySize types.IntType
-	MemPtr     types.IntType
 	Data       []byte
 
 	Argv types.IntType // pointer to the beginning of the input arguments array
@@ -35,7 +36,6 @@ func InitMemory(mem_size types.IntType) ByteMemory {
 	mem := ByteMemory{
 		Data:       make([]byte, mem_size),
 		MemorySize: mem_size,
-		MemPtr:     1,
 
 		StringsMap: make(map[string]types.IntType),
 	}
@@ -67,22 +67,51 @@ func (m *ByteMemory) Prepare(args []string) {
 }
 
 func (m *ByteMemory) LoadFromMem(ptr types.IntType, size int) (value types.IntType) {
-	value = types.IntType(0)
-	n := 0
-	for n < size {
-		value = (value << 8) | types.IntType(m.Data[ptr+types.IntType(n)])
-		n++
+	sub := m.Data[ptr:ptr+types.IntType(size)]
+	buf := bytes.NewReader(sub)
+	switch size {
+	case 1:
+		var v int8
+		binary.Read(buf, binary.LittleEndian, &v)
+		value = types.IntType(v)
+	case 2:
+		var v int16
+		binary.Read(buf, binary.LittleEndian, &v)
+		value = types.IntType(v)
+	case 4:
+		var v int32
+		binary.Read(buf, binary.LittleEndian, &v)
+		value = types.IntType(v)
+	case 8:
+		var v int64
+		binary.Read(buf, binary.LittleEndian, &v)
+		value = types.IntType(v)
+	default:
+		panic(fmt.Sprintf("Cannot load value of size %d, only 1,2,4 and 8 are supported", size))
 	}
 	return
 }
 
 func (m *ByteMemory) StoreToMem(ptr types.IntType, value types.IntType, size int) {
-	diff := types.IntType(size - 1)
-	for diff >= 0 {
-		b := byte(value & 0xFF)
-		m.Data[ptr+diff] = b
-		value >>= 8
-		diff--
+	buf := new(bytes.Buffer)
+	switch size {
+	case 1:
+		val := int8(value)
+		binary.Write(buf, binary.LittleEndian, &val)
+	case 2:
+		val := int16(value)
+		binary.Write(buf, binary.LittleEndian, &val)
+	case 4:
+		val := int32(value)
+		binary.Write(buf, binary.LittleEndian, &val)
+	case 8:
+		val := int64(value)
+		binary.Write(buf, binary.LittleEndian, &val)
+	default:
+		panic(fmt.Sprintf("Cannot store value of size %d, only 1,2,4 and 8 are supported", size))
+	}
+	for i, b := range buf.Bytes() {
+		m.Data[ptr+int64(i)] = b
 	}
 }
 
@@ -103,10 +132,11 @@ func (m *ByteMemory) PrintDebug() {
 	}
 	fmt.Printf("  %v\n", data)
 	fmt.Printf(
-		"Operative memory (cap=%d size=%d start=%d):\n",
+		"Operative memory (cap=%d size=%d start=%d ptr=%d):\n",
 		m.OperativeMemRegion.Size,
 		m.OperativeMemRegion.Ptr-m.OperativeMemRegion.Start,
 		m.OperativeMemRegion.Start,
+		m.OperativeMemRegion.Ptr,
 	)
 	fmt.Printf("  %v\n", m.Data[m.OperativeMemRegion.Start:m.OperativeMemRegion.Ptr])
 }

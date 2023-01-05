@@ -1,17 +1,34 @@
 alloc x 4 end
+alloc y 8 end
+
+func h do
+  alloc x 8 end
+  87654321 x !64
+  x @64 puti ' ' putc
+end
+
+func g do
+  alloc x 2 end
+  42 x !16
+  x @16 puti ' ' putc
+  h
+  x @16 puti ' ' putc
+end
 
 func f do
   alloc x 4 end
-  5678 x !32
 
-  x @32 puti '\n' putc
+  5678 x !32
+  x @32 puti ' ' putc
+  g
+  x @32 puti ' ' putc
 end
 
 func main do
   1234 x !32
+  4321 y !64
 
-  x @32 puti '\n' putc
+  x @32 puti ' ' putc
   f
-  x @32 puti '\n' putc
-
+  x @32 puti
 end

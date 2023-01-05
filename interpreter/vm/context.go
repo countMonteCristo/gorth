@@ -5,11 +5,18 @@ import (
 	"Gorth/interpreter/types"
 )
 
-type Allocation struct {
-	Ptr types.IntType
-	Size types.IntType
-}
+type ScopeType int
 
+const (
+	ScopeGlobal ScopeType = iota
+	ScopeLocal
+	ScopeUnknown
+)
+
+type Allocation struct {
+	Offset types.IntType
+	Size   types.IntType
+}
 
 // Allocations and constants visible only inside function
 type FuncContext struct {
@@ -17,13 +24,13 @@ type FuncContext struct {
 	Allocs   map[string]Allocation
 	Consts   map[string]types.IntType
 	Names    map[string]lexer.Token
-	MemPtr   types.IntType
+	MemSize  types.IntType
 }
 
-func NewFuncContext(funcName string, memPtr types.IntType) FuncContext {
-	return FuncContext{
+func NewFuncContext(funcName string) *FuncContext {
+	return &FuncContext{
 		FuncName: funcName, Consts: make(map[string]types.IntType), Allocs: make(map[string]Allocation),
-		Names: make(map[string]lexer.Token), MemPtr: memPtr,
+		Names: make(map[string]lexer.Token), MemSize: 0,
 	}
 }
 
@@ -31,16 +38,16 @@ type Context struct {
 	Memory ByteMemory
 	Funcs  map[string]types.IntType // name to absolute intruction address
 
-	LocalContexts map[string]FuncContext // local function context
+	LocalContexts map[string]*FuncContext // local function context
 }
 
 func InitContext(mem_size types.IntType) *Context {
 	ctx := &Context{
 		Memory:        InitMemory(mem_size),
 		Funcs:         make(map[string]types.IntType),
-		LocalContexts: make(map[string]FuncContext),
+		LocalContexts: make(map[string]*FuncContext),
 	}
-	ctx.LocalContexts[""] = NewFuncContext("", ctx.Memory.OperativeMemRegion.Ptr) // global context
+	ctx.LocalContexts[""] = NewFuncContext("") // global context
 
 	return ctx
 }
@@ -59,16 +66,16 @@ func (c *Context) GetConst(name, func_name string) (types.IntType, bool) {
 	return 0, false
 }
 
-func (c *Context) GetAlloc(name, func_name string) (Allocation, bool) {
+func (c *Context) GetAlloc(name, func_name string) (Allocation, ScopeType) {
 	if func_name != "" {
 		alloc, exists := c.LocalContexts[func_name].Allocs[name]
 		if exists {
-			return alloc, exists
+			return alloc, ScopeLocal
 		}
 	}
 	alloc, exists := c.LocalContexts[""].Allocs[name]
 	if exists {
-		return alloc, exists
+		return alloc, ScopeGlobal
 	}
-	return Allocation{}, false
+	return Allocation{}, ScopeUnknown
 }

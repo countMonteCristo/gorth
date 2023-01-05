@@ -273,11 +273,11 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 				continue
 			}
 
-			alloc, exists := vm.Ctx.GetAlloc(name, current_function)
-			if exists {
+			_, scope := vm.Ctx.GetAlloc(name, current_function)
+			if scope != ScopeUnknown {
 				ops = append(ops, Op{
-					Typ:     OpPushInt,
-					Operand: alloc.Ptr,
+					Typ:     OpPushAlloc,
+					Operand: name,
 					OpToken: token,
 				})
 				continue
@@ -335,7 +335,12 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 				}
 				block := blocks.Pop().(Block)
 				if block.Tok.Typ != lexer.TokenKeyword {
-					lexer.CompilerFatal(&token.Loc, fmt.Sprintf("Only keywords may form blocks, but not `%s`. Probably bug in lex()", block.Tok.Text))
+					lexer.CompilerFatal(
+						&token.Loc, fmt.Sprintf(
+							"Only keywords may form blocks, but not `%s`. Probably bug in lex()",
+							block.Tok.Text,
+						),
+					)
 				}
 				block_start_kw := block.Tok.Value.(lexer.KeywordType)
 				op.Operand = types.IntType(1)
@@ -373,7 +378,7 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 					func_end_op := Op{
 						OpToken: token, Typ: OpFuncEnd, Operand: current_function,
 					}
-					current_function = ""
+					current_function = ""	// we do not allow nested function definitions so it is ok
 					ops = append(ops, func_end_op)
 				default:
 					lexer.CompilerFatal(&token.Loc, "Unhandled block start processing")
@@ -441,21 +446,17 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 				ops = append(ops, op)
 
 			case lexer.KeywordConst:
-				tok, const_value := vm.parse_named_block(&token, &tokens, token.Text, &locals)
+				tok, const_value := vm.parse_named_block(&token, &tokens, token.Text, locals)
 				locals.Consts[tok.Text] = const_value
-				locals.Names[tok.Text] = tok
 			case lexer.KeywordAlloc:
-				tok, alloc_size := vm.parse_named_block(&token, &tokens, token.Text, &locals)
+				tok, alloc_size := vm.parse_named_block(&token, &tokens, token.Text, locals)
 				if alloc_size < 0 {
 					lexer.CompilerFatal(&tok.Loc, fmt.Sprintf("Negative size for `alloc` block: %d", alloc_size))
 				}
-
 				locals.Allocs[tok.Text] = Allocation{
-					Ptr: vm.Ctx.Memory.OperativeMemRegion.Ptr, Size: alloc_size,
+					Offset: locals.MemSize, Size: alloc_size,
 				}
-				locals.MemPtr += alloc_size
-				vm.Ctx.Memory.OperativeMemRegion.Ptr += alloc_size
-				locals.Names[tok.Text] = tok
+				locals.MemSize += alloc_size
 
 			case lexer.KeywordFunc:
 				if current_function != "" {
@@ -464,11 +465,13 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 						fmt.Sprintf("Cannot define functions inside a function %s", current_function),
 					)
 				}
-				func_token, func_name := vm.parse_func_def(&token, &tokens, &globals)
+				func_token, func_name := vm.parse_func_def(&token, &tokens, globals)
 				current_function = func_name
 
-				vm.Ctx.LocalContexts[func_name] = NewFuncContext(func_name, vm.Ctx.Memory.OperativeMemRegion.Ptr)
-				vm.Ctx.LocalContexts[func_name].Names[func_name] = func_token
+				new_ctx := NewFuncContext(func_name)
+				new_ctx.Names[func_name] = func_token
+				vm.Ctx.LocalContexts[func_name] = new_ctx
+
 				vm.Ctx.Funcs[func_name] = len_ops
 				blocks.Push(Block{Addr: len_ops, Tok: token})
 
@@ -503,18 +506,24 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 type ScriptContext struct {
 	Stack       utils.Stack
 	ReturnStack utils.Stack
-	Addr        int64
+	FuncStack   utils.Stack
+	Addr        types.IntType
 	Args        []string
-	CurrentFunc string
+	OpsCount    types.IntType
 }
 
-func NewScriptContext(len_ops types.IntType, args []string, current_func string) *ScriptContext {
+func NewScriptContext(len_ops types.IntType, args []string) *ScriptContext {
 	ctx := &ScriptContext{
 		Stack: utils.Stack{}, ReturnStack: utils.Stack{},
-		Addr: 0, Args: args, CurrentFunc: current_func,
+		Addr: 0, Args: args, OpsCount: len_ops, FuncStack: utils.Stack{},
 	}
 	ctx.ReturnStack.Push(len_ops)
+	ctx.FuncStack.Push("")
 	return ctx
+}
+
+func (ctx *ScriptContext) CurrentFunction() string {
+	return ctx.FuncStack.Top().(string)
 }
 
 func (vm *VM) ProcessSyscall(ctx *ScriptContext) {
@@ -689,32 +698,52 @@ func (vm *VM) Step(ops []Op, ctx *ScriptContext) {
 		ctx.Addr += op.Operand.(types.IntType)
 	case OpFuncBegin:
 		ctx.Addr++
-		ctx.CurrentFunc = op.Operand.(string)
+		ctx.FuncStack.Push(op.Operand.(string))
+		vm.Ctx.Memory.OperativeMemRegion.Ptr += vm.Ctx.LocalContexts[ctx.CurrentFunction()].MemSize
 	case OpFuncEnd:
 		if ctx.ReturnStack.Size() == 0 {
 			lexer.RuntimeFatal(&op.OpToken.Loc, "Return stack is empty")
 		}
 		ctx.Addr = ctx.ReturnStack.Pop().(types.IntType) + 1
-		vm.Ctx.Memory.OperativeMemRegion.Ptr = vm.Ctx.LocalContexts[ctx.CurrentFunc].MemPtr
+		vm.Ctx.Memory.OperativeMemRegion.Ptr -= vm.Ctx.LocalContexts[ctx.CurrentFunction()].MemSize
+		ctx.FuncStack.Pop()
+	case OpPushAlloc:
+		alloc_name := op.Operand.(string)
+		alloc, scope := vm.Ctx.GetAlloc(alloc_name, ctx.CurrentFunction())
+		if scope == ScopeUnknown {
+			lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Unknown alloc at runtime: `%s`", alloc_name))
+		}
+		addr := alloc.Offset
+		if scope == ScopeLocal {
+			addr += vm.Ctx.Memory.OperativeMemRegion.Ptr - vm.Ctx.LocalContexts[ctx.CurrentFunction()].MemSize
+		} else {
+			addr += vm.Ctx.Memory.OperativeMemRegion.Start
+		}
+		ctx.Stack.Push(addr)
+		ctx.Addr++
 	default:
 		lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation: `%s`", OpName[op.Typ]))
 	}
 }
 
-func (vm *VM) Interprete(ops []Op, args []string) {
+func (vm *VM) Prepare(ops []Op, args []string) *ScriptContext {
 	len_ops := types.IntType(len(ops))
-	ctx := NewScriptContext(len_ops, args, "")
+	ctx := NewScriptContext(len_ops, args)
 	ctx.Addr = vm.Ctx.Funcs["main"]
 
-	for ctx.Addr < len_ops {
+	vm.Ctx.Memory.OperativeMemRegion.Ptr = vm.Ctx.Memory.OperativeMemRegion.Start + vm.Ctx.LocalContexts[""].MemSize
+	return ctx
+}
+
+func (vm *VM) Interprete(ops []Op, args []string) {
+	ctx := vm.Prepare(ops, args)
+	for ctx.Addr < ctx.OpsCount {
 		vm.Step(ops, ctx)
 	}
 }
 
 func (vm *VM) InterpreteDebug(ops []Op, args []string, cmd <-chan string, resp chan<- string) {
-	len_ops := types.IntType(len(ops))
-	ctx := NewScriptContext(len_ops, args, "")
-	ctx.Addr = vm.Ctx.Funcs["main"]
+	ctx := vm.Prepare(ops, args)
 
 loop:
 	for {
@@ -731,7 +760,7 @@ loop:
 			resp <- "ok"
 			break loop
 		case "n": // step
-			if ctx.Addr >= len_ops {
+			if ctx.Addr >= ctx.OpsCount {
 				fmt.Printf("Script finished\n")
 				resp <- "failed"
 			} else {
@@ -739,17 +768,17 @@ loop:
 				resp <- "ok"
 			}
 		case "c": // continue
-			if ctx.Addr >= len_ops {
+			if ctx.Addr >= ctx.OpsCount {
 				fmt.Printf("Script finished\n")
 				resp <- "failed"
 			} else {
-				for ctx.Addr < len_ops {
+				for ctx.Addr < ctx.OpsCount {
 					vm.Step(ops, ctx)
 				}
 				resp <- "ok"
 			}
 		case "t": // token
-			if ctx.Addr >= len_ops {
+			if ctx.Addr >= ctx.OpsCount {
 				fmt.Printf("Script finished\n")
 				resp <- "failed"
 			} else {
@@ -758,7 +787,7 @@ loop:
 				resp <- "ok"
 			}
 		case "o": // operation
-			if ctx.Addr >= len_ops {
+			if ctx.Addr >= ctx.OpsCount {
 				fmt.Printf("Script finished\n")
 				resp <- "failed"
 			} else {
@@ -779,21 +808,22 @@ loop:
 			}
 			resp <- "ok"
 		case "e": // env - consts and allocs
-			if ctx.Addr >= len_ops {
+			if ctx.Addr >= ctx.OpsCount {
 				fmt.Printf("Script finished\n")
 				resp <- "failed"
 			} else {
-				locals := vm.Ctx.LocalContexts[ctx.CurrentFunc]
+				locals := vm.Ctx.LocalContexts[ctx.CurrentFunction()]
 
-				fmt.Printf("Scope: <%s>\n", ctx.CurrentFunc)
-				if ctx.CurrentFunc != "" {
+				fmt.Printf("Scope: <%s>\n", ctx.CurrentFunction())
+				if ctx.CurrentFunction() != "" {
 					fmt.Printf("Locals: ")
 					for const_name, const_value := range locals.Consts {
 						fmt.Printf("%s=%d ", const_name, const_value)
 					}
 					for alloc_name, alloc := range locals.Allocs {
-						alloc_mem := vm.Ctx.Memory.Data[alloc.Ptr:alloc.Ptr+alloc.Size]
-						fmt.Printf("%s(%d,%d)=%d ", alloc_name, alloc.Ptr, alloc.Size, alloc_mem)
+						alloc_ptr := vm.Ctx.Memory.OperativeMemRegion.Ptr - vm.Ctx.LocalContexts[ctx.CurrentFunction()].MemSize + alloc.Offset
+						alloc_mem := vm.Ctx.Memory.Data[alloc_ptr : alloc_ptr+alloc.Size]
+						fmt.Printf("%s(%d,%d)=%d ", alloc_name, alloc_ptr, alloc.Size, alloc_mem)
 					}
 					fmt.Println()
 				}
@@ -803,8 +833,9 @@ loop:
 					fmt.Printf("%s=%d ", const_name, const_value)
 				}
 				for alloc_name, alloc := range vm.Ctx.LocalContexts[""].Allocs {
-					alloc_mem := vm.Ctx.Memory.Data[alloc.Ptr:alloc.Ptr+alloc.Size]
-					fmt.Printf("%s(%d,%d)=%d ", alloc_name, alloc.Ptr, alloc.Size, alloc_mem)
+					alloc_ptr := vm.Ctx.Memory.OperativeMemRegion.Start + alloc.Offset
+					alloc_mem := vm.Ctx.Memory.Data[alloc_ptr : alloc_ptr+alloc.Size]
+					fmt.Printf("%s(%d,%d)=%d ", alloc_name, alloc_ptr, alloc.Size, alloc_mem)
 				}
 				fmt.Println()
 

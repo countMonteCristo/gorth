@@ -13,21 +13,66 @@ end
 // Converts string to unsigned number
 // Returns -1 if convertion failed
 func atou do  // ptr len -> uint
-  alloc result 8 end    // allocate memory for result
-  0 result !64          // clear memory
+  alloc result 8 end          // allocate memory for result
+  0 result !64                // clear memory
 
-  over + swap           // ptr len -> ptr_end ptr_begin
+  over + swap                 // ptr len -> ptr_end ptr_begin
   while over over > do
-    dup @8 '0' -        // load digit
-    dup 10 > if         // if char is not a digit - break and return -1
+    dup @8 '0' -              // load digit
+    dup 10 > over 0 < || if   // if char is not a digit - break and return -1
       drop -1 result !64 break
     end
-    result @64 10 * +   // update result number
-    result !64          // store result number in memory
+    result @64 10 * +         // update result number
+    result !64                // store result number in memory
     1 +
   end
   drop drop
   result @64
+end
+
+// Converts string to signed number
+// Returns err=1 if conversion failed
+// TODO: signle '+' and '-' both converted to 0
+func atoi do  // ptr len -> int err
+  alloc result 8 end          // allocate memory for result
+  alloc sign_m 1 end
+  alloc err 1 end
+
+  0 result !64                // clear memory
+  1 sign_m !8                 // set sign
+  0 err !8                    // set error to 0
+
+  over @8 '-' = if
+    -1 sign_m !8
+    1 - swap 1 + swap
+  else
+    over @8 '+' = if
+      1 - swap 1 + swap
+    end
+  end
+
+  over + swap                 // ptr len -> ptr_end ptr_begin
+  while over over > do
+    dup @8 '0' -              // load digit
+
+    dup 10 > over 0 < || if   // if char is not a digit - break
+      drop -1 result !64
+      1 err !8
+      break
+    end
+
+    result @64 10 * +         // update result number
+    result !64                // store result number in memory
+    1 +
+  end
+  drop drop
+
+  err @8 dup 0 > if 0
+  else
+    result @64 sign_m @8 *
+  end
+
+  swap
 end
 
 // Consumes number of the input argument and returns pointer to it
