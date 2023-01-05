@@ -763,7 +763,10 @@ loop:
 			if ctx.Addr >= ctx.OpsCount {
 				di.SendFailed("Can not step: script finished")
 			} else {
-				vm.Step(ops, ctx)
+				steps_count := cmd.Args.(int)
+				for i:=0; i<steps_count && ctx.Addr < ctx.OpsCount; i++ {
+					vm.Step(ops, ctx)
+				}
 				di.SendOK()
 			}
 		case DebugCmdContinue: // continue

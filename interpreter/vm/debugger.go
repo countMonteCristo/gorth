@@ -1,6 +1,10 @@
 package vm
 
-import "strings"
+import (
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 type DebugCommandType int
 
@@ -77,7 +81,21 @@ func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 	if !exists {
 		return cmd, false
 	}
+
 	cmd.Type = cmd_type
 	// TODO: save other args from parts[1:] to cmd.Args
+	switch cmd.Type {
+	case DebugCmdStep:
+		if len(parts) > 1 {
+			arg, err := strconv.Atoi(parts[1])
+			if err != nil || arg <= 0 {
+				fmt.Printf("Argument of `step` command should be unsigned integer > 0, but got %s. Use 1 by default.\n", parts[1])
+				arg = 1
+			}
+			cmd.Args = arg
+		} else {
+			cmd.Args = 1
+		}
+	}
 	return cmd, true
 }

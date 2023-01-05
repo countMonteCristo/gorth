@@ -3,8 +3,10 @@ package main
 import (
 	"Gorth/interpreter"
 	"Gorth/interpreter/vm"
+	"bufio"
 	"flag"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -29,11 +31,11 @@ func main() {
 		debugger_interface := vm.NewDebugInterface()
 		i.RunDebug(gorth_script, debugger_interface)
 
+		scanner := bufio.NewScanner(os.Stdin)
 		for {
-			input := ""
 			fmt.Print("> ")
-			fmt.Scanln(&input)
-			input = strings.ToLower(input)
+			scanner.Scan()
+			input := strings.ToLower(scanner.Text())
 
 			if input == "h" || input == "help" {
 				fmt.Println("Availavle commands:")
@@ -52,7 +54,7 @@ func main() {
 
 			cmd, ok := vm.ParseDebuggerCommand(input)
 			if !ok {
-				fmt.Printf("Unknown command: <%s>\n", input)
+				fmt.Printf("Unknown coMMand: <%s>\n", input)
 				continue
 			}
 
