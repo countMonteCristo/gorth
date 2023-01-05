@@ -10,7 +10,7 @@ type DebugCommandType int
 
 const (
 	DebugCmdStep DebugCommandType = iota
-	DebugCmdBreak
+	DebugCmdBreakpoint
 	DebugCmdContinue
 	DebugCmdStack
 	DebugCmdMemory
@@ -23,9 +23,11 @@ const (
 )
 
 var Str2DebugCommandType = map[string]DebugCommandType{
-	"n": DebugCmdStep, "c": DebugCmdContinue, "t": DebugCmdToken, "o": DebugCmdOperation,
-	"ol": DebugCmdOperationList, "s": DebugCmdStack, "m": DebugCmdMemory,
-	"e": DebugCmdEnv, "h": DebugCmdHelp, "q": DebugCmdQuit,
+	"n": DebugCmdStep, "c": DebugCmdContinue,
+	"b": DebugCmdBreakpoint,
+	"t": DebugCmdToken, "o": DebugCmdOperation, "ol": DebugCmdOperationList,
+	"s": DebugCmdStack, "m": DebugCmdMemory, "e": DebugCmdEnv,
+	"h": DebugCmdHelp, "q": DebugCmdQuit,
 }
 
 type DebugCommandStatusType int
@@ -47,13 +49,15 @@ type DebugCommandResponse struct {
 }
 
 type DebugInterface struct {
-	Commands chan DebugCommand
-	Response chan DebugCommandResponse
+	Commands    chan DebugCommand
+	Response    chan DebugCommandResponse
+	BreakPoints map[string]bool
 }
 
 func NewDebugInterface() *DebugInterface {
 	return &DebugInterface{
 		Commands: make(chan DebugCommand), Response: make(chan DebugCommandResponse),
+		BreakPoints: make(map[string]bool),
 	}
 }
 
@@ -71,6 +75,20 @@ func (di *DebugInterface) SendFailed(msg string) {
 	}
 }
 
+func (di *DebugInterface) IsBreakpoint(ctx *ScriptContext, ops []Op) (string, bool) {
+	if ctx.Addr < ctx.OpsCount {
+		op := ops[ctx.Addr]
+		if op.Typ == OpFuncBegin {
+			fn_name := op.Operand.(string)
+			_, exists := di.BreakPoints[fn_name]
+			if exists {
+				return fn_name, true
+			}
+		}
+	}
+	return "", false
+}
+
 func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 	cmd := DebugCommand{Str: input}
 	parts := strings.Fields(input)
@@ -83,6 +101,7 @@ func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 	}
 
 	cmd.Type = cmd_type
+
 	// TODO: save other args from parts[1:] to cmd.Args
 	switch cmd.Type {
 	case DebugCmdStep:
@@ -96,6 +115,12 @@ func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 		} else {
 			cmd.Args = 1
 		}
+	case DebugCmdBreakpoint:
+		if len(parts) < 2 {
+			fmt.Printf("Specify names for breakpoints")
+			return cmd, false
+		}
+		cmd.Args = parts[1:]
 	}
 	return cmd, true
 }

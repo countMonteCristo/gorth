@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"unsafe"
 
+	"golang.org/x/exp/slices"
 	"golang.org/x/sys/unix"
 )
 
@@ -378,7 +379,7 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 					func_end_op := Op{
 						OpToken: token, Typ: OpFuncEnd, Operand: current_function,
 					}
-					current_function = ""	// we do not allow nested function definitions so it is ok
+					current_function = "" // we do not allow nested function definitions so it is ok
 					ops = append(ops, func_end_op)
 				default:
 					lexer.CompilerFatal(&token.Loc, "Unhandled block start processing")
@@ -764,8 +765,17 @@ loop:
 				di.SendFailed("Can not step: script finished")
 			} else {
 				steps_count := cmd.Args.(int)
-				for i:=0; i<steps_count && ctx.Addr < ctx.OpsCount; i++ {
+				for i := 0; i < steps_count && ctx.Addr < ctx.OpsCount; i++ {
 					vm.Step(ops, ctx)
+
+					fn_name, is_bp := di.IsBreakpoint(ctx, ops)
+					if is_bp {
+						fmt.Printf("[INFO] Break at function %s\n", fn_name)
+						break
+					}
+				}
+				if ctx.Addr >= ctx.OpsCount {
+					fmt.Printf("[INFO] Script finished\n")
 				}
 				di.SendOK()
 			}
@@ -775,8 +785,32 @@ loop:
 			} else {
 				for ctx.Addr < ctx.OpsCount {
 					vm.Step(ops, ctx)
+
+					fn_name, is_bp := di.IsBreakpoint(ctx, ops)
+					if is_bp {
+						fmt.Printf("[INFO] Break at function %s\n", fn_name)
+						break
+					}
+				}
+				if ctx.Addr >= ctx.OpsCount {
+					fmt.Printf("[INFO] Script finished\n")
 				}
 				di.SendOK()
+			}
+		case DebugCmdBreakpoint:
+			bp_names := cmd.Args.([]string)
+			found_names := make([]string, 0, len(bp_names))
+			for fn_name := range vm.Ctx.Funcs {
+				if slices.Contains(bp_names, fn_name) {
+					found_names = append(found_names, fn_name)
+					di.BreakPoints[fn_name] = true
+				}
+			}
+			if len(found_names) > 0 {
+				fmt.Printf("[INFO] Set break point to functions %v\n", found_names)
+				di.SendOK()
+			} else {
+				di.SendFailed(fmt.Sprintf("Can not find functions `%v` to set break point", bp_names))
 			}
 		case DebugCmdToken: // token
 			if ctx.Addr >= ctx.OpsCount {
@@ -800,10 +834,17 @@ loop:
 		case DebugCmdOperationList: // print ops list
 			for addr, op := range ops {
 				marker := " "
+				bp := " "
 				if int64(addr) == ctx.Addr {
 					marker = "*"
 				}
-				fmt.Printf("%s%s\n", marker, op.Str(int64(addr)))
+				if op.Typ == OpFuncBegin {
+					_, exists := di.BreakPoints[op.Operand.(string)]
+					if exists {
+						bp = "b"
+					}
+				}
+				fmt.Printf("%s%s%s\n", marker, bp, op.Str(int64(addr)))
 			}
 			di.SendOK()
 		case DebugCmdEnv: // env - consts and allocs
