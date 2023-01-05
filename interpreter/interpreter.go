@@ -31,8 +31,8 @@ func (i *Interpreter) Run(fn string) {
 	i.vm.Interprete(ops, i.args)
 }
 
-func (i *Interpreter) RunDebug(fn string, cmd <-chan string, resp chan<- string) {
+func (i *Interpreter) RunDebug(fn string, di *vm.DebugInterface) {
 	tokens := i.lx.ProcessFile(fn, []string{}, &i.imp)
 	ops := i.vm.Compile(fn, tokens, i.args)
-	go i.vm.InterpreteDebug(ops, i.args, cmd, resp)
+	go i.vm.InterpreteDebug(ops, i.args, di)
 }

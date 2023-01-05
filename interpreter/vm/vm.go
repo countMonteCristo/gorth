@@ -742,63 +742,59 @@ func (vm *VM) Interprete(ops []Op, args []string) {
 	}
 }
 
-func (vm *VM) InterpreteDebug(ops []Op, args []string, cmd <-chan string, resp chan<- string) {
+func (vm *VM) InterpreteDebug(ops []Op, args []string, di *DebugInterface) {
 	ctx := vm.Prepare(ops, args)
 
 loop:
 	for {
-		command := <-cmd
+		cmd := <-di.Commands
 
-		switch command {
-		case "s": // print stack
+		switch cmd.Type {
+		case DebugCmdStack: // print stack
 			fmt.Println(ctx.Stack.Data)
-			resp <- "ok"
-		case "m": // print memory
+			di.SendOK()
+		case DebugCmdMemory: // print memory
 			vm.Ctx.Memory.PrintDebug()
-			resp <- "ok"
-		case "q": // quit
-			resp <- "ok"
+			di.SendOK()
+		case DebugCmdQuit: // quit
+			di.SendOK()
 			break loop
-		case "n": // step
+		case DebugCmdStep: // step
 			if ctx.Addr >= ctx.OpsCount {
-				fmt.Printf("Script finished\n")
-				resp <- "failed"
+				di.SendFailed("Can not step: script finished")
 			} else {
 				vm.Step(ops, ctx)
-				resp <- "ok"
+				di.SendOK()
 			}
-		case "c": // continue
+		case DebugCmdContinue: // continue
 			if ctx.Addr >= ctx.OpsCount {
-				fmt.Printf("Script finished\n")
-				resp <- "failed"
+				di.SendFailed("Can not continue: script finished")
 			} else {
 				for ctx.Addr < ctx.OpsCount {
 					vm.Step(ops, ctx)
 				}
-				resp <- "ok"
+				di.SendOK()
 			}
-		case "t": // token
+		case DebugCmdToken: // token
 			if ctx.Addr >= ctx.OpsCount {
-				fmt.Printf("Script finished\n")
-				resp <- "failed"
+				di.SendFailed("Can not print token: script finished")
 			} else {
 				token := ops[ctx.Addr].OpToken
 				fmt.Printf("%s:%d:%d Token(%s)\n", token.Loc.Filepath, token.Loc.Line+1, token.Loc.Column+1, token.Text)
-				resp <- "ok"
+				di.SendOK()
 			}
-		case "o": // operation
+		case DebugCmdOperation: // operation
 			if ctx.Addr >= ctx.OpsCount {
-				fmt.Printf("Script finished\n")
-				resp <- "failed"
+				di.SendFailed("Can not print operation: script finished")
 			} else {
 				op := ops[ctx.Addr]
 				fmt.Printf(
 					"%s:%d:%d %s\n", op.OpToken.Loc.Filepath, op.OpToken.Loc.Line+1,
 					op.OpToken.Loc.Column+1, op.Str(ctx.Addr),
 				)
-				resp <- "ok"
+				di.SendOK()
 			}
-		case "ol": // print ops list
+		case DebugCmdOperationList: // print ops list
 			for addr, op := range ops {
 				marker := " "
 				if int64(addr) == ctx.Addr {
@@ -806,11 +802,10 @@ loop:
 				}
 				fmt.Printf("%s%s\n", marker, op.Str(int64(addr)))
 			}
-			resp <- "ok"
-		case "e": // env - consts and allocs
+			di.SendOK()
+		case DebugCmdEnv: // env - consts and allocs
 			if ctx.Addr >= ctx.OpsCount {
-				fmt.Printf("Script finished\n")
-				resp <- "failed"
+				di.SendFailed("Can not print environment: script finished")
 			} else {
 				locals := vm.Ctx.LocalContexts[ctx.CurrentFunction()]
 
@@ -839,11 +834,10 @@ loop:
 				}
 				fmt.Println()
 
-				resp <- "ok"
+				di.SendOK()
 			}
 		default:
-			fmt.Printf("Unknown command: '%s'\n", command)
-			resp <- "failed"
+			di.SendFailed(fmt.Sprintf("Unknown command: '%s'", cmd.Str))
 		}
 	}
 }

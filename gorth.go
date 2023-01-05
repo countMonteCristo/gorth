@@ -2,6 +2,7 @@ package main
 
 import (
 	"Gorth/interpreter"
+	"Gorth/interpreter/vm"
 	"flag"
 	"fmt"
 	"path/filepath"
@@ -25,9 +26,8 @@ func main() {
 	if !*debugFlag {
 		i.Run(gorth_script)
 	} else {
-		cmd_chan := make(chan string)
-		resp_chan := make(chan string)
-		i.RunDebug(gorth_script, cmd_chan, resp_chan)
+		debugger_interface := vm.NewDebugInterface()
+		i.RunDebug(gorth_script, debugger_interface)
 
 		for {
 			input := ""
@@ -44,15 +44,24 @@ func main() {
 				fmt.Println(" * ol - print operations list")
 				fmt.Println(" * s -  print current stack state")
 				fmt.Println(" * m -  print current memory state")
+				fmt.Println(" * e -  print current local and global environment (consts, allocs)")
 				fmt.Println(" * h -  print help")
 				fmt.Println(" * q -  exit debugger")
 				continue
 			}
 
-			cmd_chan <- input
-			<-resp_chan
+			cmd, ok := vm.ParseDebuggerCommand(input)
+			if !ok {
+				fmt.Printf("Unknown command: <%s>\n", input)
+				continue
+			}
 
-			if input == "q" {
+			response := debugger_interface.Communicate(cmd)
+			if response.Status == vm.DebugCommandStatusFailed {
+				fmt.Printf("[FAILED] %s\n", response.Msg)
+			}
+
+			if cmd.Type == vm.DebugCmdQuit {
 				break
 			}
 		}
