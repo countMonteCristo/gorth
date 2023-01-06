@@ -974,23 +974,28 @@ loop:
 			di.PrintOpsList(0, sc.OpsCount-1, ops, sc)
 			di.SendOK()
 		case DebugCmdEnv: // env - consts and allocs
+			typ := cmd.Args.(string)
 			if sc.Addr >= sc.OpsCount {
 				di.SendFailed("Can not print environment: script finished")
 			} else {
 				current_scope_name := sc.CurrentScopeName()
 
-				fmt.Printf("Scope: <%s>\n", current_scope_name)
-				if current_scope_name != GlobalScopeName {
-					fmt.Printf("Locals: ")
-					vm.Ctx.DebugConsts(current_scope_name)
-					vm.Ctx.DebugAllocs(current_scope_name)
-					fmt.Println()
+				if typ == "all" || typ == "local" {
+					fmt.Printf("Scope: <%s>\n", current_scope_name)
+					if current_scope_name != GlobalScopeName {
+						fmt.Printf("Locals: ")
+						vm.Ctx.DebugConsts(current_scope_name)
+						vm.Ctx.DebugAllocs(current_scope_name)
+						fmt.Println()
+					}
 				}
 
-				fmt.Printf("Globals: ")
-				vm.Ctx.DebugConsts(GlobalScopeName)
-				vm.Ctx.DebugAllocs(GlobalScopeName)
-				fmt.Println()
+				if typ == "all" || typ == "global" {
+					fmt.Printf("Globals: ")
+					vm.Ctx.DebugConsts(GlobalScopeName)
+					vm.Ctx.DebugAllocs(GlobalScopeName)
+					fmt.Println()
+				}
 
 				di.SendOK()
 			}

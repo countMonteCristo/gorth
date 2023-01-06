@@ -195,6 +195,18 @@ func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 			return cmd, false
 		}
 		cmd.Args = parts[1:]
+	case DebugCmdEnv:
+		if len(parts) == 1 {
+			cmd.Args = "all"
+		} else {
+			if parts[1] == "local" || parts[1] == "global" || parts[1] == "all" {
+				cmd.Args = parts[1]
+			} else {
+				fmt.Printf("Unknown parameter for `e` command: %s, only [all, local, global] are supported\n", parts[1])
+				return cmd, false
+			}
+		}
 	}
+
 	return cmd, true
 }

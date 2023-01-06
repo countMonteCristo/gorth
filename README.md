@@ -92,7 +92,7 @@ Availavle commands:
  * `m`                 - print current memory state
  * `mo` `addr` `size`  - print memory chunk of size `size` at address `addr`
  * `p` `n1 n2 .. nk`   - print consts, allocs or functions
- * `e`                 - print current local and global environment (consts, allocs)
+ * `e` [`type`]        - print current environment (consts, allocs), `type` could be [`all`, `local`, `global`], by default `type`=`all`
  * `h`                 - print help
  * `q`                 - exit debugger
 

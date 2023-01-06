@@ -50,7 +50,7 @@ func main() {
 				fmt.Println(" * `m`                 - print current memory state")
 				fmt.Println(" * `mo` `addr` `size`  - print memory chunk of size `size` at address `addr`")
 				fmt.Println(" * `p` `n1 n2 .. nk`   - print consts, allocs or functions")
-				fmt.Println(" * `e`                 - print current local and global environment (consts, allocs)")
+				fmt.Println(" * `e` [`type`]        - print current environment (consts, allocs), `type` could be [`all`, `local`, `global`], by default `type`=`all`")
 				fmt.Println(" * `h`                 - print help")
 				fmt.Println(" * `q`                 - exit debugger")
 				continue

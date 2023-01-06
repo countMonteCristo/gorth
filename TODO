@@ -32,7 +32,7 @@
 [] Improve interpreter
   [] Add debugger mode (run by step, go in, go out, continue, etc)
     [*] Add simple debugger
-    [] Add parameter loc/glb to env command
+    [*] Add parameter loc/glb to env command
     [*] Add `p` command for printing consts, allocs or functions
     [*] Add command for showing parts of memory as a slice
 
