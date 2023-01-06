@@ -1,1 +1,1 @@
-{"argv":[],"stdin":"","stdout":"","stderr":"interpreter/vm/vm.go:41 [INFO] Redefinition of word `x`:\n  Gorth/tests/const-alloc-redefinition.gorth:3:9\ninterpreter/vm/vm.go:42 [INFO] Previously defined here:\n  Gorth/tests/const-alloc-redefinition.gorth:2:9\nexit status 1\n","exit_code":1}
+{"argv":[],"stdin":"","stdout":"","stderr":"interpreter/vm/vm.go:42 [INFO] Redefinition of word `x`:\n  Gorth/tests/const-alloc-redefinition.gorth:3:9\ninterpreter/vm/vm.go:43 [INFO] Previously defined here:\n  Gorth/tests/const-alloc-redefinition.gorth:2:9\nexit status 1\n","exit_code":1}

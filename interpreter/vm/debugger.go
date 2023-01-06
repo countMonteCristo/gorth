@@ -95,6 +95,26 @@ func (di *DebugInterface) IsBreakpoint(ctx *ScriptContext, ops []Op) (types.IntT
 	return -1, false
 }
 
+func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []Op, ctx *ScriptContext) {
+	// TODO: align operations
+	for addr := start; addr >= 0 && addr < ctx.OpsCount && addr <= finish; addr++ {
+		marker := " "
+		if addr == ctx.Addr {
+			marker = "*"
+		}
+		bp := " "
+		_, exists := di.BreakPoints[addr]
+		if exists {
+			bp = "b"
+		}
+		op := ops[addr]
+		fmt.Printf(
+			"%s:%d:%d\t%s%s%s\n", op.OpToken.Loc.Filepath, op.OpToken.Loc.Line+1,
+			op.OpToken.Loc.Column+1, marker, bp, op.Str(addr),
+		)
+	}
+}
+
 func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 	cmd := DebugCommand{Str: input}
 	parts := strings.Fields(input)
