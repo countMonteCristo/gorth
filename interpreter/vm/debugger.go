@@ -100,7 +100,10 @@ func (di *DebugInterface) IsBreakpoint(ctx *ScriptContext, ops []Op) (types.IntT
 }
 
 func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []Op, ctx *ScriptContext) {
-	// TODO: align operations
+	path_column := make([]string, 0)
+	markers_column := make([]string, 0)
+	cmd_column := make([]string, 0)
+	max_column_width := 0
 	for addr := start; addr >= 0 && addr < ctx.OpsCount && addr <= finish; addr++ {
 		marker := " "
 		if addr == ctx.Addr {
@@ -112,10 +115,19 @@ func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []Op, ct
 			bp = "b"
 		}
 		op := ops[addr]
-		fmt.Printf(
-			"%s:%d:%d\t%s%s%s\n", op.OpToken.Loc.Filepath, op.OpToken.Loc.Line+1,
-			op.OpToken.Loc.Column+1, marker, bp, op.Str(addr),
-		)
+
+		path := fmt.Sprintf("%s:%d:%d", op.OpToken.Loc.Filepath, op.OpToken.Loc.Line+1, op.OpToken.Loc.Column+1)
+		if len(path) > max_column_width {
+			max_column_width = len(path)
+		}
+
+		path_column = append(path_column, path)
+		markers_column = append(markers_column, fmt.Sprintf("%s%s", bp, marker))
+		cmd_column = append(cmd_column, op.Str(addr))
+	}
+
+	for i, path := range(path_column) {
+		fmt.Printf("%-*s %s%s\n", max_column_width, path, markers_column[i], cmd_column[i])
 	}
 }
 
