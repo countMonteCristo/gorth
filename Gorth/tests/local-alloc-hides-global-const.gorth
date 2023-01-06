@@ -1,0 +1,5 @@
+const x 99 end
+
+func main do
+  alloc x 5 end
+end

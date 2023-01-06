@@ -1,0 +1,1 @@
+{"argv":[],"stdin":"","stdout":"","stderr":"interpreter/vm/vm.go:56 [INFO] Redefinition of word `x`:\n  Gorth/tests/local-alloc-hides-global-const.gorth:4:9\ninterpreter/vm/vm.go:57 [INFO] Previously defined here:\n  Gorth/tests/local-alloc-hides-global-const.gorth:1:7\n","exit_code":0}

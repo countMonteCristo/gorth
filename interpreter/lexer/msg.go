@@ -13,6 +13,8 @@ var (
 	package_dir   = filepath.Dir(filepath.Dir(filepath.Dir(msg_file_path)))
 )
 
+// TODO: add CompilerWarn
+
 func LogStatus(loc *Location, file string, line int, msg, status string) {
 	rel_file := file[len(package_dir)+1:]
 	fmt.Fprintf(os.Stderr, "%s:%d [%s] %s:\n", rel_file, line, status, msg)

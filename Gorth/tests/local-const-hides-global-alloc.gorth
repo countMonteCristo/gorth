@@ -1,0 +1,5 @@
+alloc x 8 end
+
+func main do
+  const x 5 end
+end
