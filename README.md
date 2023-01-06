@@ -80,15 +80,19 @@ Run script with debugger.
 > ./bin/gorth -debug Gorth/examples/helloworld.gorth
 ```
 Availavle commands:
- * n -  step (process singe instruction)
- * c -  continue (process all instructions until the end)
- * t -  print current token
- * o -  print current operation
- * ol - print operations list
- * s -  print current stack state
- * m -  print current memory state
- * h -  print help
- * q -  exit debugger
+ * `n` [`count`]       - process at most `count` instructions (by default `count`=1)
+ * `c`                 - continue (process all instructions to the break point or to the end)
+ * `bs` `a1 a2 .. ak`  - set break points for functions or addresses
+ * `bl`                - list all break points
+ * `br` `a1 a2 .. ak`  - remove break points from functions or addresses
+ * `t`                 - print current token
+ * `o` [`ctx`]         - print current operation (+-`ctx` operations, by default `ctx`=0)
+ * `ol`                - print operations list
+ * `s`                 - print current stack state
+ * `m`                 - print current memory state
+ * `e`                 - print current local and global environment (consts, allocs)
+ * `h`                 - print help
+ * `q`                 - exit debugger
 
 # Language Reference
 ## Literals

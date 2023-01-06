@@ -9,12 +9,11 @@ import (
 
 type DebugCommandType int
 
-// TODO: add br - delete breakpoins
-// TODO: add argument `c` for DebugCmdOperation - print `c` operations before and after current one
 const (
 	DebugCmdStep DebugCommandType = iota
 	DebugCmdBreakpointSet
 	DebugCmdBreakpointList
+	DebugCmdBreakpointRemove
 	DebugCmdContinue
 	DebugCmdStack
 	DebugCmdMemory
@@ -28,7 +27,7 @@ const (
 
 var Str2DebugCommandType = map[string]DebugCommandType{
 	"n": DebugCmdStep, "c": DebugCmdContinue,
-	"bs": DebugCmdBreakpointSet, "bl": DebugCmdBreakpointList,
+	"bs": DebugCmdBreakpointSet, "bl": DebugCmdBreakpointList, "br": DebugCmdBreakpointRemove,
 	"t":  DebugCmdToken, "o": DebugCmdOperation, "ol": DebugCmdOperationList,
 	"s": DebugCmdStack, "m": DebugCmdMemory, "e": DebugCmdEnv,
 	"h": DebugCmdHelp, "q": DebugCmdQuit,
@@ -122,7 +121,18 @@ func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 		} else {
 			cmd.Args = 1
 		}
-	case DebugCmdBreakpointSet:
+	case DebugCmdOperation:
+		if len(parts) > 1 {
+			arg, err := strconv.ParseInt(parts[1], 10, 64)
+			if err != nil || arg < 0 {
+				fmt.Printf("Argument of `step` command should be unsigned integer, but got %s. Use 0 by default.\n", parts[1])
+				arg = 0
+			}
+			cmd.Args = arg
+		} else {
+			cmd.Args = types.IntType(0)
+		}
+	case DebugCmdBreakpointSet, DebugCmdBreakpointRemove:
 		bps := BreakPointList{
 			Funcs: make([]string, 0), Addr: make([]int64, 0),
 		}

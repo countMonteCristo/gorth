@@ -836,15 +836,62 @@ loop:
 				)
 			}
 		case DebugCmdBreakpointList:
-			addressess := make([]types.IntType, 0, len(di.BreakPoints))
+			addresses := make([]types.IntType, 0, len(di.BreakPoints))
 			for addr := range di.BreakPoints {
-				addressess = append(addressess, addr)
+				addresses = append(addresses, addr)
 			}
-			sort.Slice(addressess, func(i, j int) bool {return addressess[i] < addressess[j]})
-			for _, addr := range addressess {
+			sort.Slice(addresses, func(i, j int) bool { return addresses[i] < addresses[j] })
+			for _, addr := range addresses {
 				fmt.Printf("b%s\n", ops[addr].Str(addr))
 			}
+			if len(addresses) == 0 {
+				fmt.Println("[INFO] No breakpoints were set")
+			}
 			di.SendOK()
+		case DebugCmdBreakpointRemove:
+			bps := cmd.Args.(BreakPointList)
+
+			removed_names := make([]string, 0, len(bps.Funcs))
+			for _, func_name := range bps.Funcs {
+				addr, exists := vm.Ctx.Funcs[func_name]
+				if !exists {
+					fmt.Printf("[WARN] Can not remove break point from unknown function `%s`\n", func_name)
+				} else {
+					_, exists := di.BreakPoints[addr]
+					if !exists {
+						fmt.Printf("[WARN] Can not remove break point from function `%s` - it was not set\n", func_name)
+					} else {
+						removed_names = append(removed_names, func_name)
+						delete(di.BreakPoints, addr)
+					}
+				}
+			}
+
+			removed_addr := make([]types.IntType, 0, len(bps.Addr))
+			for _, addr := range bps.Addr {
+				_, exists := di.BreakPoints[addr]
+				if !exists {
+					fmt.Printf("[WARN] Can not remove break point from address `%d` - it was not set, skip\n", addr)
+				} else {
+					removed_addr = append(removed_addr, addr)
+					delete(di.BreakPoints, addr)
+				}
+			}
+
+			if len(removed_names) > 0 {
+				fmt.Printf("[INFO] Remove break points from functions %v\n", removed_names)
+			}
+			if len(removed_addr) > 0 {
+				fmt.Printf("[INFO] Remove break points from addresses %v\n", removed_addr)
+			}
+
+			if len(removed_names)+len(removed_addr) > 0 {
+				di.SendOK()
+			} else {
+				di.SendFailed(
+					fmt.Sprintf("Can not remove break points for functions=%v and addresses=%v", bps.Funcs, bps.Addr),
+				)
+			}
 		case DebugCmdToken: // token
 			if ctx.Addr >= ctx.OpsCount {
 				di.SendFailed("Can not print token: script finished")
@@ -857,11 +904,22 @@ loop:
 			if ctx.Addr >= ctx.OpsCount {
 				di.SendFailed("Can not print operation: script finished")
 			} else {
-				op := ops[ctx.Addr]
-				fmt.Printf(
-					"%s:%d:%d %s\n", op.OpToken.Loc.Filepath, op.OpToken.Loc.Line+1,
-					op.OpToken.Loc.Column+1, op.Str(ctx.Addr),
-				)
+				context_size := cmd.Args.(types.IntType)
+				start := ctx.Addr - context_size
+				finish := ctx.Addr + context_size
+
+				for addr := start; addr >= 0 && addr < ctx.OpsCount && addr <= finish; addr++ {
+					marker := " "
+					if addr == ctx.Addr {
+						marker = "*"
+					}
+					op := ops[addr]
+					fmt.Printf(
+						"%s:%d:%d %s%s\n", op.OpToken.Loc.Filepath, op.OpToken.Loc.Line+1,
+						op.OpToken.Loc.Column+1, marker, op.Str(addr),
+					)
+				}
+
 				di.SendOK()
 			}
 		case DebugCmdOperationList: // print ops list
