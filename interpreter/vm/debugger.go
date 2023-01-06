@@ -17,6 +17,7 @@ const (
 	DebugCmdContinue
 	DebugCmdStack
 	DebugCmdMemory
+	DebugCmdOperativeMemory
 	DebugCmdEnv
 	DebugCmdToken
 	DebugCmdOperation
@@ -28,8 +29,9 @@ const (
 var Str2DebugCommandType = map[string]DebugCommandType{
 	"n": DebugCmdStep, "c": DebugCmdContinue,
 	"bs": DebugCmdBreakpointSet, "bl": DebugCmdBreakpointList, "br": DebugCmdBreakpointRemove,
-	"t":  DebugCmdToken, "o": DebugCmdOperation, "ol": DebugCmdOperationList,
-	"s": DebugCmdStack, "m": DebugCmdMemory, "e": DebugCmdEnv,
+	"t": DebugCmdToken, "o": DebugCmdOperation, "ol": DebugCmdOperationList,
+	"s": DebugCmdStack, "e": DebugCmdEnv,
+	"m": DebugCmdMemory, "mo": DebugCmdOperativeMemory,
 	"h": DebugCmdHelp, "q": DebugCmdQuit,
 }
 
@@ -169,6 +171,22 @@ func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 			return cmd, false
 		}
 		cmd.Args = bps
+	case DebugCmdOperativeMemory:
+		if len(parts) < 3 {
+			fmt.Printf("Specify start address and size of memory chunk\n")
+			return cmd, false
+		}
+		start, err := strconv.Atoi(parts[1])
+		if err != nil || start < 0 {
+			fmt.Printf("Start address should be unsigned integer, got `%s`\n", parts[1])
+			return cmd, false
+		}
+		size, err := strconv.Atoi(parts[2])
+		if err != nil || size < 0 {
+			fmt.Printf("Size of memory chunk should be unsigned integer, got `%s`\n", parts[2])
+			return cmd, false
+		}
+		cmd.Args = []int{start, size}
 	}
 	return cmd, true
 }

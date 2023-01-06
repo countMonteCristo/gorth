@@ -49,6 +49,7 @@ func main() {
 				fmt.Println(" * `ol`                - print operations list")
 				fmt.Println(" * `s`                 - print current stack state")
 				fmt.Println(" * `m`                 - print current memory state")
+				fmt.Println(" * `mo` `addr` `size`  - print memory chunk of size `size` at address `addr`")
 				fmt.Println(" * `e`                 - print current local and global environment (consts, allocs)")
 				fmt.Println(" * `h`                 - print help")
 				fmt.Println(" * `q`                 - exit debugger")
@@ -57,7 +58,7 @@ func main() {
 
 			cmd, ok := vm.ParseDebuggerCommand(input)
 			if !ok {
-				fmt.Printf("Unknown command: <%s>\n", input)
+				fmt.Printf("Wrong command: <%s>\n", input)
 				continue
 			}
 

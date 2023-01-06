@@ -90,6 +90,7 @@ Availavle commands:
  * `ol`                - print operations list
  * `s`                 - print current stack state
  * `m`                 - print current memory state
+ * `mo` `addr` `size`  - print memory chunk of size `size` at address `addr`
  * `e`                 - print current local and global environment (consts, allocs)
  * `h`                 - print help
  * `q`                 - exit debugger

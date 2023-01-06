@@ -755,6 +755,20 @@ loop:
 		case DebugCmdMemory: // print memory
 			vm.Ctx.Memory.PrintDebug()
 			di.SendOK()
+		case DebugCmdOperativeMemory:
+			chunk := cmd.Args.([]int)
+			start, size := chunk[0], chunk[1]
+			if start >= int(vm.Ctx.Memory.MemorySize) {
+				di.SendFailed(fmt.Sprintf("Start address %d is out of bounds", start))
+				continue
+			}
+			end := start + size
+			if end >= int(vm.Ctx.Memory.MemorySize) {
+				end = int(vm.Ctx.Memory.MemorySize) - 1
+			}
+			memory_chunk := vm.Ctx.Memory.Data[start:end]
+			fmt.Printf("addr=%d size=%d: %v\n", start, size, memory_chunk)
+			di.SendOK()
 		case DebugCmdQuit: // quit
 			di.SendOK()
 			break loop

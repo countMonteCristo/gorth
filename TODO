@@ -34,7 +34,7 @@
     [*] Add simple debugger
     [] Add parameter loc/glb to env command
     [] Add `p` command for printing consts and allocs
-    [] Add command for showing parts of memory as a slice
+    [*] Add command for showing parts of memory as a slice
 
 [] Low-level interaction with OS
   [] syscalls
