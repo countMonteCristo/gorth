@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"Gorth/interpreter/types"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,9 +9,12 @@ import (
 
 type DebugCommandType int
 
+// TODO: add br - delete breakpoins
+// TODO: add argument `c` for DebugCmdOperation - print `c` operations before and after current one
 const (
 	DebugCmdStep DebugCommandType = iota
-	DebugCmdBreakpoint
+	DebugCmdBreakpointSet
+	DebugCmdBreakpointList
 	DebugCmdContinue
 	DebugCmdStack
 	DebugCmdMemory
@@ -24,10 +28,19 @@ const (
 
 var Str2DebugCommandType = map[string]DebugCommandType{
 	"n": DebugCmdStep, "c": DebugCmdContinue,
-	"b": DebugCmdBreakpoint,
-	"t": DebugCmdToken, "o": DebugCmdOperation, "ol": DebugCmdOperationList,
+	"bs": DebugCmdBreakpointSet, "bl": DebugCmdBreakpointList,
+	"t":  DebugCmdToken, "o": DebugCmdOperation, "ol": DebugCmdOperationList,
 	"s": DebugCmdStack, "m": DebugCmdMemory, "e": DebugCmdEnv,
 	"h": DebugCmdHelp, "q": DebugCmdQuit,
+}
+
+type BreakPointList struct {
+	Funcs []string
+	Addr  []types.IntType
+}
+
+func (l *BreakPointList) Count() int {
+	return len(l.Funcs) + len(l.Addr)
 }
 
 type DebugCommandStatusType int
@@ -51,13 +64,13 @@ type DebugCommandResponse struct {
 type DebugInterface struct {
 	Commands    chan DebugCommand
 	Response    chan DebugCommandResponse
-	BreakPoints map[string]bool
+	BreakPoints map[types.IntType]bool
 }
 
 func NewDebugInterface() *DebugInterface {
 	return &DebugInterface{
 		Commands: make(chan DebugCommand), Response: make(chan DebugCommandResponse),
-		BreakPoints: make(map[string]bool),
+		BreakPoints: make(map[types.IntType]bool),
 	}
 }
 
@@ -75,18 +88,12 @@ func (di *DebugInterface) SendFailed(msg string) {
 	}
 }
 
-func (di *DebugInterface) IsBreakpoint(ctx *ScriptContext, ops []Op) (string, bool) {
-	if ctx.Addr < ctx.OpsCount {
-		op := ops[ctx.Addr]
-		if op.Typ == OpFuncBegin {
-			fn_name := op.Operand.(string)
-			_, exists := di.BreakPoints[fn_name]
-			if exists {
-				return fn_name, true
-			}
-		}
+func (di *DebugInterface) IsBreakpoint(ctx *ScriptContext, ops []Op) (types.IntType, bool) {
+	_, exists := di.BreakPoints[ctx.Addr]
+	if exists {
+		return ctx.Addr, true
 	}
-	return "", false
+	return -1, false
 }
 
 func ParseDebuggerCommand(input string) (DebugCommand, bool) {
@@ -115,12 +122,23 @@ func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 		} else {
 			cmd.Args = 1
 		}
-	case DebugCmdBreakpoint:
-		if len(parts) < 2 {
-			fmt.Printf("Specify names for breakpoints")
+	case DebugCmdBreakpointSet:
+		bps := BreakPointList{
+			Funcs: make([]string, 0), Addr: make([]int64, 0),
+		}
+		for _, arg := range parts[1:] {
+			addr, ok := strconv.ParseInt(arg, 10, 64)
+			if ok == nil {
+				bps.Addr = append(bps.Addr, addr)
+			} else {
+				bps.Funcs = append(bps.Funcs, arg)
+			}
+		}
+		if bps.Count() == 0 {
+			fmt.Printf("Specify names amd/or addresses for breakpoints\n")
 			return cmd, false
 		}
-		cmd.Args = parts[1:]
+		cmd.Args = bps
 	}
 	return cmd, true
 }

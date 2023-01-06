@@ -5,9 +5,9 @@ import (
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 	"fmt"
+	"sort"
 	"unsafe"
 
-	"golang.org/x/exp/slices"
 	"golang.org/x/sys/unix"
 )
 
@@ -768,9 +768,9 @@ loop:
 				for i := 0; i < steps_count && ctx.Addr < ctx.OpsCount; i++ {
 					vm.Step(ops, ctx)
 
-					fn_name, is_bp := di.IsBreakpoint(ctx, ops)
+					addr, is_bp := di.IsBreakpoint(ctx, ops)
 					if is_bp {
-						fmt.Printf("[INFO] Break at function %s\n", fn_name)
+						fmt.Printf("[INFO] Break at address %d\n", addr)
 						break
 					}
 				}
@@ -786,9 +786,9 @@ loop:
 				for ctx.Addr < ctx.OpsCount {
 					vm.Step(ops, ctx)
 
-					fn_name, is_bp := di.IsBreakpoint(ctx, ops)
+					addr, is_bp := di.IsBreakpoint(ctx, ops)
 					if is_bp {
-						fmt.Printf("[INFO] Break at function %s\n", fn_name)
+						fmt.Printf("[INFO] Break at address %d\n", addr)
 						break
 					}
 				}
@@ -797,21 +797,54 @@ loop:
 				}
 				di.SendOK()
 			}
-		case DebugCmdBreakpoint:
-			bp_names := cmd.Args.([]string)
-			found_names := make([]string, 0, len(bp_names))
-			for fn_name := range vm.Ctx.Funcs {
-				if slices.Contains(bp_names, fn_name) {
-					found_names = append(found_names, fn_name)
-					di.BreakPoints[fn_name] = true
+		case DebugCmdBreakpointSet:
+			bps := cmd.Args.(BreakPointList)
+
+			found_names := make([]string, 0, len(bps.Funcs))
+			for _, func_name := range bps.Funcs {
+				addr, exists := vm.Ctx.Funcs[func_name]
+				if !exists {
+					fmt.Printf("[WARN] Can not set break point to unknown function `%s`, skip\n", func_name)
+				} else {
+					found_names = append(found_names, func_name)
+					di.BreakPoints[addr] = true
 				}
 			}
+
+			found_addr := make([]types.IntType, 0, len(bps.Addr))
+			for _, addr := range bps.Addr {
+				if addr >= ctx.OpsCount || addr < 0 {
+					fmt.Printf("[WARN] Address %d is out of bounds. skip\n", addr)
+				} else {
+					di.BreakPoints[addr] = true
+					found_addr = append(found_addr, addr)
+				}
+			}
+
 			if len(found_names) > 0 {
 				fmt.Printf("[INFO] Set break point to functions %v\n", found_names)
+			}
+			if len(found_addr) > 0 {
+				fmt.Printf("[INFO] Set break point for addresses %v\n", found_addr)
+			}
+
+			if len(found_names)+len(found_addr) > 0 {
 				di.SendOK()
 			} else {
-				di.SendFailed(fmt.Sprintf("Can not find functions `%v` to set break point", bp_names))
+				di.SendFailed(
+					fmt.Sprintf("Can not set break points for functions=%v and addresses=%v", bps.Funcs, bps.Addr),
+				)
 			}
+		case DebugCmdBreakpointList:
+			addressess := make([]types.IntType, 0, len(di.BreakPoints))
+			for addr := range di.BreakPoints {
+				addressess = append(addressess, addr)
+			}
+			sort.Slice(addressess, func(i, j int) bool {return addressess[i] < addressess[j]})
+			for _, addr := range addressess {
+				fmt.Printf("b%s\n", ops[addr].Str(addr))
+			}
+			di.SendOK()
 		case DebugCmdToken: // token
 			if ctx.Addr >= ctx.OpsCount {
 				di.SendFailed("Can not print token: script finished")
@@ -833,17 +866,18 @@ loop:
 			}
 		case DebugCmdOperationList: // print ops list
 			for addr, op := range ops {
+				iaddr := int64(addr)
+
 				marker := " "
-				bp := " "
-				if int64(addr) == ctx.Addr {
+				if iaddr == ctx.Addr {
 					marker = "*"
 				}
-				if op.Typ == OpFuncBegin {
-					_, exists := di.BreakPoints[op.Operand.(string)]
-					if exists {
-						bp = "b"
-					}
+				bp := " "
+				_, exists := di.BreakPoints[iaddr]
+				if exists {
+					bp = "b"
 				}
+
 				fmt.Printf("%s%s%s\n", marker, bp, op.Str(int64(addr)))
 			}
 			di.SendOK()

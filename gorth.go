@@ -39,17 +39,17 @@ func main() {
 
 			if input == "h" || input == "help" {
 				fmt.Println("Availavle commands:")
-				fmt.Println(" * n [count]     - process at most `count` instructions (by default count=1)")
-				fmt.Println(" * c             - continue (process all instructions to the break point or to the end)")
-				fmt.Println(" * b f1 f2 .. fk - set break points to functions f1, f2, .., fk")
-				fmt.Println(" * t             - print current token")
-				fmt.Println(" * o             - print current operation")
-				fmt.Println(" * ol            - print operations list")
-				fmt.Println(" * s             - print current stack state")
-				fmt.Println(" * m             - print current memory state")
-				fmt.Println(" * e             - print current local and global environment (consts, allocs)")
-				fmt.Println(" * h             - print help")
-				fmt.Println(" * q             - exit debugger")
+				fmt.Println(" * n [count]         - process at most `count` instructions (by default count=1)")
+				fmt.Println(" * c                 - continue (process all instructions to the break point or to the end)")
+				fmt.Println(" * bs f1 f2 .. fk    - set break points to functions f1, f2, .., fk")
+				fmt.Println(" * t                 - print current token")
+				fmt.Println(" * o                 - print current operation")
+				fmt.Println(" * ol                - print operations list")
+				fmt.Println(" * s                 - print current stack state")
+				fmt.Println(" * m                 - print current memory state")
+				fmt.Println(" * e                 - print current local and global environment (consts, allocs)")
+				fmt.Println(" * h                 - print help")
+				fmt.Println(" * q                 - exit debugger")
 				continue
 			}
 
