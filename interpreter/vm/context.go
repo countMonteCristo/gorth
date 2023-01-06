@@ -59,18 +59,18 @@ func (c *Context) GlobalScope() *Scope {
 	return c.Scopes[GlobalScopeName]
 }
 
-func (c *Context) GetConst(name, func_name string) (types.IntType, bool) {
+func (c *Context) GetConst(name, func_name string) (types.IntType, ScopeType) {
 	if func_name != GlobalScopeName {
 		val, exists := c.Scopes[func_name].Consts[name]
 		if exists {
-			return val, exists
+			return val, ScopeLocal
 		}
 	}
 	val, exists := c.GlobalScope().Consts[name]
 	if exists {
-		return val, exists
+		return val, ScopeGlobal
 	}
-	return 0, false
+	return 0, ScopeUnknown
 }
 
 func (c *Context) GetAlloc(name, func_name string) (Allocation, ScopeType) {

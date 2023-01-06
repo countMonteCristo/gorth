@@ -91,6 +91,7 @@ Availavle commands:
  * `s`                 - print current stack state
  * `m`                 - print current memory state
  * `mo` `addr` `size`  - print memory chunk of size `size` at address `addr`
+ * `p` `n1 n2 .. nk`   - print consts, allocs or functions
  * `e`                 - print current local and global environment (consts, allocs)
  * `h`                 - print help
  * `q`                 - exit debugger

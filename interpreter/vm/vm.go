@@ -43,6 +43,7 @@ func (vm *VM) parse_named_block(token *lexer.Token, tokens *[]lexer.Token, typ s
 		lexer.CompilerInfo(&defined_token.Loc, "Previously defined here")
 		utils.Exit(1)
 	}
+	// TODO: fix bug: local allocs do not hide global constants
 	defined_token, exists = vm.Ctx.GlobalScope().Names[name_token.Text]
 	_, func_exists := vm.Ctx.Funcs[name_token.Text]
 	if exists && func_exists {
@@ -128,8 +129,8 @@ func (vm *VM) const_eval(name_token *lexer.Token, tokens *[]lexer.Token, scope *
 				continue
 			}
 
-			val, exists := vm.Ctx.GetConst(token.Text, scope.ScopeName)
-			if exists {
+			val, scope := vm.Ctx.GetConst(token.Text, scope.ScopeName)
+			if scope != ScopeUnknown {
 				const_stack.Push(val)
 				continue
 			}
@@ -262,8 +263,8 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 				continue
 			}
 
-			val, exists := vm.Ctx.GetConst(name, current_scope_name)
-			if exists {
+			val, const_scope := vm.Ctx.GetConst(name, current_scope_name)
+			if const_scope != ScopeUnknown {
 				ops = append(ops, Op{
 					Typ:     OpPushInt,
 					Operand: val,
@@ -272,8 +273,8 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 				continue
 			}
 
-			_, scope := vm.Ctx.GetAlloc(name, current_scope_name)
-			if scope != ScopeUnknown {
+			_, alloc_scope := vm.Ctx.GetAlloc(name, current_scope_name)
+			if alloc_scope != ScopeUnknown {
 				ops = append(ops, Op{
 					Typ:     OpPushAlloc,
 					Operand: name,
@@ -769,6 +770,55 @@ loop:
 			memory_chunk := vm.Ctx.Memory.Data[start:end]
 			fmt.Printf("addr=%d size=%d: %v\n", start, size, memory_chunk)
 			di.SendOK()
+		case DebugCmdPrint:
+			n_found := 0
+			names := cmd.Args.([]string)
+			for _, name := range names {
+				found := false
+
+				const_value, const_scope := vm.Ctx.GetConst(name, sc.CurrentScopeName())
+				if const_scope == ScopeLocal {
+					fmt.Printf("(%s) %s = %d\n", sc.CurrentScopeName(), name, const_value)
+					found = true
+				}
+				const_value, const_scope = vm.Ctx.GetConst(name, GlobalScopeName)
+				if const_scope == ScopeGlobal {
+					fmt.Printf("(%s) %s = %d\n", GlobalScopeName, name, const_value)
+					found = true
+				}
+
+				alloc, scope_type := vm.Ctx.GetAlloc(name, sc.CurrentScopeName())
+				if scope_type == ScopeLocal {
+					alloc_ptr, alloc_mem := vm.Ctx.GetAllocInfo(name, sc.CurrentScopeName())
+					scope_title := sc.CurrentScopeName()
+					fmt.Printf("(%s) %s(%d,%d)=%v\n", scope_title, name, alloc_ptr, alloc.Size, alloc_mem)
+					found = true
+				}
+				alloc, scope_type = vm.Ctx.GetAlloc(name, GlobalScopeName)
+				if scope_type == ScopeGlobal {
+					alloc_ptr, alloc_mem := vm.Ctx.GetAllocInfo(name, GlobalScopeName)
+					scope_title := GlobalScopeName
+					fmt.Printf("(%s) %s(%d,%d)=%v\n", scope_title, name, alloc_ptr, alloc.Size, alloc_mem)
+					found = true
+				}
+
+				addr, exists := vm.Ctx.Funcs[name]
+				if exists {
+					fmt.Printf("addr=%d %s\n", addr, name)
+					found = true
+				}
+
+				if !found {
+					fmt.Printf("[WARN] Unknown name: %s\n", name)
+				} else {
+					n_found++
+				}
+			}
+			if n_found > 0 {
+				di.SendOK()
+			} else {
+				di.SendFailed("Failed to print name values")
+			}
 		case DebugCmdQuit: // quit
 			di.SendOK()
 			break loop

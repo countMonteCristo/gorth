@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 )
 
 var (
@@ -35,7 +34,7 @@ func main() {
 		for {
 			fmt.Print("> ")
 			scanner.Scan()
-			input := strings.ToLower(scanner.Text())
+			input := scanner.Text()
 
 			if input == "h" || input == "help" {
 				fmt.Println("Availavle commands:")
@@ -50,6 +49,7 @@ func main() {
 				fmt.Println(" * `s`                 - print current stack state")
 				fmt.Println(" * `m`                 - print current memory state")
 				fmt.Println(" * `mo` `addr` `size`  - print memory chunk of size `size` at address `addr`")
+				fmt.Println(" * `p` `n1 n2 .. nk`   - print consts, allocs or functions")
 				fmt.Println(" * `e`                 - print current local and global environment (consts, allocs)")
 				fmt.Println(" * `h`                 - print help")
 				fmt.Println(" * `q`                 - exit debugger")

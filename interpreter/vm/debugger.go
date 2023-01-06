@@ -18,6 +18,7 @@ const (
 	DebugCmdStack
 	DebugCmdMemory
 	DebugCmdOperativeMemory
+	DebugCmdPrint
 	DebugCmdEnv
 	DebugCmdToken
 	DebugCmdOperation
@@ -32,6 +33,7 @@ var Str2DebugCommandType = map[string]DebugCommandType{
 	"t": DebugCmdToken, "o": DebugCmdOperation, "ol": DebugCmdOperationList,
 	"s": DebugCmdStack, "e": DebugCmdEnv,
 	"m": DebugCmdMemory, "mo": DebugCmdOperativeMemory,
+	"p": DebugCmdPrint,
 	"h": DebugCmdHelp, "q": DebugCmdQuit,
 }
 
@@ -187,6 +189,12 @@ func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 			return cmd, false
 		}
 		cmd.Args = []int{start, size}
+	case DebugCmdPrint:
+		if len(parts) < 2 {
+			fmt.Println("Specify names for constants, allocs or functions to print")
+			return cmd, false
+		}
+		cmd.Args = parts[1:]
 	}
 	return cmd, true
 }
