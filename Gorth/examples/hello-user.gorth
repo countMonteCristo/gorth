@@ -1,0 +1,14 @@
+include "std/std.gorth"
+
+// Programm asks user's name and prints string "Hello, ${name}!"
+// Length of the name should be less than 254 characters (one for \n and )
+
+func main do
+  const BUF_SIZE 256 end
+  alloc buf BUF_SIZE end
+  "What is your name?" p_str
+  0 buf BUF_SIZE read
+  drop 1 - buf swap
+  "Hello, " puts puts '!' putc
+  0
+end

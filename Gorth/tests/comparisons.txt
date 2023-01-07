@@ -1,1 +1,7 @@
-{"argv":[],"stdin":"","stdout":"false\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\nfalse\n","stderr":"","exit_code":0}
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "false\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\nfalse\n",
+  "stderr": "",
+  "exit_code": 0
+}

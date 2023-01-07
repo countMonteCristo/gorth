@@ -1,1 +1,7 @@
-{"argv":[],"stdin":"","stdout":"","stderr":"interpreter/vm/vm.go:169 [INFO] Redefinition of word `f` in function definition:\n  Gorth/tests/func-const-redefinition.gorth:3:6\ninterpreter/vm/vm.go:170 [INFO] Previously defined here:\n  Gorth/tests/func-const-redefinition.gorth:1:7\nexit status 1\n","exit_code":1}
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "",
+  "stderr": "interpreter/vm/vm.go:169 [INFO] Redefinition of word `f` in function definition:\n  Gorth/tests/func-const-redefinition.gorth:3:6\ninterpreter/vm/vm.go:170 [INFO] Previously defined here:\n  Gorth/tests/func-const-redefinition.gorth:1:7\nexit status 1\n",
+  "exit_code": 1
+}

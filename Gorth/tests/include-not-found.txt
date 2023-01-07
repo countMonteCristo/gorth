@@ -1,1 +1,7 @@
-{"argv":[],"stdin":"","stdout":"","stderr":"interpreter/lexer/lexer.go:235 [ERROR] Can not import file hello.gorth: not in Paths:\n  Gorth/tests/include-not-found.gorth:1:9\nexit status 1\n","exit_code":1}
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "",
+  "stderr": "interpreter/lexer/lexer.go:235 [ERROR] Can not import file hello.gorth: not in Paths:\n  Gorth/tests/include-not-found.gorth:1:9\nexit status 1\n",
+  "exit_code": 1
+}

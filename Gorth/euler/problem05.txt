@@ -1,1 +1,7 @@
-{"argv":[],"stdin":"","stdout":"232792560\n","stderr":"","exit_code":0}
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "232792560\n",
+  "stderr": "",
+  "exit_code": 0
+}

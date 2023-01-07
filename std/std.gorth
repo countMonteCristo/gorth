@@ -10,6 +10,19 @@ func strlen do // int -> int
   swap -
 end
 
+// Copy string of length `len` from `src` to `dst`, returns nothing
+// WARNING: situations when src and dst are overlapped ARE NOT HANDLED!
+func strcpy do    // src len dst -> void
+  rot rot over +
+  while over over < do
+    rot rot
+    dup @8
+    rot dup rot swap !8
+    1 + swap 1 + rot
+  end
+  drop drop drop
+end
+
 // Converts string to unsigned number
 // Returns -1 if convertion failed
 func atou do  // ptr len -> uint

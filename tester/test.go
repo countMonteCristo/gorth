@@ -60,6 +60,7 @@ func (t *TestCase) GetExpectedFilePath() string {
 	return name + ".txt"
 }
 
+// TODO: update input and output separately
 func (t *TestCase) run() TestOutput {
 	fmt.Printf("Running testcase %s\n", t.File)
 
@@ -264,6 +265,7 @@ func SaveExpected(fn string, config TestConfig) {
 	}()
 
 	encoder := json.NewEncoder(ostream)
+	encoder.SetIndent("", "  ")
 	err = encoder.Encode(&config)
 	if err != nil {
 		log.Fatal(err)

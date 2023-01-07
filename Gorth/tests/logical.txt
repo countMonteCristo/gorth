@@ -1,1 +1,7 @@
-{"argv":[],"stdin":"","stdout":"20\n30\n60\n","stderr":"","exit_code":0}
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "20\n30\n60\n",
+  "stderr": "",
+  "exit_code": 0
+}

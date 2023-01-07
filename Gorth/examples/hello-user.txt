@@ -1,0 +1,7 @@
+{
+  "argv": [],
+  "stdin": "Artem\n",
+  "stdout": "What is your name?\nHello, Artem!",
+  "stderr": "",
+  "exit_code": 0
+}
