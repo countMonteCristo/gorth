@@ -20,4 +20,5 @@ func main do
   end drop drop
 
   p_int
+  0
 end

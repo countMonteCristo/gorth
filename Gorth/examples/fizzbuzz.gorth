@@ -32,4 +32,6 @@ func main do
     end
     1 +
   end
+  drop
+  0
 end

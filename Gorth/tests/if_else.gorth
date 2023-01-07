@@ -42,4 +42,6 @@ func main do
       120 p_int
     end
   end
+
+  0
 end

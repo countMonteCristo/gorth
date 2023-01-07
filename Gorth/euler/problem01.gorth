@@ -9,8 +9,6 @@ include "std/std.gorth"
 func main do
   0
   1 while dup 1000 < do
-    // sum n
-    over over
 
     dup 3 % 0 = if
       swap over + swap
@@ -22,6 +20,6 @@ func main do
 
     1 +
   end drop
-
   p_int
+  0
 end

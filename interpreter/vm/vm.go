@@ -528,6 +528,11 @@ func (vm *VM) Compile(fn string, tokens []lexer.Token, args []string) (ops []Op)
 	return
 }
 
+type ExitCodeType struct {
+	Code types.IntType
+	Msg  string
+}
+
 type ScriptContext struct {
 	Stack       utils.Stack
 	ReturnStack utils.Stack
@@ -535,12 +540,14 @@ type ScriptContext struct {
 	Addr        types.IntType
 	Args        []string
 	OpsCount    types.IntType
+	ExitCode    ExitCodeType
 }
 
 func NewScriptContext(len_ops types.IntType, args []string) *ScriptContext {
 	sc := &ScriptContext{
 		Stack: utils.Stack{}, ReturnStack: utils.Stack{},
 		Addr: 0, Args: args, OpsCount: len_ops, FuncStack: utils.Stack{},
+		ExitCode: ExitCodeType{Code: 0},
 	}
 	sc.ReturnStack.Push(len_ops)
 	sc.FuncStack.Push(GlobalScopeName)
@@ -549,6 +556,20 @@ func NewScriptContext(len_ops types.IntType, args []string) *ScriptContext {
 
 func (sc *ScriptContext) CurrentScopeName() string {
 	return sc.FuncStack.Top().(string)
+}
+
+func (sc *ScriptContext) GetExitCode(ops []Op) ExitCodeType {
+	switch {
+	case sc.Stack.Size() > 1:
+		sc.ExitCode.Code = types.IntType(1)
+		sc.ExitCode.Msg = fmt.Sprintf("Multiple values left in stack after script exit: %v", sc.Stack.Data)
+	case sc.Stack.Size() == 0:
+		sc.ExitCode.Code = types.IntType(2)
+		sc.ExitCode.Msg = "Empty stack after script exit"
+	default:
+		sc.ExitCode.Code = sc.Stack.Pop().(types.IntType)
+	}
+	return sc.ExitCode
 }
 
 func (vm *VM) ProcessSyscall(sc *ScriptContext) {
@@ -760,11 +781,12 @@ func (vm *VM) Prepare(ops []Op, args []string) *ScriptContext {
 	return sc
 }
 
-func (vm *VM) Interprete(ops []Op, args []string) {
+func (vm *VM) Interprete(ops []Op, args []string) ExitCodeType {
 	sc := vm.Prepare(ops, args)
 	for sc.Addr < sc.OpsCount {
 		vm.Step(ops, sc)
 	}
+	return sc.GetExitCode(ops)
 }
 
 func (vm *VM) InterpreteDebug(ops []Op, args []string, di *DebugInterface) {
@@ -823,7 +845,12 @@ loop:
 					}
 				}
 				if sc.Addr >= sc.OpsCount {
-					fmt.Printf("[INFO] Script finished\n")
+					ec := sc.GetExitCode(ops)
+					fmt.Printf("[INFO] Script finished with exit code %d", ec.Code)
+					if len(ec.Msg) > 0 {
+						fmt.Printf(": %s", ec.Msg)
+					}
+					fmt.Println()
 				}
 				di.SendOK()
 			}
@@ -841,7 +868,12 @@ loop:
 					}
 				}
 				if sc.Addr >= sc.OpsCount {
-					fmt.Printf("[INFO] Script finished\n")
+					ec := sc.GetExitCode(ops)
+					fmt.Printf("[INFO] Script finished with exit code %d", ec.Code)
+					if len(ec.Msg) > 0 {
+						fmt.Printf(": %s", ec.Msg)
+					}
+					fmt.Println()
 				}
 				di.SendOK()
 			}

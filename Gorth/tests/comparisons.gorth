@@ -30,4 +30,6 @@ func main do
   11 12 < p_int
   12 11 < p_int
   11 11 < p_int
+
+  0
 end

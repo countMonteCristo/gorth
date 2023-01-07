@@ -16,4 +16,6 @@ func main do
   3  sign p_int
   -3 sign p_int
   0  sign p_int
+
+  0
 end

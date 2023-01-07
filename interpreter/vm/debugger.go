@@ -104,7 +104,10 @@ func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []Op, ct
 	markers_column := make([]string, 0)
 	cmd_column := make([]string, 0)
 	max_column_width := 0
-	for addr := start; addr >= 0 && addr < ctx.OpsCount && addr <= finish; addr++ {
+	for addr := start; addr < ctx.OpsCount && addr <= finish; addr++ {
+		if addr < 0 {
+			continue
+		}
 		marker := " "
 		if addr == ctx.Addr {
 			marker = "*"

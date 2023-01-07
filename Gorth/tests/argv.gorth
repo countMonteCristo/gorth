@@ -5,5 +5,6 @@ func main do
     dup argv_n
     dup strlen p_str
     1 +
-  end
+  end drop
+  0
 end

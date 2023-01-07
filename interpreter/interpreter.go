@@ -3,6 +3,8 @@ package interpreter
 import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/vm"
+	"fmt"
+	"os"
 )
 
 type Interpreter struct {
@@ -25,14 +27,25 @@ func InitInterpreter(arguments []string, pkg_dir string) *Interpreter {
 	return i
 }
 
-func (i *Interpreter) Run(fn string) {
+func (i *Interpreter) Run(fn string) vm.ExitCodeType {
 	tokens := i.lx.ProcessFile(fn, []string{}, &i.imp)
 	ops := i.vm.Compile(fn, tokens, i.args)
-	i.vm.Interprete(ops, i.args)
+	return i.vm.Interprete(ops, i.args)
 }
 
 func (i *Interpreter) RunDebug(fn string, di *vm.DebugInterface) {
 	tokens := i.lx.ProcessFile(fn, []string{}, &i.imp)
 	ops := i.vm.Compile(fn, tokens, i.args)
 	go i.vm.InterpreteDebug(ops, i.args, di)
+}
+
+func (i *Interpreter) ProcessExit(exit_code vm.ExitCodeType) {
+	if exit_code.Code != 0 {
+		fmt.Fprintf(os.Stderr, "Script finished with exit code %d", exit_code.Code)
+		if len(exit_code.Msg) > 0 {
+			fmt.Fprintf(os.Stderr, ": %s", exit_code.Msg)
+		}
+		fmt.Fprintln(os.Stderr)
+	}
+	os.Exit(int(exit_code.Code))
 }

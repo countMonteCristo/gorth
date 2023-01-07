@@ -69,4 +69,5 @@ func main do
   end drop
 
   puti '\n' putc
+  0
 end

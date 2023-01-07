@@ -30,4 +30,6 @@ func main do
   31 -7 % p_int
   -31 7 % p_int
   -31 -7 % p_int
+
+  0
 end

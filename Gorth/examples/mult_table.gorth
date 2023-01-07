@@ -38,4 +38,6 @@ func main do
     '\n' putc
     1 +
   end drop
+  drop
+  0
 end

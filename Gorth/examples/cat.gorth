@@ -21,4 +21,6 @@ func main do
       drop close                    // close file
     end
   end
+  drop drop
+  0
 end

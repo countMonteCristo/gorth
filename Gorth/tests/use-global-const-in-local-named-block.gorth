@@ -7,4 +7,6 @@ func main do
   x puti '\n' putc
   98765 z !32
   z @32 puti '\n' putc
+
+  0
 end

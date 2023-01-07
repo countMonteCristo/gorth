@@ -10,6 +10,8 @@ func main do
     end
     ' ' putc
     1 +
-  end
+  end drop
   '\n' putc
+
+  0
 end

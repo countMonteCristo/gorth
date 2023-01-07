@@ -19,6 +19,7 @@ func main do
       2 +
     end
   end
-
+  drop drop
   p_int
+  0
 end

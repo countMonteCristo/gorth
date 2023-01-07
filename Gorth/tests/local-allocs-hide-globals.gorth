@@ -31,4 +31,6 @@ func main do
   x @32 puti ' ' putc
   f
   x @32 puti
+
+  0
 end

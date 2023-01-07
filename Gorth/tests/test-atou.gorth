@@ -4,6 +4,8 @@ func main do
   1 while dup argc < do
     dup argv_n dup strlen atou puti ' ' putc
     1 +
-  end
+  end drop
   '\n' putc
+
+  0
 end

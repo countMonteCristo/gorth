@@ -25,7 +25,8 @@ func main() {
 	i := interpreter.InitInterpreter(flag.Args(), package_dir)
 
 	if !*debugFlag {
-		i.Run(gorth_script)
+		exit_code := i.Run(gorth_script)
+		i.ProcessExit(exit_code)
 	} else {
 		debugger_interface := vm.NewDebugInterface()
 		i.RunDebug(gorth_script, debugger_interface)

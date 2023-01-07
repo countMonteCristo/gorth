@@ -9,4 +9,6 @@ func main do
     over p_int
     swap over +
   end
+  drop drop
+  0
 end

@@ -3,4 +3,5 @@ const x 10 end
 func main do
   const x 20 end
   x puti
+  0
 end
