@@ -1,3 +1,5 @@
+include "std/std.gorth"
+
 // Multiplication table
 
 const N 10 end

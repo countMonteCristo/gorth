@@ -4,6 +4,11 @@ const SYS_WRITE 1 end
 const SYS_OPEN  2 end
 const SYS_CLOSE 3 end
 
+// Standart streams
+const STDIN 0 end
+const STDOUT 1 end
+const STDERR 2 end
+
 // flags for open syscall
 const O_RDONLY 0    end
 const O_WRONLY 1    end
@@ -52,13 +57,18 @@ end
 // Execute `write` system call
 // fd ptr count -> actual_count errno
 func write do
-  SYS_READ syscall
+  SYS_WRITE syscall
 end
 
 // Execute `close` system call
 // fd -> result errno
 func close do
   SYS_CLOSE syscall
+end
+
+func puts do  // ptr len -> void
+  STDOUT rot rot write
+  drop drop
 end
 
 // TODO: add errno messages

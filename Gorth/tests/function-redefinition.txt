@@ -2,6 +2,6 @@
   "argv": [],
   "stdin": "",
   "stdout": "",
-  "stderr": "interpreter/vm/vm.go:169 [INFO] Redefinition of word `foo` in function definition:\n  Gorth/tests/function-redefinition.gorth:5:6\ninterpreter/vm/vm.go:170 [INFO] Previously defined here:\n  Gorth/tests/function-redefinition.gorth:1:6\nexit status 1\n",
+  "stderr": "interpreter/vm/vm.go:169 [INFO] Redefinition of word `foo` in function definition:\n  Gorth/tests/function-redefinition.gorth:7:6\ninterpreter/vm/vm.go:170 [INFO] Previously defined here:\n  Gorth/tests/function-redefinition.gorth:3:6\nexit status 1\n",
   "exit_code": 1
 }

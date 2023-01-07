@@ -1,3 +1,5 @@
+include "std/std.gorth"
+
 func foo do
   "foo\n" puts
 end
