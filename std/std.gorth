@@ -10,9 +10,9 @@ func strlen do // int -> int
   swap -
 end
 
-// Copy string of length `len` from `src` to `dst`, returns nothing
+// Copy memory chunk of length `len` from `src` to `dst`, returns nothing
 // WARNING: situations when src and dst are overlapped ARE NOT HANDLED!
-func strcpy do    // src len dst -> void
+func memcpy do    // src len dst -> void
   rot rot over +
   while over over < do
     rot rot
@@ -98,6 +98,20 @@ func argv_n do
     1 +
   end
   drop drop
+end
+
+// Sets `size` count of bytes starting from `ptr` to `value`
+func memset do  // value ptr size -> ptr
+  alloc ptr 4 end
+  over ptr !32
+  over + // value ptr end
+  while over over < do
+    rot rot // end value ptr
+    over over !8 // end value ptr
+    1 + rot // value ptr+1 end
+  end
+  drop drop drop
+  ptr @32
 end
 
 // Consumes two numbers and pushes minimum value

@@ -2,6 +2,6 @@
   "argv": [],
   "stdin": "",
   "stdout": "1234 5678 42 87654321 42 5678 1234",
-  "stderr": "interpreter/vm/vm.go:56 [INFO] Redefinition of word `x`:\n  Gorth/tests/local-allocs-hide-globals.gorth:5:9\ninterpreter/vm/vm.go:57 [INFO] Previously defined here:\n  Gorth/tests/local-allocs-hide-globals.gorth:1:7\ninterpreter/vm/vm.go:56 [INFO] Redefinition of word `x`:\n  Gorth/tests/local-allocs-hide-globals.gorth:11:9\ninterpreter/vm/vm.go:57 [INFO] Previously defined here:\n  Gorth/tests/local-allocs-hide-globals.gorth:1:7\ninterpreter/vm/vm.go:56 [INFO] Redefinition of word `x`:\n  Gorth/tests/local-allocs-hide-globals.gorth:19:9\ninterpreter/vm/vm.go:57 [INFO] Previously defined here:\n  Gorth/tests/local-allocs-hide-globals.gorth:1:7\n",
+  "stderr": "interpreter/vm/vm.go:56 [INFO] Redefinition of word `x`:\n  Gorth/tests/local-allocs-hide-globals.gorth:7:9\ninterpreter/vm/vm.go:57 [INFO] Previously defined here:\n  Gorth/tests/local-allocs-hide-globals.gorth:3:7\ninterpreter/vm/vm.go:56 [INFO] Redefinition of word `x`:\n  Gorth/tests/local-allocs-hide-globals.gorth:13:9\ninterpreter/vm/vm.go:57 [INFO] Previously defined here:\n  Gorth/tests/local-allocs-hide-globals.gorth:3:7\ninterpreter/vm/vm.go:56 [INFO] Redefinition of word `x`:\n  Gorth/tests/local-allocs-hide-globals.gorth:21:9\ninterpreter/vm/vm.go:57 [INFO] Previously defined here:\n  Gorth/tests/local-allocs-hide-globals.gorth:3:7\n",
   "exit_code": 0
 }

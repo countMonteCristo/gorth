@@ -1,0 +1,9 @@
+include "std/std.gorth"
+
+func main do
+  const N 10 end
+  alloc buf N end
+  'X' buf N 1 - memset
+  N 1 - puts
+  0
+end

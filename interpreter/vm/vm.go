@@ -703,9 +703,6 @@ func (vm *VM) Step(ops []Op, sc *ScriptContext) {
 		case lexer.IntrinsicPuti:
 			x := sc.Stack.Pop()
 			fmt.Print(x)
-		case lexer.IntrinsicPutc:
-			x := sc.Stack.Pop()
-			fmt.Print(string(byte(x.(types.IntType))))
 		case lexer.IntrinsicDebug:
 			fmt.Printf(
 				"\tMem: %v\tStack: %v\n",

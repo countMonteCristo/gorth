@@ -66,9 +66,17 @@ func close do
   SYS_CLOSE syscall
 end
 
+// Prints string to stdout
 func puts do  // ptr len -> void
   STDOUT rot rot write
   drop drop
+end
+
+// Prints char to stdout
+func putc do  // char -> void
+  alloc buf 1 end
+  buf !8
+  buf 1 puts
 end
 
 // TODO: add errno messages

@@ -2,7 +2,7 @@ include "std/std.gorth"
 
 func main do
   alloc buf 64 end
-  "Hello, world!" buf strcpy
+  "Hello, world!" buf memcpy
   buf dup strlen p_str
   0
 end

@@ -36,7 +36,6 @@ const (
 	IntrinsicRot
 
 	IntrinsicPuti
-	IntrinsicPutc
 
 	IntrinsicDebug
 
@@ -89,7 +88,6 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicRot:  "rot",
 
 	IntrinsicPuti: "puti",
-	IntrinsicPutc: "putc",
 
 	IntrinsicDebug: "???",
 
