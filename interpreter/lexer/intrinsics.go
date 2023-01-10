@@ -51,6 +51,9 @@ const (
 	IntrinsicArgc
 	IntrinsicArgv
 
+	IntrinsicOffset
+	IntrinsicReset
+
 	IntrinsicSyscall
 
 	IntrinsicCount = iota
@@ -102,6 +105,9 @@ var IntrinsicName = map[IntrinsicType]string{
 
 	IntrinsicArgc: "argc",
 	IntrinsicArgv: "argv",
+
+	IntrinsicOffset: "offset",
+	IntrinsicReset: "reset",
 
 	IntrinsicSyscall: "syscall",
 }

@@ -42,6 +42,7 @@ type Context struct {
 	Funcs  map[string]types.IntType // name to absolute intruction address
 
 	Scopes map[string]*Scope // local function context
+	Offset types.IntType
 }
 
 func InitContext(mem_size types.IntType) *Context {
@@ -49,6 +50,7 @@ func InitContext(mem_size types.IntType) *Context {
 		Memory: InitMemory(mem_size),
 		Funcs:  make(map[string]types.IntType),
 		Scopes: make(map[string]*Scope),
+		Offset: 0,
 	}
 	ctx.Scopes[GlobalScopeName] = NewScope(GlobalScopeName) // global context
 

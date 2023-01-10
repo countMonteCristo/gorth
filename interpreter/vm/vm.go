@@ -120,13 +120,19 @@ func (vm *VM) const_eval(name_token *lexer.Token, tokens *[]lexer.Token, scope *
 					}
 					a := const_stack.Pop().(types.IntType)
 					const_stack.Push(a >> b)
-
+				case lexer.IntrinsicOffset:
+					off := const_stack.Pop().(types.IntType)
+					const_stack.Push(vm.Ctx.Offset)
+					vm.Ctx.Offset += off
+				case lexer.IntrinsicReset:
+					const_stack.Push(vm.Ctx.Offset)
+					vm.Ctx.Offset = 0
 				default:
 					lexer.CompilerFatal(
 						&token.Loc,
 						fmt.Sprintf(
 							"Unexpected intrinsic in const-block compile-time "+
-								"evaluation: `%s`. Supported: [+, -, *, /, %%, >>, <<]",
+								"evaluation: `%s`. Supported: [+, -, *, /, %%, >>, <<, offset, reset]",
 							token.Text,
 						),
 					)
