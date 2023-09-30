@@ -25,6 +25,7 @@ const (
 	DebugCmdOperationList
 	DebugCmdHelp
 	DebugCmdQuit
+	DebugCmdRestart
 )
 
 var Str2DebugCommandType = map[string]DebugCommandType{
@@ -35,6 +36,7 @@ var Str2DebugCommandType = map[string]DebugCommandType{
 	"m": DebugCmdMemory, "mo": DebugCmdOperativeMemory,
 	"p": DebugCmdPrint,
 	"h": DebugCmdHelp, "q": DebugCmdQuit,
+	"r": DebugCmdRestart,
 }
 
 type BreakPointList struct {
@@ -54,9 +56,25 @@ const (
 )
 
 type DebugCommand struct {
-	Type DebugCommandType
-	Str  string
-	Args interface{}
+	Type    DebugCommandType
+	Name    string
+	Args    interface{}
+	ArgList []string
+}
+
+func InitDebugCommand(input string) *DebugCommand {
+	parts := strings.Fields(input)
+	if len(parts) == 0 {
+		return nil
+	}
+
+	cmd_name, arg_list := parts[0], parts[1:]
+	cmd_type, exists := Str2DebugCommandType[cmd_name]
+	if !exists {
+		return nil
+	}
+
+	return &DebugCommand{Type: cmd_type, Name: cmd_name, ArgList: arg_list}
 }
 
 type DebugCommandResponse struct {
@@ -77,8 +95,31 @@ func NewDebugInterface() *DebugInterface {
 	}
 }
 
-func (di *DebugInterface) Communicate(cmd DebugCommand) DebugCommandResponse {
-	di.Commands <- cmd
+func (di *DebugInterface) PrintHelp() {
+	fmt.Println("Availavle commands:")
+	fmt.Println(" * `n` [`count`]       - process at most `count` instructions (by default `count`=1)")
+	fmt.Println(" * `c`                 - continue (process all instructions to the break point or to the end)")
+	fmt.Println(" * `bs` `a1 a2 .. ak`  - set break points for functions or addresses")
+	fmt.Println(" * `bl`                - list all break points")
+	fmt.Println(" * `br` `a1 a2 .. ak`  - remove break points from functions or addresses")
+	fmt.Println(" * `t`                 - print current token")
+	fmt.Println(" * `o` [`ctx`]         - print current operation (+-`ctx` operations, by default `ctx`=0)")
+	fmt.Println(" * `ol`                - print operations list")
+	fmt.Println(" * `s`                 - print current stack state")
+	fmt.Println(" * `m`                 - print current memory state")
+	fmt.Println(" * `mo` `addr` `size`  - print memory chunk of size `size` at address `addr`")
+	fmt.Println(" * `p` `n1 n2 .. nk`   - print consts, allocs or functions")
+	fmt.Println(" * `e` [`type`]        - print current environment (consts, allocs), `type` could be [`all`, `local`, `global`], by default `type`=`all`")
+	fmt.Println(" * `h[elp]`            - print help")
+	fmt.Println(" * `r`                 - restart script")
+	fmt.Println(" * `q`                 - exit debugger")
+}
+
+func (di *DebugInterface) Communicate(cmd *DebugCommand) DebugCommandResponse {
+	if cmd.Type == DebugCmdHelp {
+		di.PrintHelp()
+	}
+	di.Commands <- *cmd
 	return <-di.Response
 }
 
@@ -129,31 +170,23 @@ func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []Op, ct
 		cmd_column = append(cmd_column, op.Str(addr))
 	}
 
-	for i, path := range(path_column) {
+	for i, path := range path_column {
 		fmt.Printf("%-*s %s%s\n", max_column_width, path, markers_column[i], cmd_column[i])
 	}
 }
 
-func ParseDebuggerCommand(input string) (DebugCommand, bool) {
-	cmd := DebugCommand{Str: input}
-	parts := strings.Fields(input)
-	if len(parts) == 0 {
-		return cmd, false
-	}
-	cmd_type, exists := Str2DebugCommandType[parts[0]]
-	if !exists {
+func ParseDebuggerCommand(input string) (*DebugCommand, bool) {
+	cmd := InitDebugCommand(input)
+	if cmd == nil {
 		return cmd, false
 	}
 
-	cmd.Type = cmd_type
-
-	// TODO: save other args from parts[1:] to cmd.Args
 	switch cmd.Type {
 	case DebugCmdStep:
-		if len(parts) > 1 {
-			arg, err := strconv.Atoi(parts[1])
+		if len(cmd.ArgList) > 0 {
+			arg, err := strconv.Atoi(cmd.ArgList[0])
 			if err != nil || arg <= 0 {
-				fmt.Printf("Argument of `step` command should be unsigned integer > 0, but got %s. Use 1 by default.\n", parts[1])
+				fmt.Printf("Argument of `n` command should be unsigned integer > 0, but got %s. Use 1 by default.\n", cmd.ArgList[0])
 				arg = 1
 			}
 			cmd.Args = arg
@@ -161,10 +194,10 @@ func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 			cmd.Args = 1
 		}
 	case DebugCmdOperation:
-		if len(parts) > 1 {
-			arg, err := strconv.ParseInt(parts[1], 10, 64)
+		if len(cmd.ArgList) > 0 {
+			arg, err := strconv.ParseInt(cmd.ArgList[0], 10, 64)
 			if err != nil || arg < 0 {
-				fmt.Printf("Argument of `step` command should be unsigned integer, but got %s. Use 0 by default.\n", parts[1])
+				fmt.Printf("Argument of `o` command should be unsigned integer, but got %s. Use 0 by default.\n", cmd.ArgList[0])
 				arg = 0
 			}
 			cmd.Args = arg
@@ -175,7 +208,7 @@ func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 		bps := BreakPointList{
 			Funcs: make([]string, 0), Addr: make([]int64, 0),
 		}
-		for _, arg := range parts[1:] {
+		for _, arg := range cmd.ArgList {
 			addr, ok := strconv.ParseInt(arg, 10, 64)
 			if ok == nil {
 				bps.Addr = append(bps.Addr, addr)
@@ -189,35 +222,35 @@ func ParseDebuggerCommand(input string) (DebugCommand, bool) {
 		}
 		cmd.Args = bps
 	case DebugCmdOperativeMemory:
-		if len(parts) < 3 {
+		if len(cmd.ArgList) < 2 {
 			fmt.Printf("Specify start address and size of memory chunk\n")
 			return cmd, false
 		}
-		start, err := strconv.Atoi(parts[1])
+		start, err := strconv.Atoi(cmd.ArgList[0])
 		if err != nil || start < 0 {
-			fmt.Printf("Start address should be unsigned integer, got `%s`\n", parts[1])
+			fmt.Printf("Start address should be unsigned integer, got `%s`\n", cmd.ArgList[0])
 			return cmd, false
 		}
-		size, err := strconv.Atoi(parts[2])
+		size, err := strconv.Atoi(cmd.ArgList[1])
 		if err != nil || size < 0 {
-			fmt.Printf("Size of memory chunk should be unsigned integer, got `%s`\n", parts[2])
+			fmt.Printf("Size of memory chunk should be unsigned integer, got `%s`\n", cmd.ArgList[1])
 			return cmd, false
 		}
 		cmd.Args = []int{start, size}
 	case DebugCmdPrint:
-		if len(parts) < 2 {
+		if len(cmd.ArgList) < 1 {
 			fmt.Println("Specify names for constants, allocs or functions to print")
 			return cmd, false
 		}
-		cmd.Args = parts[1:]
+		cmd.Args = cmd.ArgList
 	case DebugCmdEnv:
-		if len(parts) == 1 {
+		if len(cmd.ArgList) == 0 {
 			cmd.Args = "all"
 		} else {
-			if parts[1] == "local" || parts[1] == "global" || parts[1] == "all" {
-				cmd.Args = parts[1]
+			if cmd.ArgList[0] == "local" || cmd.ArgList[0] == "global" || cmd.ArgList[0] == "all" {
+				cmd.Args = cmd.ArgList[0]
 			} else {
-				fmt.Printf("Unknown parameter for `e` command: %s, only [all, local, global] are supported\n", parts[1])
+				fmt.Printf("Unknown parameter for `e` command: %s, only [all, local, global] are supported\n", cmd.ArgList[0])
 				return cmd, false
 			}
 		}

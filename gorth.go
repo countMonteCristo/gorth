@@ -22,12 +22,16 @@ func main() {
 
 	gorth_script := flag.Args()[0]
 
-	i := interpreter.InitInterpreter(flag.Args(), package_dir)
-
 	if !*debugFlag {
+		i := interpreter.InitInterpreter(flag.Args(), package_dir)
 		exit_code := i.Run(gorth_script)
 		i.ProcessExit(exit_code)
-	} else {
+	}
+
+	for {
+		once := true
+
+		i := interpreter.InitInterpreter(flag.Args(), package_dir)
 		debugger_interface := vm.NewDebugInterface()
 		i.RunDebug(gorth_script, debugger_interface)
 
@@ -37,29 +41,9 @@ func main() {
 			scanner.Scan()
 			input := scanner.Text()
 
-			if input == "h" || input == "help" {
-				fmt.Println("Availavle commands:")
-				fmt.Println(" * `n` [`count`]       - process at most `count` instructions (by default `count`=1)")
-				fmt.Println(" * `c`                 - continue (process all instructions to the break point or to the end)")
-				fmt.Println(" * `bs` `a1 a2 .. ak`  - set break points for functions or addresses")
-				fmt.Println(" * `bl`                - list all break points")
-				fmt.Println(" * `br` `a1 a2 .. ak`  - remove break points from functions or addresses")
-				fmt.Println(" * `t`                 - print current token")
-				fmt.Println(" * `o` [`ctx`]         - print current operation (+-`ctx` operations, by default `ctx`=0)")
-				fmt.Println(" * `ol`                - print operations list")
-				fmt.Println(" * `s`                 - print current stack state")
-				fmt.Println(" * `m`                 - print current memory state")
-				fmt.Println(" * `mo` `addr` `size`  - print memory chunk of size `size` at address `addr`")
-				fmt.Println(" * `p` `n1 n2 .. nk`   - print consts, allocs or functions")
-				fmt.Println(" * `e` [`type`]        - print current environment (consts, allocs), `type` could be [`all`, `local`, `global`], by default `type`=`all`")
-				fmt.Println(" * `h`                 - print help")
-				fmt.Println(" * `q`                 - exit debugger")
-				continue
-			}
-
 			cmd, ok := vm.ParseDebuggerCommand(input)
 			if !ok {
-				fmt.Printf("Wrong command: <%s>\n", input)
+				fmt.Printf("Bad command: <%s>\n", input)
 				continue
 			}
 
@@ -71,7 +55,16 @@ func main() {
 			if cmd.Type == vm.DebugCmdQuit {
 				break
 			}
+
+			if cmd.Type == vm.DebugCmdRestart {
+				fmt.Printf("[INFO] Restart script\n")
+				once = false
+				break
+			}
+		}
+
+		if once {
+			break
 		}
 	}
-
 }

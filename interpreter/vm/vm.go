@@ -825,7 +825,7 @@ loop:
 			} else {
 				di.SendFailed(fmt.Sprintf("Failed to print values for names: %v", names))
 			}
-		case DebugCmdQuit: // quit
+		case DebugCmdQuit, DebugCmdRestart:	// quit or restart
 			di.SendOK()
 			break loop
 		case DebugCmdStep: // step
@@ -1015,8 +1015,10 @@ loop:
 
 				di.SendOK()
 			}
+		case DebugCmdHelp:
+			di.SendOK()
 		default:
-			di.SendFailed(fmt.Sprintf("Unknown command: '%s'", cmd.Str))
+			di.SendFailed(fmt.Sprintf("Unknown command: '%s'", cmd.Name))
 		}
 	}
 }
