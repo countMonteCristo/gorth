@@ -20,8 +20,6 @@ const (
 	KeywordFunc
 
 	KeywordInclude
-
-	KeywordCount = iota
 )
 
 var KeywordName = map[KeywordType]string{
@@ -37,7 +35,7 @@ var KeywordName = map[KeywordType]string{
 	KeywordConst: "const",
 	KeywordAlloc: "alloc",
 
-	KeywordFunc:   "func",
+	KeywordFunc: "func",
 
 	KeywordInclude: "include",
 }

@@ -29,22 +29,20 @@ type ByteMemory struct {
 	OperativeMemRegion MemoryRegion
 
 	StringsRegion MemoryRegion
-	StringsMap    map[string]types.IntType
+	// StringsMap    map[string]types.IntType
 }
 
 func InitMemory(mem_size types.IntType) ByteMemory {
 	mem := ByteMemory{
 		Data:       make([]byte, mem_size),
 		MemorySize: mem_size,
-
-		StringsMap: make(map[string]types.IntType),
 	}
 
 	return mem
 }
 
-func (m *ByteMemory) Prepare(args []string) {
-	for literal, addr := range m.StringsMap {
+func (m *ByteMemory) Prepare(args []string, strings *map[string]types.IntType) {
+	for literal, addr := range *strings {
 		literal_bytes := []byte(literal)
 		copy(m.Data[addr:], literal_bytes)
 	}
@@ -67,7 +65,7 @@ func (m *ByteMemory) Prepare(args []string) {
 }
 
 func (m *ByteMemory) LoadFromMem(ptr types.IntType, size int) (value types.IntType) {
-	sub := m.Data[ptr:ptr+types.IntType(size)]
+	sub := m.Data[ptr : ptr+types.IntType(size)]
 	buf := bytes.NewReader(sub)
 	switch size {
 	case 1:

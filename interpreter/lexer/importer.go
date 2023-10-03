@@ -1,7 +1,8 @@
 package lexer
 
 import (
-	"log"
+	"Gorth/interpreter/logger"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,14 +22,13 @@ func (i *Importer) Find(fn string) (string, bool) {
 				if err != nil {
 					return err
 				}
-				if strings.HasSuffix(path, fn) && len(path) > len(include_path) + len(fn){
+				if strings.HasSuffix(path, fn) && len(path) > len(include_path)+len(fn) {
 					results = append(results, path)
 				}
 				return nil
 			})
 		if err != nil {
-			// TODO: proper error message
-			log.Fatal(err)
+			logger.Crash(nil, fmt.Sprintf("Import error: %s", err.Error()))
 		}
 
 		if len(results) > 0 {

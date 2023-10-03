@@ -5,6 +5,7 @@ import (
 	"Gorth/interpreter/types"
 )
 
+// Jumps are: break and continue
 type Jump struct {
 	Keyword lexer.KeywordType
 	Addr    types.IntType

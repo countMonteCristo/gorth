@@ -1,10 +1,11 @@
-package utils
+package logger
 
 type LogLevelType int
 
 const (
 	Fatal LogLevelType = iota
 	Error
+	RuntimeError
 	Warning
 	Info
 	None
@@ -16,6 +17,8 @@ func LogMsgTypeToStr(level LogLevelType) string {
 		return "FATAL"
 	case Error:
 		return "ERROR"
+	case RuntimeError:
+		return "RUNTIME_ERROR"
 	case Warning:
 		return "WARNING"
 	case Info:

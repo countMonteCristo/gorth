@@ -132,7 +132,7 @@ func (di *DebugInterface) SendFailed(msg string) {
 	}
 }
 
-func (di *DebugInterface) IsBreakpoint(ctx *ScriptContext, ops []Op) (types.IntType, bool) {
+func (di *DebugInterface) IsBreakpoint(ctx *RunTimeContext, ops []Op) (types.IntType, bool) {
 	_, exists := di.BreakPoints[ctx.Addr]
 	if exists {
 		return ctx.Addr, true
@@ -140,7 +140,7 @@ func (di *DebugInterface) IsBreakpoint(ctx *ScriptContext, ops []Op) (types.IntT
 	return -1, false
 }
 
-func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []Op, ctx *ScriptContext) {
+func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []Op, ctx *RunTimeContext) {
 	path_column := make([]string, 0)
 	markers_column := make([]string, 0)
 	cmd_column := make([]string, 0)

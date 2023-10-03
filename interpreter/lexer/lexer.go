@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 
@@ -10,7 +11,7 @@ import (
 
 type Lexer struct {
 	Fn    string
-	Loc   Location
+	Loc   utils.Location
 	Lines []string
 	Row   int
 	Col   int
@@ -55,7 +56,7 @@ func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool, err error
 	if data[pos] == '\\' {
 		escaped = true
 		if pos+1 == len(data) {
-			err = FormatErrMsg(&lx.Loc, "Unexpected end of escaped char literal")
+			err = logger.FormatErrMsg(&lx.Loc, "Unexpected end of escaped char literal")
 			return
 		}
 		switch data[pos+1] {
@@ -68,7 +69,7 @@ func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool, err error
 		case '"':
 			b = '"'
 		default:
-			err = FormatErrMsg(&lx.Loc, "Unknown escape character: `%s`", data[pos:pos+2])
+			err = logger.FormatErrMsg(&lx.Loc, "Unknown escape character: `%s`", data[pos:pos+2])
 			return
 		}
 	} else {
@@ -88,7 +89,7 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 		}
 	}
 
-	lx.Loc = Location{Filepath: lx.Fn, Line: line, Column: pos}
+	lx.Loc = utils.Location{Filepath: lx.Fn, Line: line, Column: pos}
 	if pos == len(data) {
 		empty = true
 		return
@@ -118,7 +119,7 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 			}
 		}
 		if !closed {
-			err = FormatErrMsg(&lx.Loc, "Expecting to find closing \" for string literal, but got `%s`", string(chars[len(chars)-1]))
+			err = logger.FormatErrMsg(&lx.Loc, "Expecting to find closing \" for string literal, but got `%s`", string(chars[len(chars)-1]))
 			if err != nil {
 				return
 			}
@@ -136,11 +137,11 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 			pos++
 		}
 		if pos == len(data) {
-			err = FormatErrMsg(&lx.Loc, "Unexpecting end of char literal")
+			err = logger.FormatErrMsg(&lx.Loc, "Unexpecting end of char literal")
 			return
 		}
 		if data[pos] != '\'' {
-			err = FormatErrMsg(&lx.Loc, "Expecting to find closing ' for char literal, but got `%s`", string(data[pos]))
+			err = logger.FormatErrMsg(&lx.Loc, "Expecting to find closing ' for char literal, but got `%s`", string(data[pos]))
 			return
 		}
 		word = "'" + string(b) + "'"
@@ -282,11 +283,11 @@ func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (th
 				}
 
 				if end {
-					err = FormatErrMsg(&token.Loc, "Expected import file path to be a string, but got nothing")
+					err = logger.FormatErrMsg(&token.Loc, "Expected import file path to be a string, but got nothing")
 					return
 				}
 				if next.Typ != TokenString {
-					err = FormatErrMsg(
+					err = logger.FormatErrMsg(
 						&token.Loc, "Expected import file path to be a %s, but got %s",
 						TokenTypeName[TokenString], TokenTypeName[next.Typ],
 					)
@@ -296,13 +297,13 @@ func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (th
 				imported_fn := next.Value.(string)
 				full_imported_fn, exists := imp.Find(imported_fn)
 				if !exists {
-					err = FormatErrMsg(&next.Loc, "Can not import file %s: not in Paths", full_imported_fn)
+					err = logger.FormatErrMsg(&next.Loc, "Can not import file %s: not in Paths", full_imported_fn)
 					return
 				}
 
 				for _, prev_fn := range import_path {
 					if prev_fn == full_imported_fn {
-						err = FormatErrMsg(&next.Loc, "Circular imports detected when trying to include %s", imported_fn)
+						err = logger.FormatErrMsg(&next.Loc, "Circular imports detected when trying to include %s", imported_fn)
 						return
 					}
 				}

@@ -2,8 +2,8 @@ package vm
 
 import (
 	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
-	"Gorth/interpreter/utils"
 	"fmt"
 	"sort"
 	"unsafe"
@@ -12,276 +12,272 @@ import (
 )
 
 type VM struct {
-	Ctx            Context
+	Ctx            CompileTimeContext
 	RecursionLimit int
+	MemorySize     types.IntType
+	Rc             RunTimeContext
 }
 
 func InitVM() *VM {
 	vm := VM{
-		Ctx:            *InitContext(640 * 1024), // 640k is enough for everybody, huh?
+		Ctx:            *InitContext(),
 		RecursionLimit: 1000,
+		MemorySize:     640 * 1024, // 640k is enough for everybody, huh?,
 	}
+	vm.Rc = *NewRuntimeContext(vm.MemorySize)
 
 	return &vm
 }
 
 func (vm *VM) PreprocessTokens(th *lexer.TokenHolder) {
-	vm.Ctx.PreprocessStringLiterals(th)
+	vm.Rc.PreprocessStringLiterals(th, &vm.Ctx.StringsMap)
 }
 
-type ExitCodeType struct {
-	Code types.IntType
-	Msg  string
-}
+func (rc *RunTimeContext) PreprocessStringLiterals(th *lexer.TokenHolder, strings *map[string]types.IntType) {
+	address := types.IntType(1)
 
-type ScriptContext struct {
-	Stack       utils.Stack
-	ReturnStack utils.Stack
-	ScopeStack  utils.Stack
-	Addr        types.IntType
-	Args        []string
-	OpsCount    types.IntType
-	ExitCode    ExitCodeType
-	debug       bool
-}
-
-func NewScriptContext(len_ops types.IntType, args []string, debug bool) *ScriptContext {
-	sc := &ScriptContext{
-		Stack: utils.Stack{}, ReturnStack: utils.Stack{},
-		Addr: 0, Args: args, OpsCount: len_ops, ScopeStack: utils.Stack{},
-		ExitCode: ExitCodeType{Code: 0}, debug: debug,
+	th.Reset()
+	for !th.Empty() {
+		token := th.GetNextToken()
+		if token.Typ == lexer.TokenString {
+			literal := token.Value.(string)
+			_, exists := (*strings)[literal]
+			if !exists {
+				(*strings)[literal] = address
+				address += types.IntType(len(literal) + 1) // save literals as null-terminated strings
+			}
+		}
 	}
-	sc.ReturnStack.Push(len_ops)
-	sc.ScopeStack.Push(GlobalScopeName)
-	return sc
-}
 
-func (sc *ScriptContext) GetExitCode(ops []Op) ExitCodeType {
-	switch {
-	case sc.Stack.Size() > 1:
-		sc.ExitCode.Code = types.IntType(1)
-		sc.ExitCode.Msg = fmt.Sprintf("Multiple values left in stack after script exit: %v", sc.Stack.Data)
-	case sc.Stack.Size() == 0:
-		sc.ExitCode.Code = types.IntType(2)
-		sc.ExitCode.Msg = "Empty stack after script exit"
-	default:
-		sc.ExitCode.Code = sc.Stack.Pop().(types.IntType)
+	rc.Memory.StringsRegion = MemoryRegion{
+		Start: 1,
+		Size:  address - 1,
+		Ptr:   address,
 	}
-	return sc.ExitCode
 }
 
-func (vm *VM) ProcessSyscall(sc *ScriptContext) {
-	syscall_id := sc.Stack.Pop().(types.IntType)
+func (vm *VM) ProcessSyscall() {
+	syscall_id := vm.Rc.Stack.Pop().(types.IntType)
 	switch syscall_id {
 	case unix.SYS_OPEN:
-		mode := sc.Stack.Pop().(types.IntType)
-		flags := sc.Stack.Pop().(types.IntType)
-		ptr := sc.Stack.Pop().(types.IntType)
+		mode := vm.Rc.Stack.Pop().(types.IntType)
+		flags := vm.Rc.Stack.Pop().(types.IntType)
+		ptr := vm.Rc.Stack.Pop().(types.IntType)
 		r1, _, err := unix.Syscall(
-			unix.SYS_OPEN, uintptr(unsafe.Pointer(&vm.Ctx.Memory.Data[ptr])), uintptr(flags), uintptr(mode),
+			unix.SYS_OPEN, uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[ptr])), uintptr(flags), uintptr(mode),
 		)
-		sc.Stack.Push(types.IntType(r1))
-		sc.Stack.Push(types.IntType(err))
+		vm.Rc.Stack.Push(types.IntType(r1))
+		vm.Rc.Stack.Push(types.IntType(err))
 	case unix.SYS_READ:
-		count := sc.Stack.Pop().(types.IntType)
-		ptr := sc.Stack.Pop().(types.IntType)
-		fd := sc.Stack.Pop().(types.IntType)
+		count := vm.Rc.Stack.Pop().(types.IntType)
+		ptr := vm.Rc.Stack.Pop().(types.IntType)
+		fd := vm.Rc.Stack.Pop().(types.IntType)
 		r1, _, err := unix.Syscall(
-			unix.SYS_READ, uintptr(fd), uintptr(unsafe.Pointer(&vm.Ctx.Memory.Data[ptr])), uintptr(count),
+			unix.SYS_READ, uintptr(fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[ptr])), uintptr(count),
 		)
-		sc.Stack.Push(types.IntType(r1))
-		sc.Stack.Push(types.IntType(err))
+		vm.Rc.Stack.Push(types.IntType(r1))
+		vm.Rc.Stack.Push(types.IntType(err))
 	case unix.SYS_CLOSE:
-		fd := sc.Stack.Pop().(types.IntType)
+		fd := vm.Rc.Stack.Pop().(types.IntType)
 		r1, _, err := unix.Syscall(
 			unix.SYS_CLOSE, uintptr(fd), 0, 0,
 		)
-		sc.Stack.Push(types.IntType(r1))
-		sc.Stack.Push(types.IntType(err))
+		vm.Rc.Stack.Push(types.IntType(r1))
+		vm.Rc.Stack.Push(types.IntType(err))
 	case unix.SYS_WRITE:
-		count := sc.Stack.Pop().(types.IntType)
-		ptr := sc.Stack.Pop().(types.IntType)
-		fd := sc.Stack.Pop().(types.IntType)
+		count := vm.Rc.Stack.Pop().(types.IntType)
+		ptr := vm.Rc.Stack.Pop().(types.IntType)
+		fd := vm.Rc.Stack.Pop().(types.IntType)
 		r1, _, err := unix.Syscall(
-			unix.SYS_WRITE, uintptr(fd), uintptr(unsafe.Pointer(&vm.Ctx.Memory.Data[ptr])), uintptr(count),
+			unix.SYS_WRITE, uintptr(fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[ptr])), uintptr(count),
 		)
-		sc.Stack.Push(types.IntType(r1))
-		sc.Stack.Push(types.IntType(err))
+		vm.Rc.Stack.Push(types.IntType(r1))
+		vm.Rc.Stack.Push(types.IntType(err))
 	default:
 		panic(fmt.Sprintf("Syscall #%d is not implemented yet\n", syscall_id))
 	}
 }
 
-func (vm *VM) Step(ops []Op, sc *ScriptContext) {
-	op := ops[sc.Addr]
+func (vm *VM) Step(ops []Op) (err error) {
+	op := ops[vm.Rc.Addr]
 	switch op.Typ {
 	case OpPushInt, OpPushBool:
-		sc.Stack.Push(op.Operand)
-		sc.Addr++
+		vm.Rc.Stack.Push(op.Operand)
+		vm.Rc.Addr++
 	case OpIf, OpDo:
-		top := sc.Stack.Pop().(types.BoolType)
+		top := vm.Rc.Stack.Pop().(types.BoolType)
 		if I2B(top) {
-			sc.Addr++
+			vm.Rc.Addr++
 		} else {
-			sc.Addr += op.Operand.(types.IntType)
+			vm.Rc.Addr += op.Operand.(types.IntType)
 		}
 	case OpElse, OpEnd, OpBreak, OpContinue:
-		sc.Addr += op.Operand.(types.IntType)
+		vm.Rc.Addr += op.Operand.(types.IntType)
 	case OpWhile:
-		sc.Addr++
+		vm.Rc.Addr++
 	case OpIntrinsic:
 		intrinsic := op.Operand.(lexer.IntrinsicType)
 		switch intrinsic {
 		case lexer.IntrinsicPlus, lexer.IntrinsicMinus, lexer.IntrinsicMul, lexer.IntrinsicBitAnd, lexer.IntrinsicBitOr, lexer.IntrinsicBitXor:
-			b := sc.Stack.Pop().(types.IntType)
-			a := sc.Stack.Pop().(types.IntType)
-			sc.Stack.Push(SafeArithmeticFunctions[intrinsic](a, b))
+			b := vm.Rc.Stack.Pop().(types.IntType)
+			a := vm.Rc.Stack.Pop().(types.IntType)
+			vm.Rc.Stack.Push(SafeArithmeticFunctions[intrinsic](a, b))
 		case lexer.IntrinsicDiv:
-			b := sc.Stack.Pop().(types.IntType)
+			b := vm.Rc.Stack.Pop().(types.IntType)
 			if b == 0 {
-				lexer.RuntimeFatal(&op.OpToken.Loc, "Division by zero")
+				return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Division by zero")
 			}
-			a := sc.Stack.Pop().(types.IntType)
-			sc.Stack.Push(a / b)
+			a := vm.Rc.Stack.Pop().(types.IntType)
+			vm.Rc.Stack.Push(a / b)
 		case lexer.IntrinsicMod:
-			b := sc.Stack.Pop().(types.IntType)
+			b := vm.Rc.Stack.Pop().(types.IntType)
 			if b == 0 {
-				lexer.RuntimeFatal(&op.OpToken.Loc, "Division by zero")
+				return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Division by zero")
 			}
-			a := sc.Stack.Pop().(types.IntType)
-			sc.Stack.Push(a % b)
+			a := vm.Rc.Stack.Pop().(types.IntType)
+			vm.Rc.Stack.Push(a % b)
 		case lexer.IntrinsicShl:
-			b := sc.Stack.Pop().(types.IntType)
+			b := vm.Rc.Stack.Pop().(types.IntType)
 			if b < 0 {
-				lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Negative shift amount in `<<`: %d", b))
+				return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Negative shift amount in `<<`: %d", b)
 			}
-			a := sc.Stack.Pop().(types.IntType)
-			sc.Stack.Push(a << b)
+			a := vm.Rc.Stack.Pop().(types.IntType)
+			vm.Rc.Stack.Push(a << b)
 		case lexer.IntrinsicShr:
-			b := sc.Stack.Pop().(types.IntType)
+			b := vm.Rc.Stack.Pop().(types.IntType)
 			if b < 0 {
-				lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Negative shift amount in `>>`: %d", b))
+				return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Negative shift amount in `>>`: %d", b)
 			}
-			a := sc.Stack.Pop().(types.IntType)
-			sc.Stack.Push(a >> b)
+			a := vm.Rc.Stack.Pop().(types.IntType)
+			vm.Rc.Stack.Push(a >> b)
 		case lexer.IntrinsicBitNot:
-			a := sc.Stack.Pop().(types.IntType)
-			sc.Stack.Push(^a)
+			a := vm.Rc.Stack.Pop().(types.IntType)
+			vm.Rc.Stack.Push(^a)
 		case lexer.IntrinsicLogicalAnd, lexer.IntrinsicLogicalOr:
-			b := sc.Stack.Pop().(types.BoolType)
-			a := sc.Stack.Pop().(types.BoolType)
-			sc.Stack.Push(LogicalFunctions[intrinsic](a, b))
+			b := vm.Rc.Stack.Pop().(types.BoolType)
+			a := vm.Rc.Stack.Pop().(types.BoolType)
+			vm.Rc.Stack.Push(LogicalFunctions[intrinsic](a, b))
 		case lexer.IntrinsicLogicalNot:
-			x := sc.Stack.Pop()
-			sc.Stack.Push(B2I(!I2B(x.(types.BoolType))))
+			x := vm.Rc.Stack.Pop()
+			vm.Rc.Stack.Push(B2I(!I2B(x.(types.BoolType))))
 		case lexer.IntrinsicDup:
-			x := sc.Stack.Top()
-			sc.Stack.Push(x)
+			x := vm.Rc.Stack.Top()
+			vm.Rc.Stack.Push(x)
 		case lexer.IntrinsicSwap:
-			b := sc.Stack.Pop()
-			a := sc.Stack.Pop()
-			sc.Stack.Push(b)
-			sc.Stack.Push(a)
+			b := vm.Rc.Stack.Pop()
+			a := vm.Rc.Stack.Pop()
+			vm.Rc.Stack.Push(b)
+			vm.Rc.Stack.Push(a)
 		case lexer.IntrinsicDrop:
-			sc.Stack.Pop()
+			vm.Rc.Stack.Pop()
 		case lexer.IntrinsicOver:
-			x := sc.Stack.Data[len(sc.Stack.Data)-2]
-			sc.Stack.Push(x)
+			x := vm.Rc.Stack.Data[len(vm.Rc.Stack.Data)-2]
+			vm.Rc.Stack.Push(x)
 		case lexer.IntrinsicRot:
-			c := sc.Stack.Pop()
-			b := sc.Stack.Pop()
-			a := sc.Stack.Pop()
-			sc.Stack.Push(b)
-			sc.Stack.Push(c)
-			sc.Stack.Push(a)
+			c := vm.Rc.Stack.Pop()
+			b := vm.Rc.Stack.Pop()
+			a := vm.Rc.Stack.Pop()
+			vm.Rc.Stack.Push(b)
+			vm.Rc.Stack.Push(c)
+			vm.Rc.Stack.Push(a)
 		case lexer.IntrinsicEq, lexer.IntrinsicNe, lexer.IntrinsicLe, lexer.IntrinsicGe, lexer.IntrinsicLt, lexer.IntrinsicGt:
-			b := sc.Stack.Pop().(types.IntType)
-			a := sc.Stack.Pop().(types.IntType)
-			sc.Stack.Push(ComparableFunctions[intrinsic](a, b))
+			b := vm.Rc.Stack.Pop().(types.IntType)
+			a := vm.Rc.Stack.Pop().(types.IntType)
+			vm.Rc.Stack.Push(ComparableFunctions[intrinsic](a, b))
 		case lexer.IntrinsicPuti:
-			x := sc.Stack.Pop()
+			x := vm.Rc.Stack.Pop()
 			fmt.Print(x)
 		case lexer.IntrinsicDebug:
 			fmt.Printf(
 				"\tMem: %v\tStack: %v\n",
-				vm.Ctx.Memory.Data[vm.Ctx.Memory.OperativeMemRegion.Start:vm.Ctx.Memory.OperativeMemRegion.Ptr],
-				sc.Stack.Data,
+				vm.Rc.Memory.Data[vm.Rc.Memory.OperativeMemRegion.Start:vm.Rc.Memory.OperativeMemRegion.Ptr],
+				vm.Rc.Stack.Data,
 			)
 		case lexer.IntrinsicLoad8, lexer.IntrinsicLoad16, lexer.IntrinsicLoad32, lexer.IntrinsicLoad64:
-			ptr := sc.Stack.Pop().(types.IntType)
-			val := vm.Ctx.Memory.LoadFromMem(ptr, LoadSizes[intrinsic])
-			sc.Stack.Push(val)
+			ptr := vm.Rc.Stack.Pop().(types.IntType)
+			val := vm.Rc.Memory.LoadFromMem(ptr, LoadSizes[intrinsic])
+			vm.Rc.Stack.Push(val)
 		case lexer.IntrinsicStore8, lexer.IntrinsicStore16, lexer.IntrinsicStore32, lexer.IntrinsicStore64:
-			ptr := sc.Stack.Pop().(types.IntType)
-			x := sc.Stack.Pop().(types.IntType)
-			vm.Ctx.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic])
+			ptr := vm.Rc.Stack.Pop().(types.IntType)
+			x := vm.Rc.Stack.Pop().(types.IntType)
+			vm.Rc.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic])
 
 		case lexer.IntrinsicArgc:
-			sc.Stack.Push(types.IntType(len(sc.Args)))
+			vm.Rc.Stack.Push(types.IntType(len(vm.Rc.Args)))
 		case lexer.IntrinsicArgv:
-			sc.Stack.Push(vm.Ctx.Memory.Argv)
+			vm.Rc.Stack.Push(vm.Rc.Memory.Argv)
 		case lexer.IntrinsicSyscall:
-			vm.ProcessSyscall(sc)
+			vm.ProcessSyscall()
 		default:
-			lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled intrinsic: `%s`", op.OpToken.Text))
+			return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Unhandled intrinsic: `%s`", op.OpToken.Text)
 		}
-		sc.Addr++
+		vm.Rc.Addr++
 	case OpCall:
-		if sc.ReturnStack.Size() >= vm.RecursionLimit {
-			lexer.RuntimeFatal(&op.OpToken.Loc, "Recursion limit exceeded")
+		if vm.Rc.ReturnStack.Size() >= vm.RecursionLimit {
+			return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Recursion limit exceeded")
 		}
-		sc.ReturnStack.Push(sc.Addr)
-		sc.Addr += op.Operand.(types.IntType)
+		vm.Rc.ReturnStack.Push(vm.Rc.Addr)
+		vm.Rc.Addr += op.Operand.(types.IntType)
 	case OpFuncBegin:
-		vm.Ctx.Memory.OperativeMemRegion.Ptr += op.Operand.(types.IntType)
-		sc.Addr++
-		if sc.debug {
-			sc.ScopeStack.Push(op.DebugInfo.(string))
+		vm.Rc.Memory.OperativeMemRegion.Ptr += op.Operand.(types.IntType)
+		vm.Rc.Addr++
+		if vm.Rc.debug {
+			vm.Rc.ScopeStack.Push(op.DebugInfo.(string))
 		}
 	case OpFuncEnd:
-		if sc.ReturnStack.Size() == 0 {
-			lexer.RuntimeFatal(&op.OpToken.Loc, "Return stack is empty")
+		if vm.Rc.ReturnStack.Size() == 0 {
+			return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Return stack is empty")
 		}
-		sc.Addr = sc.ReturnStack.Pop().(types.IntType) + 1
-		vm.Ctx.Memory.OperativeMemRegion.Ptr -= op.Operand.(types.IntType)
-		if sc.debug {
-			sc.ScopeStack.Pop()
+		vm.Rc.Addr = vm.Rc.ReturnStack.Pop().(types.IntType) + 1
+		vm.Rc.Memory.OperativeMemRegion.Ptr -= op.Operand.(types.IntType)
+		if vm.Rc.debug {
+			vm.Rc.ScopeStack.Pop()
 		}
 	case OpPushLocalAlloc:
-		addr := vm.Ctx.Memory.OperativeMemRegion.Ptr - op.Operand.(types.IntType)
-		sc.Stack.Push(addr)
-		sc.Addr++
+		addr := vm.Rc.Memory.OperativeMemRegion.Ptr - op.Operand.(types.IntType)
+		vm.Rc.Stack.Push(addr)
+		vm.Rc.Addr++
 	case OpPushGlobalAlloc:
-		addr := vm.Ctx.Memory.OperativeMemRegion.Start + op.Operand.(types.IntType)
-		sc.Stack.Push(addr)
-		sc.Addr++
+		addr := vm.Rc.Memory.OperativeMemRegion.Start + op.Operand.(types.IntType)
+		vm.Rc.Stack.Push(addr)
+		vm.Rc.Addr++
 	default:
-		lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation: `%s`", OpName[op.Typ]))
+		return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Unhandled operation: `%s`", OpName[op.Typ])
 	}
+	return
 }
 
-func (vm *VM) Prepare(ops []Op, args []string, debug bool) *ScriptContext {
-	vm.Ctx.Memory.Prepare(args)
-
+func (vm *VM) PrepareRuntimeContext(ops []Op, args []string, debug bool) {
 	len_ops := types.IntType(len(ops))
-	sc := NewScriptContext(len_ops, args, debug)
-	sc.Addr = vm.Ctx.Funcs["main"].Addr
 
-	vm.Ctx.Memory.OperativeMemRegion.Ptr = vm.Ctx.Memory.OperativeMemRegion.Start + vm.Ctx.GlobalScope().MemSize
-	return sc
+	vm.Rc.OpsCount = len_ops
+	vm.Rc.ReturnStack.Push(len_ops)
+
+	vm.Rc.Args = args
+	vm.Rc.Memory.Prepare(args, &vm.Ctx.StringsMap)
+
+	vm.Rc.debug = debug
+	vm.Rc.Addr = vm.Ctx.Funcs["main"].Addr
+
+	vm.Rc.Memory.OperativeMemRegion.Ptr = vm.Rc.Memory.OperativeMemRegion.Start + vm.Ctx.GlobalScope().MemSize
 }
 
 func (vm *VM) Interprete(ops []Op, args []string) ExitCodeType {
 
-	sc := vm.Prepare(ops, args, false)
-	for sc.Addr < sc.OpsCount {
-		vm.Step(ops, sc)
+	// rc := vm.Prepare(ops, args, false)
+	vm.PrepareRuntimeContext(ops, args, false)
+	var err error = nil
+	for vm.Rc.Addr < vm.Rc.OpsCount {
+		err = vm.Step(ops)
+		if err != nil {
+			break
+		}
 	}
-	return sc.GetExitCode(ops)
+	return vm.Rc.GetExitCode(ops, err)
 }
 
 func (vm *VM) InterpreteDebug(ops []Op, args []string, di *DebugInterface) {
-	sc := vm.Prepare(ops, args, true)
+	vm.PrepareRuntimeContext(ops, args, true)
 
 loop:
 	for {
@@ -289,30 +285,30 @@ loop:
 
 		switch cmd.Type {
 		case DebugCmdStack: // print stack
-			fmt.Println(sc.Stack.Data)
+			fmt.Println(vm.Rc.Stack.Data)
 			di.SendOK()
 		case DebugCmdMemory: // print memory
-			vm.Ctx.Memory.PrintDebug()
+			vm.Rc.Memory.PrintDebug()
 			di.SendOK()
 		case DebugCmdOperativeMemory:
 			chunk := cmd.Args.([]int)
 			start, size := chunk[0], chunk[1]
-			if start >= int(vm.Ctx.Memory.MemorySize) {
+			if start >= int(vm.Rc.Memory.MemorySize) {
 				di.SendFailed(fmt.Sprintf("Start address %d is out of bounds", start))
 				continue
 			}
 			end := start + size
-			if end >= int(vm.Ctx.Memory.MemorySize) {
-				end = int(vm.Ctx.Memory.MemorySize) - 1
+			if end >= int(vm.Rc.Memory.MemorySize) {
+				end = int(vm.Rc.Memory.MemorySize) - 1
 			}
-			memory_chunk := vm.Ctx.Memory.Data[start:end]
+			memory_chunk := vm.Rc.Memory.Data[start:end]
 			fmt.Printf("addr=%d size=%d: %v\n", start, size, memory_chunk)
 			di.SendOK()
 		case DebugCmdPrint:
 			names := cmd.Args.([]string)
-			scope_name := sc.ScopeStack.Top().(string)
+			scope_name := vm.Rc.ScopeStack.Top().(string)
 			n_found := vm.Ctx.DebugConstNames(names, scope_name) +
-				vm.Ctx.DebugAllocNames(names, scope_name) +
+				vm.Ctx.DebugAllocNames(names, scope_name, &vm.Rc.Memory) +
 				vm.Ctx.DebugFuncNames(names)
 			if n_found > 0 {
 				di.SendOK()
@@ -323,51 +319,69 @@ loop:
 			di.SendOK()
 			break loop
 		case DebugCmdStep: // step
-			if sc.Addr >= sc.OpsCount {
+			if vm.Rc.Addr >= vm.Rc.OpsCount {
 				di.SendFailed("Can not step: script finished")
 			} else {
 				steps_count := cmd.Args.(int)
-				for i := 0; i < steps_count && sc.Addr < sc.OpsCount; i++ {
-					vm.Step(ops, sc)
+				var err error = nil
+				for i := 0; i < steps_count && vm.Rc.Addr < vm.Rc.OpsCount; i++ {
+					err = vm.Step(ops)
+					if err != nil {
+						break
+					}
 
-					addr, is_bp := di.IsBreakpoint(sc, ops)
+					addr, is_bp := di.IsBreakpoint(&vm.Rc, ops)
 					if is_bp {
 						fmt.Printf("[INFO] Break at address %d\n", addr)
 						break
 					}
 				}
-				if sc.Addr >= sc.OpsCount {
-					ec := sc.GetExitCode(ops)
-					fmt.Printf("[INFO] Script finished with exit code %d", ec.Code)
-					if len(ec.Msg) > 0 {
-						fmt.Printf(": %s", ec.Msg)
+
+				if err != nil {
+					di.SendFailed(fmt.Sprintf("Script failed because of: %s", err.Error()))
+				} else {
+					if vm.Rc.Addr >= vm.Rc.OpsCount {
+						ec := vm.Rc.GetExitCode(ops, err)
+						fmt.Printf("[INFO] Script finished with exit code %d", ec.Code)
+						if len(ec.Msg) > 0 {
+							fmt.Printf(": %s", ec.Msg)
+						}
+						fmt.Println()
 					}
-					fmt.Println()
+					di.SendOK()
 				}
-				di.SendOK()
 			}
 		case DebugCmdContinue: // continue
-			if sc.Addr >= sc.OpsCount {
+			if vm.Rc.Addr >= vm.Rc.OpsCount {
 				di.SendFailed("Can not continue: script finished")
 			} else {
-				for sc.Addr < sc.OpsCount {
-					vm.Step(ops, sc)
+				var err error = nil
+				for vm.Rc.Addr < vm.Rc.OpsCount {
+					err = vm.Step(ops)
+					if err != nil {
+						break
+					}
 
-					addr, is_bp := di.IsBreakpoint(sc, ops)
+					addr, is_bp := di.IsBreakpoint(&vm.Rc, ops)
 					if is_bp {
 						fmt.Printf("[INFO] Break at address %d\n", addr)
 						break
 					}
 				}
-				if sc.Addr >= sc.OpsCount {
-					ec := sc.GetExitCode(ops)
-					fmt.Printf("[INFO] Script finished with exit code %d", ec.Code)
-					if len(ec.Msg) > 0 {
-						fmt.Printf(": %s", ec.Msg)
+
+				if err != nil {
+					di.SendFailed(fmt.Sprintf("Script failed because of: %s", err.Error()))
+				} else {
+					if vm.Rc.Addr >= vm.Rc.OpsCount {
+						ec := vm.Rc.GetExitCode(ops, err)
+						fmt.Printf("[INFO] Script finished with exit code %d", ec.Code)
+						if len(ec.Msg) > 0 {
+							fmt.Printf(": %s", ec.Msg)
+						}
+						fmt.Println()
 					}
-					fmt.Println()
+					di.SendOK()
 				}
-				di.SendOK()
 			}
 		case DebugCmdBreakpointSet:
 			bps := cmd.Args.(BreakPointList)
@@ -385,7 +399,7 @@ loop:
 
 			found_addr := make([]types.IntType, 0, len(bps.Addr))
 			for _, addr := range bps.Addr {
-				if addr >= sc.OpsCount || addr < 0 {
+				if addr >= vm.Rc.OpsCount || addr < 0 {
 					fmt.Printf("[WARN] Address %d is out of bounds. skip\n", addr)
 				} else {
 					di.BreakPoints[addr] = true
@@ -465,37 +479,37 @@ loop:
 				)
 			}
 		case DebugCmdToken: // token
-			if sc.Addr >= sc.OpsCount {
+			if vm.Rc.Addr >= vm.Rc.OpsCount {
 				di.SendFailed("Can not print token: script finished")
 			} else {
-				token := ops[sc.Addr].OpToken
+				token := ops[vm.Rc.Addr].OpToken
 				fmt.Printf("%s:%d:%d Token(%s)\n", token.Loc.Filepath, token.Loc.Line+1, token.Loc.Column+1, token.Text)
 				di.SendOK()
 			}
 		case DebugCmdOperation: // operation
-			if sc.Addr >= sc.OpsCount {
+			if vm.Rc.Addr >= vm.Rc.OpsCount {
 				di.SendFailed("Can not print operation: script finished")
 			} else {
 				context_size := cmd.Args.(types.IntType)
-				di.PrintOpsList(sc.Addr-context_size, sc.Addr+context_size, ops, sc)
+				di.PrintOpsList(vm.Rc.Addr-context_size, vm.Rc.Addr+context_size, ops, &vm.Rc)
 				di.SendOK()
 			}
 		case DebugCmdOperationList: // print ops list
-			di.PrintOpsList(0, sc.OpsCount-1, ops, sc)
+			di.PrintOpsList(0, vm.Rc.OpsCount-1, ops, &vm.Rc)
 			di.SendOK()
 		case DebugCmdEnv: // env - consts and allocs
 			typ := cmd.Args.(string)
-			if sc.Addr >= sc.OpsCount {
+			if vm.Rc.Addr >= vm.Rc.OpsCount {
 				di.SendFailed("Can not print environment: script finished")
 			} else {
-				current_scope_name := sc.ScopeStack.Top().(string)
+				current_scope_name := vm.Rc.ScopeStack.Top().(string)
 
 				if typ == "all" || typ == "local" {
 					fmt.Printf("Scope: <%s>\n", current_scope_name)
 					if current_scope_name != GlobalScopeName {
 						fmt.Printf("Locals: ")
 						vm.Ctx.DebugConsts(current_scope_name)
-						vm.Ctx.DebugAllocs(current_scope_name)
+						vm.Ctx.DebugAllocs(current_scope_name, &vm.Rc.Memory)
 						fmt.Println()
 					}
 				}
@@ -503,7 +517,7 @@ loop:
 				if typ == "all" || typ == "global" {
 					fmt.Printf("Globals: ")
 					vm.Ctx.DebugConsts(GlobalScopeName)
-					vm.Ctx.DebugAllocs(GlobalScopeName)
+					vm.Ctx.DebugAllocs(GlobalScopeName, &vm.Rc.Memory)
 					fmt.Println()
 				}
 

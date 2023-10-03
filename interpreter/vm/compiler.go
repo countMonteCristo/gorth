@@ -2,6 +2,7 @@ package vm
 
 import (
 	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 )
@@ -34,11 +35,11 @@ func (c *Compiler) compileTokenInt(token *lexer.Token, scope_name string) error 
 	return nil
 }
 
-func (c *Compiler) compileTokenString(token *lexer.Token, ctx *Context, scope_name string) error {
+func (c *Compiler) compileTokenString(token *lexer.Token, ctx *CompileTimeContext, scope_name string) error {
 	literal := token.Value.(string)
-	literal_addr, exists := ctx.Memory.StringsMap[literal]
+	literal_addr, exists := ctx.StringsMap[literal]
 	if !exists {
-		return lexer.FormatErrMsg(&token.Loc, "Unknown string literal at compile-time: `%s`", literal)
+		return logger.FormatErrMsg(&token.Loc, "Unknown string literal at compile-time: `%s`", literal)
 	}
 	c.pushOps(scope_name,
 		Op{Typ: OpPushInt, Operand: literal_addr, OpToken: *token},
@@ -58,6 +59,9 @@ func (c *Compiler) compileTokenBool(token *lexer.Token, scope_name string) error
 }
 
 func (c *Compiler) compileTokenIntrinsic(token *lexer.Token, scope_name string, intrinsic lexer.IntrinsicType) error {
+	if intrinsic == lexer.IntrinsicOffset || intrinsic == lexer.IntrinsicReset {
+		return logger.FormatErrMsg(&token.Loc, "`%s` intrinsic is not allowed outside `const` or `alloc` blocks", token.Text)
+	}
 	c.pushOps(scope_name, Op{Typ: OpIntrinsic, Operand: intrinsic, OpToken: *token})
 	return nil
 }
@@ -87,21 +91,21 @@ func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope_name s
 	return nil
 }
 
-func (c *Compiler) compileIfBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *Context, scope_name string) error {
+func (c *Compiler) compileIfBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext, scope_name string) error {
 	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token))
 
 	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpIf})
 	return c.compile(th, ctx, scope_name)
 }
 
-func (c *Compiler) compileElseBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *Context, scope_name string) error {
+func (c *Compiler) compileElseBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext, scope_name string) error {
 
 	if c.Blocks.Size() == 0 {
-		return lexer.FormatErrMsg(&token.Loc, "Unexpected `end` found")
+		return logger.FormatErrMsg(&token.Loc, "Unexpected `end` found")
 	}
 	block := c.Blocks.Pop().(*Block)
 	if block.Tok.Typ != lexer.TokenKeyword {
-		return lexer.FormatErrMsg(&token.Loc, "Only keywords may form blocks, but not `%s`. Probably bug in lexer", block.Tok.Text)
+		return logger.FormatErrMsg(&token.Loc, "Only keywords may form blocks, but not `%s`. Probably bug in lexer", block.Tok.Text)
 	}
 	block_start_kw := block.Tok.Value.(lexer.KeywordType)
 
@@ -111,9 +115,9 @@ func (c *Compiler) compileElseBlock(token *lexer.Token, th *lexer.TokenHolder, c
 	case lexer.KeywordIf:
 		c.Ops[block.Addr].Operand = addr - block.Addr + 1
 	case lexer.KeywordElse, lexer.KeywordEnd, lexer.KeywordWhile:
-		return lexer.FormatErrMsg(&token.Loc, "`else` may only come after `if` block, but got `%s`", block.Tok.Text)
+		return logger.FormatErrMsg(&token.Loc, "`else` may only come after `if` block, but got `%s`", block.Tok.Text)
 	default:
-		return lexer.FormatErrMsg(&token.Loc, "Unhandled block start processing")
+		return logger.FormatErrMsg(&token.Loc, "Unhandled block start processing")
 	}
 
 	c.Blocks.Push(NewBlock(addr, token))
@@ -122,22 +126,22 @@ func (c *Compiler) compileElseBlock(token *lexer.Token, th *lexer.TokenHolder, c
 	return nil
 }
 
-func (c *Compiler) compileWhileBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *Context, scope_name string) error {
+func (c *Compiler) compileWhileBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext, scope_name string) error {
 	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token))
 	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpWhile})
 	return c.compile(th, ctx, scope_name)
 }
 
-func (c *Compiler) compileDoBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *Context, scope_name string) error {
+func (c *Compiler) compileDoBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext, scope_name string) error {
 	if c.Blocks.Size() == 0 {
-		return lexer.FormatErrMsg(&token.Loc, "Unexpected `do` found")
+		return logger.FormatErrMsg(&token.Loc, "Unexpected `do` found")
 	}
 	block := c.Blocks.Pop().(*Block)
 	if block.Tok.Typ != lexer.TokenKeyword {
-		return lexer.FormatErrMsg(&token.Loc, "Only keywords may form c.Blocks, but got `%s`", block.Tok.Text)
+		return logger.FormatErrMsg(&token.Loc, "Only keywords may form c.Blocks, but got `%s`", block.Tok.Text)
 	}
 	if block.Tok.Value.(lexer.KeywordType) != lexer.KeywordWhile {
-		return lexer.FormatErrMsg(&token.Loc, "`do` may come only inside `while` block, but not `%s`", block.Tok.Text)
+		return logger.FormatErrMsg(&token.Loc, "`do` may come only inside `while` block, but not `%s`", block.Tok.Text)
 	}
 
 	do_addr := c.getCurrentAddr()
@@ -148,7 +152,7 @@ func (c *Compiler) compileDoBlock(token *lexer.Token, th *lexer.TokenHolder, ctx
 
 func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType, scope_name string) error {
 	if c.Blocks.Size() == 0 {
-		return lexer.FormatErrMsg(&token.Loc, "Unexpected `%s` found", token.Text)
+		return logger.FormatErrMsg(&token.Loc, "Unexpected `%s` found", token.Text)
 	}
 
 	var i int
@@ -161,7 +165,7 @@ func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType, scope_
 		}
 	}
 	if i < 0 {
-		return lexer.FormatErrMsg(&token.Loc, "`%s` should be inside while-loop, but it doesn't", token.Text)
+		return logger.FormatErrMsg(&token.Loc, "`%s` should be inside while-loop, but it doesn't", token.Text)
 	}
 
 	c.pushOps(scope_name, Op{OpToken: *token, Typ: op_type})
@@ -176,13 +180,13 @@ func (c *Compiler) compileContinueKeyword(token *lexer.Token, scope_name string)
 	return c.compileJumpKeyword(token, OpContinue, scope_name)
 }
 
-func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *Context, scope_name string) error {
+func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *CompileTimeContext, scope_name string) error {
 	if c.Blocks.Size() == 0 {
-		return lexer.FormatErrMsg(&token.Loc, "Unexpected `end` found")
+		return logger.FormatErrMsg(&token.Loc, "Unexpected `end` found")
 	}
 	block := c.Blocks.Pop().(*Block)
 	if block.Tok.Typ != lexer.TokenKeyword {
-		return lexer.FormatErrMsg(&token.Loc, "Only keywords may form blocks, but not `%s`. Probably bug in lexer", block.Tok.Text)
+		return logger.FormatErrMsg(&token.Loc, "Only keywords may form blocks, but not `%s`. Probably bug in lexer", block.Tok.Text)
 	}
 	block_start_kw := block.Tok.Value.(lexer.KeywordType)
 
@@ -199,7 +203,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *Context, scope_nam
 		op.Typ = OpEnd
 		c.pushOps(scope_name, op)
 	case lexer.KeywordWhile:
-		return lexer.FormatErrMsg(&block.Tok.Loc, "`while` block must contain `do` before `end`")
+		return logger.FormatErrMsg(&block.Tok.Loc, "`while` block must contain `do` before `end`")
 	case lexer.KeywordDo:
 		do_while_addr_diff := c.Ops[block.Addr].Operand.(types.IntType)
 		for _, jump := range block.Jumps {
@@ -209,7 +213,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *Context, scope_nam
 			case lexer.KeywordContinue:
 				c.Ops[jump.Addr].Operand = block.Addr + do_while_addr_diff - jump.Addr // continue -> while
 			default:
-				return lexer.FormatErrMsg(&block.Tok.Loc, "Unhandled jump-keyword: `%s`", lexer.KeywordName[jump.Keyword])
+				return logger.FormatErrMsg(&block.Tok.Loc, "Unhandled jump-keyword: `%s`", lexer.KeywordName[jump.Keyword])
 			}
 		}
 		op.Operand = block.Addr + do_while_addr_diff - addr
@@ -217,26 +221,26 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *Context, scope_nam
 		op.Typ = OpEnd
 		c.pushOps(scope_name, op)
 	case lexer.KeywordEnd:
-		return lexer.FormatErrMsg(&token.Loc, "`end` may only close `if-else` or `while-do` blocks, but got `%s`", block.Tok.Text)
+		return logger.FormatErrMsg(&token.Loc, "`end` may only close `if-else` or `while-do` blocks, but got `%s`", block.Tok.Text)
 	case lexer.KeywordBreak:
-		return lexer.FormatErrMsg(&block.Tok.Loc, "`break` keyword shouldn't be in blocks stack")
+		return logger.FormatErrMsg(&block.Tok.Loc, "`break` keyword shouldn't be in blocks stack")
 	case lexer.KeywordContinue:
-		return lexer.FormatErrMsg(&block.Tok.Loc, "`continue` keyword shouldn't be in blocks stack")
+		return logger.FormatErrMsg(&block.Tok.Loc, "`continue` keyword shouldn't be in blocks stack")
 	case lexer.KeywordFunc:
 		func_end_op := Op{
 			OpToken: *token, Typ: OpFuncEnd, Operand: scope_name, Data: scope_name,
 		}
 		c.pushOps(scope_name, func_end_op)
 	default:
-		return lexer.FormatErrMsg(&token.Loc, "Unhandled block start processing")
+		return logger.FormatErrMsg(&token.Loc, "Unhandled block start processing")
 	}
 	return nil
 }
 
-func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *Context, scope_name string, typ string) (name_token lexer.Token, value types.IntType, err error) {
+func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext, scope_name string, typ string) (name_token lexer.Token, value types.IntType, err error) {
 
 	if th.Empty() {
-		err = lexer.FormatErrMsg(&token.Loc, "Expected `%s` name, but got nothing", typ)
+		err = logger.FormatErrMsg(&token.Loc, "Expected `%s` name, but got nothing", typ)
 		return
 	}
 
@@ -245,13 +249,13 @@ func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, 
 	name_token = *th.GetNextToken()
 
 	if name_token.Typ != lexer.TokenWord {
-		err = lexer.FormatErrMsg(&token.Loc, "Expected `%s` name to be a word, but got `%s`", typ, name_token.Text)
+		err = logger.FormatErrMsg(&token.Loc, "Expected `%s` name to be a word, but got `%s`", typ, name_token.Text)
 		return
 	}
 	defined_token, exists := scope.Names[name_token.Text]
 	if exists {
-		msg := lexer.FormatNoneMsg(&defined_token.Loc, "Previously defined here")
-		err = lexer.FormatErrMsg(&name_token.Loc, "Redefinition of name `%s` (%s)", name_token.Text, msg)
+		msg := logger.FormatNoneMsg(&defined_token.Loc, "Previously defined here")
+		err = logger.FormatErrMsg(&name_token.Loc, "Redefinition of name `%s` (%s)", name_token.Text, msg)
 		return
 	}
 
@@ -259,13 +263,13 @@ func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, 
 	if exists {
 		_, func_exists := ctx.Funcs[name_token.Text]
 		if func_exists {
-			msg := lexer.FormatNoneMsg(&defined_token.Loc, "Previously defined here")
-			err = lexer.FormatErrMsg(&name_token.Loc, "Redefinition of function `%s` (%s)", name_token.Text, msg)
+			msg := logger.FormatNoneMsg(&defined_token.Loc, "Previously defined here")
+			err = logger.FormatErrMsg(&name_token.Loc, "Redefinition of function `%s` (%s)", name_token.Text, msg)
 			return
 		}
 
-		msg := lexer.FormatNoneMsg(&defined_token.Loc, "Previously defined here")
-		err = lexer.FormatErrMsg(&name_token.Loc, "Redefinition of global name `%s` (%s)", name_token.Text, msg)
+		msg := logger.FormatNoneMsg(&defined_token.Loc, "Previously defined here")
+		err = logger.FormatErrMsg(&name_token.Loc, "Redefinition of global name `%s` (%s)", name_token.Text, msg)
 		return
 	}
 
@@ -274,7 +278,7 @@ func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, 
 	const_th := lexer.NewTokenHolder()
 	for {
 		if th.Empty() {
-			err = lexer.FormatErrMsg(&token.Loc, "Unexpected end while processing `%s` block", typ)
+			err = logger.FormatErrMsg(&token.Loc, "Unexpected end while processing `%s` block", typ)
 			return
 		}
 
@@ -290,36 +294,36 @@ func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, 
 	return
 }
 
-func (c *Compiler) compileFuncDef(token *lexer.Token, th *lexer.TokenHolder, ctx *Context) (name_token lexer.Token, func_name string, err error) {
+func (c *Compiler) compileFuncDef(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext) (name_token lexer.Token, func_name string, err error) {
 	if th.Empty() {
-		err = lexer.FormatErrMsg(&token.Loc, "Expected `%s` name, but got nothing", token.Text)
+		err = logger.FormatErrMsg(&token.Loc, "Expected `%s` name, but got nothing", token.Text)
 		return
 	}
 
 	if token.Typ == lexer.TokenKeyword {
 		kw_type := token.Value.(lexer.KeywordType)
 		if kw_type != lexer.KeywordFunc {
-			err = lexer.FormatErrMsg(&token.Loc, "Expected `func` keyword, but found %s", token.Text)
+			err = logger.FormatErrMsg(&token.Loc, "Expected `func` keyword, but found %s", token.Text)
 			return
 		}
 	}
 
 	if token.Typ == lexer.TokenKeyword && token.Value.(lexer.KeywordType) != lexer.KeywordFunc {
-		err = lexer.FormatErrMsg(&token.Loc, "Expected `func` keyword, but found %s", token.Text)
+		err = logger.FormatErrMsg(&token.Loc, "Expected `func` keyword, but found %s", token.Text)
 		return
 	}
 
 	name_token = *th.GetNextToken()
 
 	if name_token.Typ != lexer.TokenWord {
-		err = lexer.FormatErrMsg(&token.Loc, "Expected `%s` name to be a word, but got `%s`", token.Text, name_token.Text)
+		err = logger.FormatErrMsg(&token.Loc, "Expected `%s` name to be a word, but got `%s`", token.Text, name_token.Text)
 		return
 	}
 
 	defined_token, exists := ctx.GlobalScope().Names[name_token.Text]
 	if exists {
-		msg := lexer.FormatNoneMsg(&defined_token.Loc, "Previously defined here")
-		err = lexer.FormatErrMsg(&name_token.Loc, "Redefinition of global name `%s` in function definition (%s)", name_token.Text, msg)
+		msg := logger.FormatNoneMsg(&defined_token.Loc, "Previously defined here")
+		err = logger.FormatErrMsg(&name_token.Loc, "Redefinition of global name `%s` in function definition (%s)", name_token.Text, msg)
 		return
 	}
 
@@ -329,21 +333,21 @@ func (c *Compiler) compileFuncDef(token *lexer.Token, th *lexer.TokenHolder, ctx
 	do_token := *th.GetNextToken()
 
 	if do_token.Typ != lexer.TokenKeyword {
-		err = lexer.FormatErrMsg(&token.Loc, "Expected `do` to start the function name, but got `%s`", token.Text)
+		err = logger.FormatErrMsg(&token.Loc, "Expected `do` to start the function name, but got `%s`", token.Text)
 		return
 	}
 	if do_token.Value.(lexer.KeywordType) != lexer.KeywordDo {
-		err = lexer.FormatErrMsg(&token.Loc, "Expected keyword `do` to start the function name, but got `%s`", token.Text)
+		err = logger.FormatErrMsg(&token.Loc, "Expected keyword `do` to start the function name, but got `%s`", token.Text)
 		return
 	}
 
 	return
 }
 
-func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, ctx *Context, scope_name string) error {
+func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext, scope_name string) error {
 
 	if scope_name != GlobalScopeName {
-		return lexer.FormatErrMsg(&token.Loc, "Cannot define functions inside a function %s", scope_name)
+		return logger.FormatErrMsg(&token.Loc, "Cannot define functions inside a function %s", scope_name)
 	}
 	func_token, func_name, err := c.compileFuncDef(token, th, ctx)
 	if err != nil {
@@ -370,7 +374,7 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, ctx *C
 	return nil
 }
 
-func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, ctx *Context, scope *Scope) (value types.IntType, err error) {
+func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext, scope *Scope) (value types.IntType, err error) {
 	const_stack := &utils.Stack{}
 	for !th.Empty() {
 		token := th.GetNextToken()
@@ -389,7 +393,7 @@ func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, ctx *Con
 				case lexer.IntrinsicDiv:
 					b := const_stack.Pop().(types.IntType)
 					if b == 0 {
-						err = lexer.FormatErrMsg(&token.Loc, "Division by zero")
+						err = logger.FormatErrMsg(&token.Loc, "Division by zero")
 						return
 					}
 					a := const_stack.Pop().(types.IntType)
@@ -397,7 +401,7 @@ func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, ctx *Con
 				case lexer.IntrinsicMod:
 					b := const_stack.Pop().(types.IntType)
 					if b == 0 {
-						err = lexer.FormatErrMsg(&token.Loc, "Division by zero")
+						err = logger.FormatErrMsg(&token.Loc, "Division by zero")
 						return
 					}
 					a := const_stack.Pop().(types.IntType)
@@ -405,7 +409,7 @@ func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, ctx *Con
 				case lexer.IntrinsicShl:
 					b := const_stack.Pop().(types.IntType)
 					if b < 0 {
-						err = lexer.FormatErrMsg(&token.Loc, "Negative shift amount in `<<`: %d", b)
+						err = logger.FormatErrMsg(&token.Loc, "Negative shift amount in `<<`: %d", b)
 						return
 					}
 					a := const_stack.Pop().(types.IntType)
@@ -413,7 +417,7 @@ func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, ctx *Con
 				case lexer.IntrinsicShr:
 					b := const_stack.Pop().(types.IntType)
 					if b < 0 {
-						err = lexer.FormatErrMsg(&token.Loc, "Negative shift amount in `>>`: %d", b)
+						err = logger.FormatErrMsg(&token.Loc, "Negative shift amount in `>>`: %d", b)
 						return
 					}
 					a := const_stack.Pop().(types.IntType)
@@ -426,7 +430,7 @@ func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, ctx *Con
 					const_stack.Push(ctx.Offset)
 					ctx.Offset = 0
 				default:
-					err = lexer.FormatErrMsg(
+					err = logger.FormatErrMsg(
 						&token.Loc,
 						"Unexpected intrinsic in const-block compile-time "+
 							"evaluation: `%s`. Supported: [+, -, *, /, %%, >>, <<, offset, reset]", token.Text,
@@ -442,16 +446,16 @@ func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, ctx *Con
 				continue
 			}
 
-			err = lexer.FormatErrMsg(&token.Loc, "Unsupported word in compile-time const-block evaluation: `%s`", token.Text)
+			err = logger.FormatErrMsg(&token.Loc, "Unsupported word in compile-time const-block evaluation: `%s`", token.Text)
 			return
 		default:
-			err = lexer.FormatErrMsg(&token.Loc, "Unsupported token in compile-time const-block evaluation: `%s`", token.Text)
+			err = logger.FormatErrMsg(&token.Loc, "Unsupported token in compile-time const-block evaluation: `%s`", token.Text)
 			return
 		}
 	}
 
 	if const_stack.Size() > 1 {
-		err = lexer.FormatErrMsg(&token.Loc, "Unhandled data in compile-time const-block evaluation stack")
+		err = logger.FormatErrMsg(&token.Loc, "Unhandled data in compile-time const-block evaluation stack")
 		return
 	}
 
@@ -459,11 +463,11 @@ func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, ctx *Con
 	return
 }
 
-func (c *Compiler) compile(th *lexer.TokenHolder, ctx *Context, scope_name string) error {
+func (c *Compiler) compile(th *lexer.TokenHolder, ctx *CompileTimeContext, scope_name string) error {
 
 	scope, exists := ctx.Scopes[scope_name]
 	if !exists {
-		return lexer.FormatErrMsg(nil, "No such scope: `%s`", scope_name)
+		return logger.FormatErrMsg(nil, "No such scope: `%s`", scope_name)
 	}
 
 	var token *lexer.Token
@@ -539,7 +543,7 @@ func (c *Compiler) compile(th *lexer.TokenHolder, ctx *Context, scope_name strin
 				continue
 			}
 
-			return lexer.FormatErrMsg(&token.Loc, "Unknown word: `%s`", token.Text)
+			return logger.FormatErrMsg(&token.Loc, "Unknown word: `%s`", token.Text)
 
 		case lexer.TokenKeyword:
 			kw_type := token.Value.(lexer.KeywordType)
@@ -585,7 +589,7 @@ func (c *Compiler) compile(th *lexer.TokenHolder, ctx *Context, scope_name strin
 					return err
 				}
 				if alloc_size < 0 {
-					return lexer.FormatErrMsg(&tok.Loc, "Negative size for `alloc` block: %d", alloc_size)
+					return logger.FormatErrMsg(&tok.Loc, "Negative size for `alloc` block: %d", alloc_size)
 				}
 				scope.Allocs[tok.Text] = Allocation{
 					Offset: scope.MemSize, Size: alloc_size,
@@ -598,35 +602,35 @@ func (c *Compiler) compile(th *lexer.TokenHolder, ctx *Context, scope_name strin
 				}
 
 			case lexer.KeywordInclude:
-				return lexer.FormatErrMsg(&token.Loc, "Include keyword should not appear in here, probably there is a bug in a lexer")
+				return logger.FormatErrMsg(&token.Loc, "Include keyword should not appear in here, probably there is a bug in a lexer")
 			default:
-				return lexer.FormatErrMsg(&token.Loc, "Unhandled KewordType handling: `%s`", token.Text)
+				return logger.FormatErrMsg(&token.Loc, "Unhandled KewordType handling: `%s`", token.Text)
 			}
 		default:
-			return lexer.FormatErrMsg(&token.Loc, "Unhandled token: `%s`\n", token.Text)
+			return logger.FormatErrMsg(&token.Loc, "Unhandled token: `%s`\n", token.Text)
 		}
 	}
 	return nil
 }
 
-func (c *Compiler) CompileTokens(th *lexer.TokenHolder, ctx *Context) error {
+func (c *Compiler) CompileTokens(th *lexer.TokenHolder, ctx *CompileTimeContext) error {
 	th.Reset()
 	if err := c.compile(th, ctx, GlobalScopeName); err != nil {
 		return err
 	}
 
 	if !th.Empty() {
-		return lexer.FormatErrMsg(nil, "[ERROR] No all tokens were processed")
+		return logger.FormatErrMsg(nil, "[ERROR] No all tokens were processed")
 	}
 
 	if len(c.Blocks.Data) > 0 {
 		top := c.Blocks.Data[len(c.Blocks.Data)-1].(*Block)
-		return lexer.FormatErrMsg(&top.Tok.Loc, "Unclosed `%s`-block", top.Tok.Text)
+		return logger.FormatErrMsg(&top.Tok.Loc, "Unclosed `%s`-block", top.Tok.Text)
 	}
 
 	_, exists := ctx.Funcs["main"]
 	if !exists {
-		return lexer.FormatErrMsg(nil, "No entry point found (function `main` was not defined)")
+		return logger.FormatErrMsg(nil, "No entry point found (function `main` was not defined)")
 	}
 
 	return nil

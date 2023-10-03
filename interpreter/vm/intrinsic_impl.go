@@ -1,7 +1,5 @@
 package vm
 
-// TODO: rename this module
-
 import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/types"

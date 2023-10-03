@@ -2,6 +2,7 @@ package vm
 
 import (
 	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
 	"fmt"
 )
@@ -85,7 +86,7 @@ func (op *Op) Str(addr int64) (s string) {
 		res, _ := op.Operand.(types.IntType)
 		operand = fmt.Sprint(res)
 	default:
-		lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation: `%s`", OpName[op.Typ]))
+		logger.Crash(&op.OpToken.Loc, "Unhandled operation: `%s`", OpName[op.Typ])
 	}
 
 	s = fmt.Sprintf("%4d: %s %v\t\t(debug: %s)", addr, OpName[op.Typ], operand, op.DebugInfo.(string))

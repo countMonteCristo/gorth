@@ -55,8 +55,6 @@ const (
 	IntrinsicReset
 
 	IntrinsicSyscall
-
-	IntrinsicCount = iota
 )
 
 var IntrinsicName = map[IntrinsicType]string{
