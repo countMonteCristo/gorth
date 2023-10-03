@@ -165,6 +165,8 @@ func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []Op, ct
 			max_column_width = len(path)
 		}
 
+		// fmt.Println(addr)
+
 		path_column = append(path_column, path)
 		markers_column = append(markers_column, fmt.Sprintf("%s%s", bp, marker))
 		cmd_column = append(cmd_column, op.Str(addr))

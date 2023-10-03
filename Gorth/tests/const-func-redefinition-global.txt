@@ -2,6 +2,6 @@
   "argv": [],
   "stdin": "",
   "stdout": "",
-  "stderr": "interpreter/vm/vm.go:51 [INFO] Redefinition of function `f`:\n  Gorth/tests/const-func-redefinition-global.gorth:4:9\ninterpreter/vm/vm.go:52 [INFO] Previously defined here:\n  Gorth/tests/const-func-redefinition-global.gorth:1:6\nexit status 1\n",
+  "stderr": "[ERROR] Redefinition of function `f` (Previously defined here: Gorth/tests/const-func-redefinition-global.gorth:1:6):\n  Gorth/tests/const-func-redefinition-global.gorth:4:9",
   "exit_code": 1
 }

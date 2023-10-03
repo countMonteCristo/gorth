@@ -17,6 +17,7 @@ const (
 	KeywordConst
 	KeywordAlloc
 
+	KeywordInline
 	KeywordFunc
 
 	KeywordInclude
@@ -37,7 +38,8 @@ var KeywordName = map[KeywordType]string{
 	KeywordConst: "const",
 	KeywordAlloc: "alloc",
 
-	KeywordFunc: "func",
+	KeywordInline: "inline",
+	KeywordFunc:   "func",
 
 	KeywordInclude: "include",
 }

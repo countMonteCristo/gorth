@@ -1,7 +1,7 @@
 {
   "argv": [],
   "stdin": "",
-  "stdout": "[ERROR] No entry point found (function `main` was not defined at Gorth/tests/no-main.gorth)\n",
-  "stderr": "exit status 1\n",
+  "stdout": "",
+  "stderr": "[ERROR] No entry point found (function `main` was not defined)",
   "exit_code": 1
 }

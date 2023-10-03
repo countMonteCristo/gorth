@@ -1,7 +1,7 @@
 {
   "argv": [],
   "stdin": "",
-  "stdout": "20",
-  "stderr": "interpreter/vm/vm.go:56 [INFO] Redefinition of word `x`:\n  Gorth/tests/local-consts-hide-globals.gorth:4:9\ninterpreter/vm/vm.go:57 [INFO] Previously defined here:\n  Gorth/tests/local-consts-hide-globals.gorth:1:7\n",
-  "exit_code": 0
+  "stdout": "",
+  "stderr": "[ERROR] Redefinition of global name `x` (Previously defined here: Gorth/tests/local-consts-hide-globals.gorth:1:7):\n  Gorth/tests/local-consts-hide-globals.gorth:4:9",
+  "exit_code": 1
 }

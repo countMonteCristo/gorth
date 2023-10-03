@@ -2,6 +2,6 @@
   "argv": [],
   "stdin": "",
   "stdout": "",
-  "stderr": "interpreter/vm/vm.go:169 [INFO] Redefinition of word `f` in function definition:\n  Gorth/tests/func-alloc-redefinitnion.gorth:3:6\ninterpreter/vm/vm.go:170 [INFO] Previously defined here:\n  Gorth/tests/func-alloc-redefinitnion.gorth:1:7\nexit status 1\n",
+  "stderr": "[ERROR] Redefinition of global name `f` in function definition (Previously defined here: Gorth/tests/func-alloc-redefinitnion.gorth:1:7):\n  Gorth/tests/func-alloc-redefinitnion.gorth:3:6",
   "exit_code": 1
 }

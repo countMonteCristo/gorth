@@ -1,7 +1,7 @@
 {
   "argv": [],
   "stdin": "",
-  "stdout": "false\nfalse\ntrue\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\ntrue\ntrue\nfalse\ntrue\nfalse\ntrue\nfalse\nfalse\n",
+  "stdout": "0\n0\n1\n1\n1\n0\n1\n0\n1\n0\n1\n1\n0\n1\n0\n1\n0\n0\n",
   "stderr": "",
   "exit_code": 0
 }

@@ -39,7 +39,7 @@ func NewScope(funcName string) *Scope {
 
 type Context struct {
 	Memory ByteMemory
-	Funcs  map[string]types.IntType // name to absolute intruction address
+	Funcs  map[string]Function
 
 	Scopes map[string]*Scope // local function context
 	Offset types.IntType
@@ -48,13 +48,33 @@ type Context struct {
 func InitContext(mem_size types.IntType) *Context {
 	ctx := &Context{
 		Memory: InitMemory(mem_size),
-		Funcs:  make(map[string]types.IntType),
+		Funcs:  make(map[string]Function),
 		Scopes: make(map[string]*Scope),
 		Offset: 0,
 	}
 	ctx.Scopes[GlobalScopeName] = NewScope(GlobalScopeName) // global context
 
 	return ctx
+}
+
+func (ctx *Context) PreprocessStringLiterals(tokens *[]lexer.Token) {
+	address := types.IntType(1)
+	for _, token := range *tokens {
+		if token.Typ == lexer.TokenString {
+			literal := token.Value.(string)
+			_, exists := ctx.Memory.StringsMap[literal]
+			if !exists {
+				ctx.Memory.StringsMap[literal] = address
+				address += types.IntType(len(literal) + 1) // save literals as null-terminated strings
+			}
+		}
+	}
+
+	ctx.Memory.StringsRegion = MemoryRegion{
+		Start: 1,
+		Size:  address - 1,
+		Ptr:   address,
+	}
 }
 
 func (c *Context) GlobalScope() *Scope {
@@ -172,9 +192,9 @@ func (c *Context) DebugAllocNames(names []string, scope_name string) int {
 func (c *Context) DebugFuncNames(names []string) int {
 	n_found := 0
 	for _, name := range names {
-		addr, exists := c.Funcs[name]
+		function, exists := c.Funcs[name]
 		if exists {
-			fmt.Printf("addr=%d %s\n", addr, name)
+			fmt.Printf("addr=%d %s\n", function.Addr, name)
 			n_found++
 		}
 	}

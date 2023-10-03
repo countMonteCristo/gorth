@@ -2,6 +2,6 @@
   "argv": [],
   "stdin": "",
   "stdout": "",
-  "stderr": "interpreter/vm/vm.go:42 [INFO] Redefinition of word `main`:\n  Gorth/tests/alloc-func-redefinition.gorth:2:9\ninterpreter/vm/vm.go:43 [INFO] Previously defined here:\n  Gorth/tests/alloc-func-redefinition.gorth:1:6\nexit status 1\n",
+  "stderr": "[ERROR] Redefinition of name `main` (Previously defined here: Gorth/tests/alloc-func-redefinition.gorth:1:6):\n  Gorth/tests/alloc-func-redefinition.gorth:2:9",
   "exit_code": 1
 }
