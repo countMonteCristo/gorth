@@ -16,6 +16,11 @@ type Interpreter struct {
 	imp  lexer.Importer
 }
 
+func show_err_and_exit(err error) {
+	fmt.Fprint(os.Stderr, err.Error())
+	utils.Exit(1)
+}
+
 func InitInterpreter(arguments []string, pkg_dir string, debug bool) *Interpreter {
 	i := &Interpreter{
 		lx:   lexer.Lexer{},
@@ -31,13 +36,15 @@ func InitInterpreter(arguments []string, pkg_dir string, debug bool) *Interprete
 }
 
 func (i *Interpreter) Prepare(fn string) {
-	tokens := i.lx.ProcessFile(fn, []string{}, &i.imp)
-
-	i.vm.PreprocessTokens(&tokens)
-	err := i.c.CompileTokens(&tokens, &i.vm.Ctx)
+	th, err := i.lx.ProcessFile(fn, []string{}, &i.imp)
 	if err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
-		utils.Exit(1)
+		show_err_and_exit(err)
+	}
+
+	i.vm.PreprocessTokens(th)
+	err = i.c.CompileTokens(th, &i.vm.Ctx)
+	if err != nil {
+		show_err_and_exit(err)
 	}
 }
 

@@ -2,6 +2,6 @@
   "argv": [],
   "stdin": "",
   "stdout": "",
-  "stderr": "interpreter/lexer/lexer.go:225 [ERROR] Expected import file path to be a TokenString, but got TokenChar:\n  Gorth/tests/include-from-non-string.gorth:1:1\n",
+  "stderr": "[ERROR] Expected import file path to be a TokenString, but got TokenChar:\n  Gorth/tests/include-from-non-string.gorth:1:1",
   "exit_code": 1
 }

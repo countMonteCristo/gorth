@@ -2,6 +2,6 @@
   "argv": [],
   "stdin": "",
   "stdout": "",
-  "stderr": "interpreter/lexer/lexer.go:240 [ERROR] Circular imports detected when trying to include include-self.gorth:\n  /home/artem/work/study/Go/Gorth/Gorth/tests/include-self.gorth:1:9\n",
+  "stderr": "[ERROR] Circular imports detected when trying to include include-self.gorth:\n  /home/artem/work/study/Go/Gorth/Gorth/tests/include-self.gorth:1:9",
   "exit_code": 1
 }

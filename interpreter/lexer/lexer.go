@@ -4,7 +4,6 @@ import (
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -17,12 +16,47 @@ type Lexer struct {
 	Col   int
 }
 
-func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool) {
+type TokenHolder struct {
+	tokens []Token
+	idx    int
+}
+
+func NewTokenHolder() *TokenHolder {
+	return &TokenHolder{tokens: make([]Token, 0), idx: 0}
+}
+
+func (th *TokenHolder) AppendTokensFrom(oth *TokenHolder) {
+	th.tokens = append(th.tokens, oth.tokens...)
+}
+func (th *TokenHolder) AppendToken(token Token) {
+	th.tokens = append(th.tokens, token)
+}
+
+func (th *TokenHolder) GetNextToken() (token *Token) {
+	token = &(th.tokens[th.idx])
+	th.idx++
+	return
+}
+
+func (th *TokenHolder) NextToken() *Token {
+	return &(th.tokens[th.idx])
+}
+
+func (th *TokenHolder) Empty() bool {
+	return th.idx >= len(th.tokens)
+}
+
+func (th *TokenHolder) Reset() {
+	th.idx = 0
+}
+
+func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool, err error) {
 	escaped = false
 	if data[pos] == '\\' {
 		escaped = true
 		if pos+1 == len(data) {
-			CompilerFatal(&lx.Loc, "Unexpected end of escaped char literal")
+			err = FormatErrMsg(&lx.Loc, "Unexpected end of escaped char literal")
+			return
 		}
 		switch data[pos+1] {
 		case 'n':
@@ -34,7 +68,8 @@ func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool) {
 		case '"':
 			b = '"'
 		default:
-			CompilerFatal(&lx.Loc, fmt.Sprintf("Unknown escape character: `%s`", data[pos:pos+2]))
+			err = FormatErrMsg(&lx.Loc, "Unknown escape character: `%s`", data[pos:pos+2])
+			return
 		}
 	} else {
 		b = data[pos]
@@ -42,7 +77,7 @@ func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool) {
 	return
 }
 
-func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bool) {
+func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bool, err error) {
 	empty = false
 	for pos < len(data) {
 		if strings.IndexByte(" \t", data[pos]) != -1 {
@@ -67,7 +102,11 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 		chars = append(chars, '"')
 		closed := false
 		for pos < len(data) {
-			b, escaped := lx.ChopChar(data, pos)
+			b, escaped, terr := lx.ChopChar(data, pos)
+			if terr != nil {
+				err = terr
+				return
+			}
 			pos++
 			if escaped {
 				pos++
@@ -79,21 +118,30 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 			}
 		}
 		if !closed {
-			CompilerFatal(&lx.Loc, fmt.Sprintf("Expecting to find closing \" for string literal, but got `%s`", string(chars[len(chars)-1])))
+			err = FormatErrMsg(&lx.Loc, "Expecting to find closing \" for string literal, but got `%s`", string(chars[len(chars)-1]))
+			if err != nil {
+				return
+			}
 		}
 		word = string(chars)
 	case '\'':
 		pos++
-		b, escaped := lx.ChopChar(data, pos)
+		b, escaped, terr := lx.ChopChar(data, pos)
+		if terr != nil {
+			err = terr
+			return
+		}
 		pos++
 		if escaped {
 			pos++
 		}
 		if pos == len(data) {
-			CompilerFatal(&lx.Loc, "Unexpecting end of char literal")
+			err = FormatErrMsg(&lx.Loc, "Unexpecting end of char literal")
+			return
 		}
 		if data[pos] != '\'' {
-			CompilerFatal(&lx.Loc, fmt.Sprintf("Expecting to find closing ' for char literal, but got `%s`", string(data[pos])))
+			err = FormatErrMsg(&lx.Loc, "Expecting to find closing ' for char literal, but got `%s`", string(data[pos]))
+			return
 		}
 		word = "'" + string(b) + "'"
 		pos++
@@ -114,7 +162,7 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 	return
 }
 
-func (lx *Lexer) next_token() (token Token, end bool) {
+func (lx *Lexer) next_token() (token Token, end bool, err error) {
 	end = false
 	if lx.Row >= len(lx.Lines) {
 		end = true
@@ -128,11 +176,14 @@ func (lx *Lexer) next_token() (token Token, end bool) {
 			return
 		}
 	}
-	// assert(TokenCount == 6, "Unhandled Token in lex()")
 
 	for lx.Row < len(lx.Lines) {
 		// fmt.Printf("Try to chop word from line=%d col=%d\n", lx.Row+1, lx.Col+1)
-		word, empty := lx.ChopWord(lx.Lines[lx.Row], lx.Row, lx.Col)
+		word, empty, terr := lx.ChopWord(lx.Lines[lx.Row], lx.Row, lx.Col)
+		if terr != nil {
+			err = terr
+			return
+		}
 
 		// fmt.Printf("Chopped word: `%s` empty=%t\n", word, empty)
 
@@ -182,8 +233,8 @@ func (lx *Lexer) next_token() (token Token, end bool) {
 		}
 
 		// check if word is int literal
-		number, err := strconv.ParseInt(word, 10, 64)
-		if err == nil {
+		number, terr := strconv.ParseInt(word, 10, 64)
+		if terr == nil {
 			// fmt.Printf("`%s` - is an int\n", word)
 			token.Typ = TokenInt
 			token.Value = number
@@ -201,15 +252,22 @@ func (lx *Lexer) next_token() (token Token, end bool) {
 	return
 }
 
-func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (tokens []Token) {
+func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (th *TokenHolder, err error) {
 	lx.Fn = fn
 	lx.Row = 0
 	lx.Col = 0
 
 	lx.Lines = utils.ReadFile(lx.Fn)
 
+	th = NewTokenHolder()
+
 	for {
-		token, end := lx.next_token()
+		token, end, terr := lx.next_token()
+		if terr != nil {
+			err = terr
+			return
+		}
+
 		if end {
 			break
 		}
@@ -217,31 +275,35 @@ func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (to
 		if token.Typ == TokenKeyword {
 			kw_type := token.Value.(KeywordType)
 			if kw_type == KeywordInclude {
-				next, end := lx.next_token()
+				next, end, terr := lx.next_token()
+				if terr != nil {
+					err = terr
+					return
+				}
+
 				if end {
-					CompilerFatal(&token.Loc, "Expected import file path to be a string, but got nothing")
+					err = FormatErrMsg(&token.Loc, "Expected import file path to be a string, but got nothing")
+					return
 				}
 				if next.Typ != TokenString {
-					CompilerFatal(
-						&token.Loc, fmt.Sprintf(
-							"Expected import file path to be a %s, but got %s",
-							TokenTypeName[TokenString], TokenTypeName[next.Typ],
-					))
+					err = FormatErrMsg(
+						&token.Loc, "Expected import file path to be a %s, but got %s",
+						TokenTypeName[TokenString], TokenTypeName[next.Typ],
+					)
+					return
 				}
 
 				imported_fn := next.Value.(string)
 				full_imported_fn, exists := imp.Find(imported_fn)
 				if !exists {
-					CompilerFatal(&next.Loc, fmt.Sprintf("Can not import file %s: not in Paths", full_imported_fn))
+					err = FormatErrMsg(&next.Loc, "Can not import file %s: not in Paths", full_imported_fn)
+					return
 				}
 
 				for _, prev_fn := range import_path {
 					if prev_fn == full_imported_fn {
-						CompilerFatal(
-							&next.Loc, fmt.Sprintf(
-								"Circular imports detected when trying to include %s", imported_fn,
-							),
-						)
+						err = FormatErrMsg(&next.Loc, "Circular imports detected when trying to include %s", imported_fn)
+						return
 					}
 				}
 
@@ -254,14 +316,18 @@ func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (to
 				new_path := append([]string{}, import_path...)
 				new_path = append(new_path, fn)
 				new_lexer := Lexer{}
-				included_tokens := new_lexer.ProcessFile(full_imported_fn, new_path, imp)
+				included_tokens, ierr := new_lexer.ProcessFile(full_imported_fn, new_path, imp)
+				if ierr != nil {
+					err = ierr
+					return
+				}
 
-				tokens = append(tokens, included_tokens...)
+				th.AppendTokensFrom(included_tokens)
 				continue
 			}
 		}
 
-		tokens = append(tokens, token)
+		th.AppendToken(token)
 	}
 
 	imp.Included[fn] = true

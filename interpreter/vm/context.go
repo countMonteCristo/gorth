@@ -57,9 +57,12 @@ func InitContext(mem_size types.IntType) *Context {
 	return ctx
 }
 
-func (ctx *Context) PreprocessStringLiterals(tokens *[]lexer.Token) {
+func (ctx *Context) PreprocessStringLiterals(th *lexer.TokenHolder) {
 	address := types.IntType(1)
-	for _, token := range *tokens {
+
+	th.Reset()
+	for !th.Empty() {
+		token := th.GetNextToken()
 		if token.Typ == lexer.TokenString {
 			literal := token.Value.(string)
 			_, exists := ctx.Memory.StringsMap[literal]

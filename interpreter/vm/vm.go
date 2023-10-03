@@ -25,8 +25,8 @@ func InitVM() *VM {
 	return &vm
 }
 
-func (vm *VM) PreprocessTokens(tokens *[]lexer.Token) {
-	vm.Ctx.PreprocessStringLiterals(tokens)
+func (vm *VM) PreprocessTokens(th *lexer.TokenHolder) {
+	vm.Ctx.PreprocessStringLiterals(th)
 }
 
 type ExitCodeType struct {
@@ -55,10 +55,6 @@ func NewScriptContext(len_ops types.IntType, args []string, debug bool) *ScriptC
 	sc.ScopeStack.Push(GlobalScopeName)
 	return sc
 }
-
-// func (sc *ScriptContext) CurrentScopeName() string {
-// 	return sc.FuncStack.Top().(string)
-// }
 
 func (sc *ScriptContext) GetExitCode(ops []Op) ExitCodeType {
 	switch {
