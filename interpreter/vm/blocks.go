@@ -23,7 +23,5 @@ func NewBlock(addr types.IntType, token *lexer.Token) *Block {
 
 type Function struct {
 	Name    string
-	Ops     []Op
 	Addr    types.IntType
-	Inlined bool
 }

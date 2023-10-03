@@ -281,22 +281,17 @@ func (c *Compiler) compileNamedBlock(token *lexer.Token, tokens *[]lexer.Token, 
 	return
 }
 
-func (c *Compiler) compileFuncDef(token *lexer.Token, tokens *[]lexer.Token, ctx *Context) (name_token lexer.Token, func_name string, inlined bool, err error) {
+func (c *Compiler) compileFuncDef(token *lexer.Token, tokens *[]lexer.Token, ctx *Context) (name_token lexer.Token, func_name string, err error) {
 	if len(*tokens) == 0 {
 		err = lexer.FormatErrMsg(&token.Loc, "Expected `%s` name, but got nothing", token.Text)
 		return
 	}
 
-	inlined = false
 	if token.Typ == lexer.TokenKeyword {
 		kw_type := token.Value.(lexer.KeywordType)
-		if kw_type != lexer.KeywordInline && kw_type != lexer.KeywordFunc {
-			err = lexer.FormatErrMsg(&token.Loc, "Expected `inline` or `func` keyword, but found %s", token.Text)
+		if kw_type != lexer.KeywordFunc {
+			err = lexer.FormatErrMsg(&token.Loc, "Expected `func` keyword, but found %s", token.Text)
 			return
-		}
-		if kw_type == lexer.KeywordInline {
-			inlined = true
-			token, *tokens = &(*tokens)[0], (*tokens)[1:]
 		}
 	}
 
@@ -340,7 +335,7 @@ func (c *Compiler) compileFunc(token *lexer.Token, tokens *[]lexer.Token, ctx *C
 	if scope_name != GlobalScopeName {
 		return lexer.FormatErrMsg(&token.Loc, "Cannot define functions inside a function %s", scope_name)
 	}
-	func_token, func_name, _, err := c.compileFuncDef(token, tokens, ctx)
+	func_token, func_name, err := c.compileFuncDef(token, tokens, ctx)
 	if err != nil {
 		return err
 	}
@@ -514,12 +509,8 @@ func (c *Compiler) compile(tokens *[]lexer.Token, ctx *Context, scope_name strin
 
 			function, exists := ctx.Funcs[name]
 			if exists {
-				if !function.Inlined {
-					if err := c.compileFuncCall(&token, &function); err != nil {
-						return err
-					}
-				} else {
-					return lexer.FormatErrMsg(&token.Loc, "Calling inline function is not implemented yet")
+				if err := c.compileFuncCall(&token, &function); err != nil {
+					return err
 				}
 				continue
 			}
@@ -577,7 +568,7 @@ func (c *Compiler) compile(tokens *[]lexer.Token, ctx *Context, scope_name strin
 				}
 				scope.MemSize += alloc_size
 
-			case lexer.KeywordInline, lexer.KeywordFunc:
+			case lexer.KeywordFunc:
 				if err := c.compileFunc(&token, tokens, ctx, scope_name); err != nil {
 					return err
 				}
