@@ -29,7 +29,6 @@ func (vm *VM) PreprocessTokens(tokens *[]lexer.Token) {
 	vm.Ctx.PreprocessStringLiterals(tokens)
 }
 
-
 type ExitCodeType struct {
 	Code types.IntType
 	Msg  string
@@ -38,27 +37,28 @@ type ExitCodeType struct {
 type ScriptContext struct {
 	Stack       utils.Stack
 	ReturnStack utils.Stack
-	FuncStack   utils.Stack
+	ScopeStack  utils.Stack
 	Addr        types.IntType
 	Args        []string
 	OpsCount    types.IntType
 	ExitCode    ExitCodeType
+	debug       bool
 }
 
-func NewScriptContext(len_ops types.IntType, args []string) *ScriptContext {
+func NewScriptContext(len_ops types.IntType, args []string, debug bool) *ScriptContext {
 	sc := &ScriptContext{
 		Stack: utils.Stack{}, ReturnStack: utils.Stack{},
-		Addr: 0, Args: args, OpsCount: len_ops, FuncStack: utils.Stack{},
-		ExitCode: ExitCodeType{Code: 0},
+		Addr: 0, Args: args, OpsCount: len_ops, ScopeStack: utils.Stack{},
+		ExitCode: ExitCodeType{Code: 0}, debug: debug,
 	}
 	sc.ReturnStack.Push(len_ops)
-	sc.FuncStack.Push(GlobalScopeName)
+	sc.ScopeStack.Push(GlobalScopeName)
 	return sc
 }
 
-func (sc *ScriptContext) CurrentScopeName() string {
-	return sc.FuncStack.Top().(string)
-}
+// func (sc *ScriptContext) CurrentScopeName() string {
+// 	return sc.FuncStack.Top().(string)
+// }
 
 func (sc *ScriptContext) GetExitCode(ops []Op) ExitCodeType {
 	switch {
@@ -237,28 +237,26 @@ func (vm *VM) Step(ops []Op, sc *ScriptContext) {
 		sc.ReturnStack.Push(sc.Addr)
 		sc.Addr += op.Operand.(types.IntType)
 	case OpFuncBegin:
+		vm.Ctx.Memory.OperativeMemRegion.Ptr += op.Operand.(types.IntType)
 		sc.Addr++
-		sc.FuncStack.Push(op.Operand.(string))
-		vm.Ctx.Memory.OperativeMemRegion.Ptr += vm.Ctx.Scopes[sc.CurrentScopeName()].MemSize
+		if sc.debug {
+			sc.ScopeStack.Push(op.DebugInfo.(string))
+		}
 	case OpFuncEnd:
 		if sc.ReturnStack.Size() == 0 {
 			lexer.RuntimeFatal(&op.OpToken.Loc, "Return stack is empty")
 		}
 		sc.Addr = sc.ReturnStack.Pop().(types.IntType) + 1
-		vm.Ctx.Memory.OperativeMemRegion.Ptr -= vm.Ctx.Scopes[sc.CurrentScopeName()].MemSize
-		sc.FuncStack.Pop()
-	case OpPushAlloc:
-		alloc_name := op.Operand.(string)
-		alloc, scope := vm.Ctx.GetAlloc(alloc_name, sc.CurrentScopeName())
-		if scope == ScopeUnknown {
-			lexer.RuntimeFatal(&op.OpToken.Loc, fmt.Sprintf("Unknown alloc at runtime: `%s`", alloc_name))
+		vm.Ctx.Memory.OperativeMemRegion.Ptr -= op.Operand.(types.IntType)
+		if sc.debug {
+			sc.ScopeStack.Pop()
 		}
-		addr := alloc.Offset
-		if scope == ScopeLocal {
-			addr += vm.Ctx.Memory.OperativeMemRegion.Ptr - vm.Ctx.Scopes[sc.CurrentScopeName()].MemSize
-		} else {
-			addr += vm.Ctx.Memory.OperativeMemRegion.Start
-		}
+	case OpPushLocalAlloc:
+		addr := vm.Ctx.Memory.OperativeMemRegion.Ptr - op.Operand.(types.IntType)
+		sc.Stack.Push(addr)
+		sc.Addr++
+	case OpPushGlobalAlloc:
+		addr := vm.Ctx.Memory.OperativeMemRegion.Start + op.Operand.(types.IntType)
 		sc.Stack.Push(addr)
 		sc.Addr++
 	default:
@@ -266,11 +264,11 @@ func (vm *VM) Step(ops []Op, sc *ScriptContext) {
 	}
 }
 
-func (vm *VM) Prepare(ops []Op, args []string) *ScriptContext {
+func (vm *VM) Prepare(ops []Op, args []string, debug bool) *ScriptContext {
 	vm.Ctx.Memory.Prepare(args)
 
 	len_ops := types.IntType(len(ops))
-	sc := NewScriptContext(len_ops, args)
+	sc := NewScriptContext(len_ops, args, debug)
 	sc.Addr = vm.Ctx.Funcs["main"].Addr
 
 	vm.Ctx.Memory.OperativeMemRegion.Ptr = vm.Ctx.Memory.OperativeMemRegion.Start + vm.Ctx.GlobalScope().MemSize
@@ -279,7 +277,7 @@ func (vm *VM) Prepare(ops []Op, args []string) *ScriptContext {
 
 func (vm *VM) Interprete(ops []Op, args []string) ExitCodeType {
 
-	sc := vm.Prepare(ops, args)
+	sc := vm.Prepare(ops, args, false)
 	for sc.Addr < sc.OpsCount {
 		vm.Step(ops, sc)
 	}
@@ -287,7 +285,7 @@ func (vm *VM) Interprete(ops []Op, args []string) ExitCodeType {
 }
 
 func (vm *VM) InterpreteDebug(ops []Op, args []string, di *DebugInterface) {
-	sc := vm.Prepare(ops, args)
+	sc := vm.Prepare(ops, args, true)
 
 loop:
 	for {
@@ -316,8 +314,9 @@ loop:
 			di.SendOK()
 		case DebugCmdPrint:
 			names := cmd.Args.([]string)
-			n_found := vm.Ctx.DebugConstNames(names, sc.CurrentScopeName()) +
-				vm.Ctx.DebugAllocNames(names, sc.CurrentScopeName()) +
+			scope_name := sc.ScopeStack.Top().(string)
+			n_found := vm.Ctx.DebugConstNames(names, scope_name) +
+				vm.Ctx.DebugAllocNames(names, scope_name) +
 				vm.Ctx.DebugFuncNames(names)
 			if n_found > 0 {
 				di.SendOK()
@@ -493,7 +492,7 @@ loop:
 			if sc.Addr >= sc.OpsCount {
 				di.SendFailed("Can not print environment: script finished")
 			} else {
-				current_scope_name := sc.CurrentScopeName()
+				current_scope_name := sc.ScopeStack.Top().(string)
 
 				if typ == "all" || typ == "local" {
 					fmt.Printf("Scope: <%s>\n", current_scope_name)

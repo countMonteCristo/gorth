@@ -9,78 +9,88 @@ import (
 type Compiler struct {
 	Blocks utils.Stack
 	Ops    []Op
+	debug  bool
 }
 
-func NewCompiler() *Compiler {
-	return &Compiler{Blocks: utils.Stack{}, Ops: make([]Op, 0)}
+func NewCompiler(debug bool) *Compiler {
+	return &Compiler{Blocks: utils.Stack{}, Ops: make([]Op, 0), debug: debug}
 }
 
 func (c *Compiler) getCurrentAddr() (addr types.IntType) {
 	return types.IntType(len(c.Ops))
 }
 
-func (c *Compiler) compileTokenInt(token *lexer.Token) error {
-	c.Ops = append(c.Ops, Op{Typ: OpPushInt, Operand: token.Value.(types.IntType), OpToken: *token})
+func (c *Compiler) pushOps(scope_name string, ops ...Op) {
+	if c.debug {
+		for i := range ops {
+			ops[i].DebugInfo = scope_name
+		}
+	}
+	c.Ops = append(c.Ops, ops...)
+}
+
+func (c *Compiler) compileTokenInt(token *lexer.Token, scope_name string) error {
+	c.pushOps(scope_name, Op{Typ: OpPushInt, Operand: token.Value.(types.IntType), OpToken: *token})
 	return nil
 }
 
-func (c *Compiler) compileTokenString(token *lexer.Token, ctx *Context) error {
+func (c *Compiler) compileTokenString(token *lexer.Token, ctx *Context, scope_name string) error {
 	literal := token.Value.(string)
 	literal_addr, exists := ctx.Memory.StringsMap[literal]
 	if !exists {
 		return lexer.FormatErrMsg(&token.Loc, "Unknown string literal at compile-time: `%s`", literal)
 	}
-	c.Ops = append(c.Ops,
+	c.pushOps(scope_name,
 		Op{Typ: OpPushInt, Operand: literal_addr, OpToken: *token},
 		Op{Typ: OpPushInt, Operand: types.IntType(len(literal)), OpToken: *token},
 	)
 	return nil
 }
 
-func (c *Compiler) compileTokenChar(token *lexer.Token) error {
-	c.Ops = append(c.Ops, Op{Typ: OpPushInt, Operand: token.Value.(types.IntType), OpToken: *token})
+func (c *Compiler) compileTokenChar(token *lexer.Token, scope_name string) error {
+	c.pushOps(scope_name, Op{Typ: OpPushInt, Operand: token.Value.(types.IntType), OpToken: *token})
 	return nil
 }
 
-func (c *Compiler) compileTokenBool(token *lexer.Token) error {
-	c.Ops = append(c.Ops, Op{Typ: OpPushBool, Operand: token.Value.(types.BoolType), OpToken: *token})
+func (c *Compiler) compileTokenBool(token *lexer.Token, scope_name string) error {
+	c.pushOps(scope_name, Op{Typ: OpPushBool, Operand: token.Value.(types.BoolType), OpToken: *token})
 	return nil
 }
 
-func (c *Compiler) compileTokenIntrinsic(token *lexer.Token, intrinsic lexer.IntrinsicType) error {
-	c.Ops = append(c.Ops, Op{Typ: OpIntrinsic, Operand: intrinsic, OpToken: *token})
+func (c *Compiler) compileTokenIntrinsic(token *lexer.Token, scope_name string, intrinsic lexer.IntrinsicType) error {
+	c.pushOps(scope_name, Op{Typ: OpIntrinsic, Operand: intrinsic, OpToken: *token})
 	return nil
 }
 
-func (c *Compiler) compileLocalConst(token *lexer.Token, val types.IntType) error {
-	c.Ops = append(c.Ops, Op{Typ: OpPushInt, Operand: val, OpToken: *token})
+func (c *Compiler) compileLocalConst(token *lexer.Token, val types.IntType, scope_name string) error {
+	c.pushOps(scope_name, Op{Typ: OpPushInt, Operand: val, OpToken: *token})
 	return nil
 }
 
-func (c *Compiler) compileGlobalConst(token *lexer.Token, val types.IntType) error {
-	c.Ops = append(c.Ops, Op{Typ: OpPushInt, Operand: val, OpToken: *token})
+func (c *Compiler) compileGlobalConst(token *lexer.Token, val types.IntType, scope_name string) error {
+	c.pushOps(scope_name, Op{Typ: OpPushInt, Operand: val, OpToken: *token})
 	return nil
 }
 
-func (c *Compiler) compileLocalAlloc(token *lexer.Token) error {
-	c.Ops = append(c.Ops, Op{Typ: OpPushAlloc, Operand: token.Text, OpToken: *token})
+func (c *Compiler) compileLocalAlloc(token *lexer.Token, scope *Scope) error {
+	c.pushOps(scope.ScopeName, Op{Typ: OpPushLocalAlloc, Operand: scope.MemSize - scope.Allocs[token.Text].Offset, OpToken: *token})
 	return nil
 }
 
-func (c *Compiler) compileGlobalAlloc(token *lexer.Token) error {
-	c.Ops = append(c.Ops, Op{Typ: OpPushAlloc, Operand: token.Text, OpToken: *token})
+func (c *Compiler) compileGlobalAlloc(token *lexer.Token, scope *Scope) error {
+	c.pushOps(scope.ScopeName, Op{Typ: OpPushGlobalAlloc, Operand: scope.Allocs[token.Text].Offset, OpToken: *token})
 	return nil
 }
 
-func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function) error {
-	c.Ops = append(c.Ops, Op{Typ: OpCall, Operand: f.Addr - c.getCurrentAddr(), OpToken: *token})
+func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope_name string) error {
+	c.pushOps(scope_name, Op{Typ: OpCall, Operand: f.Addr - c.getCurrentAddr(), OpToken: *token})
 	return nil
 }
 
 func (c *Compiler) compileIfBlock(token *lexer.Token, tokens *[]lexer.Token, ctx *Context, scope_name string) error {
 	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token))
 
-	c.Ops = append(c.Ops, Op{OpToken: *token, Typ: OpIf})
+	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpIf})
 	return c.compile(tokens, ctx, scope_name)
 }
 
@@ -107,14 +117,14 @@ func (c *Compiler) compileElseBlock(token *lexer.Token, tokens *[]lexer.Token, c
 	}
 
 	c.Blocks.Push(NewBlock(addr, token))
-	c.Ops = append(c.Ops, Op{OpToken: *token, Typ: OpElse})
+	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpElse})
 
 	return nil
 }
 
 func (c *Compiler) compileWhileBlock(token *lexer.Token, tokens *[]lexer.Token, ctx *Context, scope_name string) error {
 	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token))
-	c.Ops = append(c.Ops, Op{OpToken: *token, Typ: OpWhile})
+	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpWhile})
 	return c.compile(tokens, ctx, scope_name)
 }
 
@@ -132,11 +142,11 @@ func (c *Compiler) compileDoBlock(token *lexer.Token, tokens *[]lexer.Token, ctx
 
 	do_addr := c.getCurrentAddr()
 	c.Blocks.Push(NewBlock(do_addr, token))
-	c.Ops = append(c.Ops, Op{OpToken: *token, Typ: OpDo, Operand: block.Addr - do_addr})
+	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpDo, Operand: block.Addr - do_addr})
 	return nil
 }
 
-func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType) error {
+func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType, scope_name string) error {
 	if c.Blocks.Size() == 0 {
 		return lexer.FormatErrMsg(&token.Loc, "Unexpected `%s` found", token.Text)
 	}
@@ -154,16 +164,16 @@ func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType) error 
 		return lexer.FormatErrMsg(&token.Loc, "`%s` should be inside while-loop, but it doesn't", token.Text)
 	}
 
-	c.Ops = append(c.Ops, Op{OpToken: *token, Typ: op_type})
+	c.pushOps(scope_name, Op{OpToken: *token, Typ: op_type})
 	return nil
 }
 
-func (c *Compiler) compileBreakKeyword(token *lexer.Token) error {
-	return c.compileJumpKeyword(token, OpBreak)
+func (c *Compiler) compileBreakKeyword(token *lexer.Token, scope_name string) error {
+	return c.compileJumpKeyword(token, OpBreak, scope_name)
 }
 
-func (c *Compiler) compileContinueKeyword(token *lexer.Token) error {
-	return c.compileJumpKeyword(token, OpContinue)
+func (c *Compiler) compileContinueKeyword(token *lexer.Token, scope_name string) error {
+	return c.compileJumpKeyword(token, OpContinue, scope_name)
 }
 
 func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *Context, scope_name string) error {
@@ -183,11 +193,11 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *Context, scope_nam
 	case lexer.KeywordIf:
 		c.Ops[block.Addr].Operand = addr - block.Addr + 1
 		op.Typ = OpEnd
-		c.Ops = append(c.Ops, op)
+		c.pushOps(scope_name, op)
 	case lexer.KeywordElse:
 		c.Ops[block.Addr].Operand = addr - block.Addr + 1
 		op.Typ = OpEnd
-		c.Ops = append(c.Ops, op)
+		c.pushOps(scope_name, op)
 	case lexer.KeywordWhile:
 		return lexer.FormatErrMsg(&block.Tok.Loc, "`while` block must contain `do` before `end`")
 	case lexer.KeywordDo:
@@ -205,7 +215,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *Context, scope_nam
 		op.Operand = block.Addr + do_while_addr_diff - addr
 		c.Ops[block.Addr].Operand = addr - block.Addr + 1
 		op.Typ = OpEnd
-		c.Ops = append(c.Ops, op)
+		c.pushOps(scope_name, op)
 	case lexer.KeywordEnd:
 		return lexer.FormatErrMsg(&token.Loc, "`end` may only close `if-else` or `while-do` blocks, but got `%s`", block.Tok.Text)
 	case lexer.KeywordBreak:
@@ -214,9 +224,9 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *Context, scope_nam
 		return lexer.FormatErrMsg(&block.Tok.Loc, "`continue` keyword shouldn't be in blocks stack")
 	case lexer.KeywordFunc:
 		func_end_op := Op{
-			OpToken: *token, Typ: OpFuncEnd, Operand: scope_name,
+			OpToken: *token, Typ: OpFuncEnd, Operand: scope_name, Data: scope_name,
 		}
-		c.Ops = append(c.Ops, func_end_op)
+		c.pushOps(scope_name, func_end_op)
 	default:
 		return lexer.FormatErrMsg(&token.Loc, "Unhandled block start processing")
 	}
@@ -347,12 +357,16 @@ func (c *Compiler) compileFunc(token *lexer.Token, tokens *[]lexer.Token, ctx *C
 	func_addr := c.getCurrentAddr()
 	c.Blocks.Push(NewBlock(func_addr, token))
 
-	c.Ops = append(c.Ops, Op{OpToken: *token, Typ: OpFuncBegin, Operand: func_name})
+	c.pushOps(func_name, Op{OpToken: *token, Typ: OpFuncBegin, Data: func_name})
 	if err = c.compile(tokens, ctx, func_name); err != nil {
 		return err
 	}
 
 	ctx.Funcs[func_name] = Function{Addr: func_addr}
+
+	c.Ops[func_addr].Operand = new_scope.MemSize
+	c.Ops[c.getCurrentAddr()-1].Operand = new_scope.MemSize
+
 	return nil
 }
 
@@ -442,6 +456,11 @@ func (c *Compiler) constEval(token *lexer.Token, tokens *[]lexer.Token, ctx *Con
 
 func (c *Compiler) compile(tokens *[]lexer.Token, ctx *Context, scope_name string) error {
 
+	scope, exists := ctx.Scopes[scope_name]
+	if !exists {
+		return lexer.FormatErrMsg(nil, "No such scope: `%s`", scope_name)
+	}
+
 	var token lexer.Token
 	for len(*tokens) > 0 {
 
@@ -449,19 +468,19 @@ func (c *Compiler) compile(tokens *[]lexer.Token, ctx *Context, scope_name strin
 
 		switch token.Typ {
 		case lexer.TokenInt:
-			if err := c.compileTokenInt(&token); err != nil {
+			if err := c.compileTokenInt(&token, scope_name); err != nil {
 				return err
 			}
 		case lexer.TokenString:
-			if err := c.compileTokenString(&token, ctx); err != nil {
+			if err := c.compileTokenString(&token, ctx, scope_name); err != nil {
 				return err
 			}
 		case lexer.TokenChar:
-			if err := c.compileTokenChar(&token); err != nil {
+			if err := c.compileTokenChar(&token, scope_name); err != nil {
 				return err
 			}
 		case lexer.TokenBool:
-			if err := c.compileTokenBool(&token); err != nil {
+			if err := c.compileTokenBool(&token, scope_name); err != nil {
 				return err
 			}
 		case lexer.TokenWord:
@@ -469,7 +488,7 @@ func (c *Compiler) compile(tokens *[]lexer.Token, ctx *Context, scope_name strin
 
 			intrinsic, exists := lexer.WordToIntrinsic[name]
 			if exists {
-				if err := c.compileTokenIntrinsic(&token, intrinsic); err != nil {
+				if err := c.compileTokenIntrinsic(&token, scope_name, intrinsic); err != nil {
 					return err
 				}
 				continue
@@ -477,7 +496,7 @@ func (c *Compiler) compile(tokens *[]lexer.Token, ctx *Context, scope_name strin
 
 			val, exists := ctx.GetLocalConst(name, scope_name)
 			if exists {
-				if err := c.compileLocalConst(&token, val); err != nil {
+				if err := c.compileLocalConst(&token, val, scope_name); err != nil {
 					return err
 				}
 				continue
@@ -485,7 +504,7 @@ func (c *Compiler) compile(tokens *[]lexer.Token, ctx *Context, scope_name strin
 
 			_, exists = ctx.GetLocalAlloc(name, scope_name)
 			if exists {
-				if err := c.compileLocalAlloc(&token); err != nil {
+				if err := c.compileLocalAlloc(&token, scope); err != nil {
 					return err
 				}
 				continue
@@ -493,7 +512,7 @@ func (c *Compiler) compile(tokens *[]lexer.Token, ctx *Context, scope_name strin
 
 			val, exists = ctx.GetGlobalConst(name)
 			if exists {
-				if err := c.compileGlobalConst(&token, val); err != nil {
+				if err := c.compileGlobalConst(&token, val, scope_name); err != nil {
 					return err
 				}
 				continue
@@ -501,7 +520,7 @@ func (c *Compiler) compile(tokens *[]lexer.Token, ctx *Context, scope_name strin
 
 			_, exists = ctx.GetGlobalAlloc(name)
 			if exists {
-				if err := c.compileGlobalAlloc(&token); err != nil {
+				if err := c.compileGlobalAlloc(&token, scope); err != nil {
 					return err
 				}
 				continue
@@ -509,7 +528,7 @@ func (c *Compiler) compile(tokens *[]lexer.Token, ctx *Context, scope_name strin
 
 			function, exists := ctx.Funcs[name]
 			if exists {
-				if err := c.compileFuncCall(&token, &function); err != nil {
+				if err := c.compileFuncCall(&token, &function, scope_name); err != nil {
 					return err
 				}
 				continue
@@ -541,11 +560,11 @@ func (c *Compiler) compile(tokens *[]lexer.Token, ctx *Context, scope_name strin
 					return err
 				}
 			case lexer.KeywordBreak:
-				if err := c.compileBreakKeyword(&token); err != nil {
+				if err := c.compileBreakKeyword(&token, scope_name); err != nil {
 					return err
 				}
 			case lexer.KeywordContinue:
-				if err := c.compileContinueKeyword(&token); err != nil {
+				if err := c.compileContinueKeyword(&token, scope_name); err != nil {
 					return err
 				}
 

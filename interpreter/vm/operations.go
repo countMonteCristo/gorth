@@ -24,7 +24,8 @@ const (
 	OpFuncBegin
 	OpFuncEnd
 
-	OpPushAlloc
+	OpPushLocalAlloc
+	OpPushGlobalAlloc
 
 	OpCount = iota
 )
@@ -46,13 +47,16 @@ var OpName = map[OpType]string{
 	OpFuncBegin: "FUNC_BEGIN",
 	OpFuncEnd:   "FUNC_END",
 
-	OpPushAlloc: "PUSH_ALLOC",
+	OpPushLocalAlloc:  "PUSH_ALLOC_L",
+	OpPushGlobalAlloc: "PUSH_ALLOC_G",
 }
 
 type Op struct {
-	Typ     OpType
-	Operand interface{}
-	OpToken lexer.Token
+	Typ       OpType
+	Operand   interface{}
+	OpToken   lexer.Token
+	Data      interface{}
+	DebugInfo interface{}
 }
 
 func (op *Op) Str(addr int64) (s string) {
@@ -74,12 +78,16 @@ func (op *Op) Str(addr int64) (s string) {
 		operand = fmt.Sprint(res)
 	case OpWhile:
 		operand = ""
-	case OpFuncBegin, OpFuncEnd, OpPushAlloc:
-		operand = op.Operand.(string)
+	case OpFuncBegin, OpFuncEnd:
+		res, _ := op.Operand.(types.IntType)
+		operand = fmt.Sprintf("%d (%s)", res, op.Data.(string))
+	case OpPushLocalAlloc, OpPushGlobalAlloc:
+		res, _ := op.Operand.(types.IntType)
+		operand = fmt.Sprint(res)
 	default:
 		lexer.CompilerFatal(&op.OpToken.Loc, fmt.Sprintf("Unhandled operation: `%s`", OpName[op.Typ]))
 	}
 
-	s = fmt.Sprintf("%4d: %s %v", addr, OpName[op.Typ], operand)
+	s = fmt.Sprintf("%4d: %s %v\t\t(debug: %s)", addr, OpName[op.Typ], operand, op.DebugInfo.(string))
 	return
 }

@@ -16,11 +16,11 @@ type Interpreter struct {
 	imp  lexer.Importer
 }
 
-func InitInterpreter(arguments []string, pkg_dir string) *Interpreter {
+func InitInterpreter(arguments []string, pkg_dir string, debug bool) *Interpreter {
 	i := &Interpreter{
 		lx:   lexer.Lexer{},
 		vm:   *vm.InitVM(),
-		c:    *vm.NewCompiler(),
+		c:    *vm.NewCompiler(debug),
 		args: arguments,
 		imp: lexer.Importer{
 			Paths:    []string{pkg_dir},
