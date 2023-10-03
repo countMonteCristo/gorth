@@ -26,26 +26,31 @@ type ByteMemory struct {
 
 	Argv types.IntType // pointer to the beginning of the input arguments array
 
+	StringsRegion      MemoryRegion
 	OperativeMemRegion MemoryRegion
-
-	StringsRegion MemoryRegion
-	// StringsMap    map[string]types.IntType
 }
 
 func InitMemory(mem_size types.IntType) ByteMemory {
 	mem := ByteMemory{
-		Data:       make([]byte, mem_size),
-		MemorySize: mem_size,
+		Data:          make([]byte, mem_size),
+		MemorySize:    mem_size,
+		StringsRegion: MemoryRegion{Start: types.IntType(1)},
 	}
 
 	return mem
 }
 
 func (m *ByteMemory) Prepare(args []string, strings *map[string]types.IntType) {
+	literals_size := types.IntType(0)
+
 	for literal, addr := range *strings {
 		literal_bytes := []byte(literal)
 		copy(m.Data[addr:], literal_bytes)
+		literals_size += types.IntType(len(literal_bytes) + 1)
 	}
+
+	m.StringsRegion.Size = literals_size
+	m.StringsRegion.Ptr = m.StringsRegion.Start + literals_size
 
 	// add input args to string literals as null-terminated strings
 	m.Argv = types.IntType(m.StringsRegion.Ptr)

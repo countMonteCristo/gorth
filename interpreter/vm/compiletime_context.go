@@ -56,6 +56,23 @@ func InitContext() *CompileTimeContext {
 	return ctx
 }
 
+func (ctx *CompileTimeContext) PreprocessStringLiterals(th *lexer.TokenHolder, start types.IntType) {
+	address := start
+
+	th.Reset()
+	for !th.Empty() {
+		token := th.GetNextToken()
+		if token.Typ == lexer.TokenString {
+			literal := token.Value.(string)
+			_, exists := ctx.StringsMap[literal]
+			if !exists {
+				ctx.StringsMap[literal] = address
+				address += types.IntType(len(literal) + 1) // save literals as null-terminated strings
+			}
+		}
+	}
+}
+
 func (c *CompileTimeContext) GlobalScope() *Scope {
 	return c.Scopes[GlobalScopeName]
 }

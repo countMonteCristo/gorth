@@ -34,6 +34,24 @@ func NewRuntimeContext(memSize types.IntType) *RunTimeContext {
 	return rc
 }
 
+func (rc *RunTimeContext) Argc() types.IntType {
+	return types.IntType(len(rc.Args))
+}
+
+func (rc *RunTimeContext) Prepare(ctx *CompileTimeContext, args []string, ops_count types.IntType, debug bool) {
+	rc.OpsCount = ops_count
+	rc.ReturnStack.Push(rc.OpsCount) // for exit after hitting OpFuncEnd of main function
+
+	rc.Args = args                           // for OpArgc
+	rc.Memory.Prepare(args, &ctx.StringsMap) // load string literals and input args to memory
+
+	rc.debug = debug                 // debug mode
+	rc.Addr = ctx.Funcs["main"].Addr // script entry point address
+
+	// in case we have global allocs
+	rc.Memory.OperativeMemRegion.Ptr = rc.Memory.OperativeMemRegion.Start + ctx.GlobalScope().MemSize
+}
+
 func (rc *RunTimeContext) GetExitCode(ops []Op, err error) ExitCodeType {
 	switch {
 	case rc.Stack.Size() > 1:

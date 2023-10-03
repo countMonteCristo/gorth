@@ -30,30 +30,7 @@ func InitVM() *VM {
 }
 
 func (vm *VM) PreprocessTokens(th *lexer.TokenHolder) {
-	vm.Rc.PreprocessStringLiterals(th, &vm.Ctx.StringsMap)
-}
-
-func (rc *RunTimeContext) PreprocessStringLiterals(th *lexer.TokenHolder, strings *map[string]types.IntType) {
-	address := types.IntType(1)
-
-	th.Reset()
-	for !th.Empty() {
-		token := th.GetNextToken()
-		if token.Typ == lexer.TokenString {
-			literal := token.Value.(string)
-			_, exists := (*strings)[literal]
-			if !exists {
-				(*strings)[literal] = address
-				address += types.IntType(len(literal) + 1) // save literals as null-terminated strings
-			}
-		}
-	}
-
-	rc.Memory.StringsRegion = MemoryRegion{
-		Start: 1,
-		Size:  address - 1,
-		Ptr:   address,
-	}
+	vm.Ctx.PreprocessStringLiterals(th, vm.Rc.Memory.StringsRegion.Start)
 }
 
 func (vm *VM) ProcessSyscall() {
@@ -203,7 +180,7 @@ func (vm *VM) Step(ops []Op) (err error) {
 			vm.Rc.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic])
 
 		case lexer.IntrinsicArgc:
-			vm.Rc.Stack.Push(types.IntType(len(vm.Rc.Args)))
+			vm.Rc.Stack.Push(vm.Rc.Argc())
 		case lexer.IntrinsicArgv:
 			vm.Rc.Stack.Push(vm.Rc.Memory.Argv)
 		case lexer.IntrinsicSyscall:
@@ -248,23 +225,10 @@ func (vm *VM) Step(ops []Op) (err error) {
 }
 
 func (vm *VM) PrepareRuntimeContext(ops []Op, args []string, debug bool) {
-	len_ops := types.IntType(len(ops))
-
-	vm.Rc.OpsCount = len_ops
-	vm.Rc.ReturnStack.Push(len_ops)
-
-	vm.Rc.Args = args
-	vm.Rc.Memory.Prepare(args, &vm.Ctx.StringsMap)
-
-	vm.Rc.debug = debug
-	vm.Rc.Addr = vm.Ctx.Funcs["main"].Addr
-
-	vm.Rc.Memory.OperativeMemRegion.Ptr = vm.Rc.Memory.OperativeMemRegion.Start + vm.Ctx.GlobalScope().MemSize
+	vm.Rc.Prepare(&vm.Ctx, args, types.IntType(len(ops)), debug)
 }
 
 func (vm *VM) Interprete(ops []Op, args []string) ExitCodeType {
-
-	// rc := vm.Prepare(ops, args, false)
 	vm.PrepareRuntimeContext(ops, args, false)
 	var err error = nil
 	for vm.Rc.Addr < vm.Rc.OpsCount {
