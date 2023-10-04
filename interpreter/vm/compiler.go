@@ -150,7 +150,11 @@ func (c *Compiler) compileDoBlock(token *lexer.Token, th *lexer.TokenHolder, ctx
 	return nil
 }
 
-func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType, scope_name string) error {
+func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType, kw lexer.KeywordType, scope_name string) error {
+	if kw != lexer.KeywordContinue && kw != lexer.KeywordBreak {
+		return logger.FormatErrMsg(&token.Loc, "Only `break` and `continue` are supported as jumps, but got `%s`", lexer.KeywordName[kw])
+	}
+
 	if c.Blocks.Size() == 0 {
 		return logger.FormatErrMsg(&token.Loc, "Unexpected `%s` found", token.Text)
 	}
@@ -160,7 +164,7 @@ func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType, scope_
 		cur_block := c.Blocks.Data[i].(*Block)
 
 		if cur_block.Tok.Typ == lexer.TokenKeyword && cur_block.Tok.Value.(lexer.KeywordType) == lexer.KeywordDo {
-			cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: lexer.KeywordBreak, Addr: c.getCurrentAddr()})
+			cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: kw, Addr: c.getCurrentAddr()})
 			break
 		}
 	}
@@ -173,11 +177,11 @@ func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType, scope_
 }
 
 func (c *Compiler) compileBreakKeyword(token *lexer.Token, scope_name string) error {
-	return c.compileJumpKeyword(token, OpBreak, scope_name)
+	return c.compileJumpKeyword(token, OpBreak, lexer.KeywordBreak, scope_name)
 }
 
 func (c *Compiler) compileContinueKeyword(token *lexer.Token, scope_name string) error {
-	return c.compileJumpKeyword(token, OpContinue, scope_name)
+	return c.compileJumpKeyword(token, OpContinue, lexer.KeywordContinue, scope_name)
 }
 
 func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *CompileTimeContext, scope_name string) error {

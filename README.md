@@ -11,28 +11,24 @@
 
 ### HelloWorld:
 ```gorth
+include "std.gorth"
+
 func main do
-  "Hello, World\n" puts
+  "Hello, world!\n" puts
+  0
 end
 ```
 
 ### Print all input arguments:
 ```gorth
-func strlen do
-  dup
-  while dup @8 0 != do
-    1 +
-  end
-  over -
-end
+include "std.gorth"
 
 func main do
-  argv 0
-  while dup argc < do
-    over strlen over over puts '\n' putc
-    + rot drop 1 + swap
-    1 +
-  end
+  argv while dup @32 dup 0 != do
+    dup strlen p_str
+    sizeof(ptr) +
+  end drop drop
+  0
 end
 ```
 Output:
@@ -70,9 +66,13 @@ Record test outputs:
 ```
 
 ## Usage
-```console
-> ./bin/gorth Gorth/examples/helloworld.gorth
 ```
+> ./bin/gorth [-debug] [-env] Gorth/examples/helloworld.gorth [args...]
+```
+
+Supported flags:
+* `debug` - run interpreter in debug mode
+* `env` - adds environment variables to VM memory (turned off by default)
 
 ## Debugger
 Run script with debugger.
@@ -103,7 +103,10 @@ Integer literal is a sequence of decimal digits (optionally starts with + or -).
 
 Example:
 ```gorth
-1 2 +
+func main do
+  1 2 + puti
+  0
+end
 ```
 This code pushes 1 and 2 onto the stack, pops two numbers and pushes their sum back. So, afterall, there will be 3 on top of the stack.
 
@@ -112,16 +115,26 @@ String literal is a sequence of characters enclosed by double quotes (`"`). Mult
 
 Example:
 ```gorth
-"Hello, world!\n" puts
+include "std.gorth"
+
+func main do
+  "Hello, world!" p_str
+  0
+end
 ```
-This code pushes pointer to a null-terminated string "Hello, world\n" and its size onto the stack. After that `puts` pops these to arguments and prints this string to stdout.
+This code pushes pointer to a null-terminated string "Hello, world" and its size onto the stack. After that `puts` pops these to arguments and prints this string to stdout.
 
 ### Character
 Character is a single byte enclosed by single quotes ('). When character literal encountered the interpreter pushes its ASCII code onto the stack
 
 Example:
 ```gorth
-'\n' putc
+include "std.gorth"
+
+func main do
+  '\n' putc
+  0
+end
 ```
 
 ## Types
@@ -188,7 +201,8 @@ Only two types are supported for now: `int` and `bool`.
 ### Misc
 - `???` - prints stack state
 - `argc` - pushes count of input arguments onto the stack
-- `argv` - pushes the pointer to the first input argument
+- `argv` - pushes the pointer to the null-terminated list of pointers to the input arguments
+- `env`  - pushes the pointer to the null-terminated list of pointers to the environment variables
 
 ### System calls:
 - `syscall` - perform system call (description: ```man 2 syscalls```)
@@ -198,28 +212,37 @@ For now only 4 system calls are supported: `open`, `read`, `write` and `close`. 
 ## Control Flow
 ### If-else-end
 ```gorth
-10 20 < if
-  30 puti '\n' putc
-else
-  40 puti '\n' putc
+include "std.gorth"
+
+func main do
+  10 20 < if
+    30 puti '\n' putc
+  else
+    40 puti '\n' putc
+  end
+  0
 end
 ```
 ### While loop
 ```gorth
-0 while dup 10 <= do
-  dup 2 = if
+include "std.gorth"
+
+func main do
+  0 while dup 10 <= do
+    dup 2 = if
+      1 +
+      continue
+    end
+
+    dup 2 % 0 = if
+      dup puti '\n' putc
+    end
+
     1 +
-    continue
-  end
-
-  dup 2 % 0 = if
-    dup puti '\n' putc
-  end
-
-  1 +
-  dup 4 > if
-    break
-  end
+    dup 6 > if
+      break
+    end
+  end drop 0
 end
 ```
 ### Include
@@ -231,21 +254,19 @@ all inluded files, so it won't include file if it has been already inlcuded some
 
 ### Functions
 ```gorth
-func strlen do
-  dup
-  while dup @8 0 != do
-    1 +
-  end
-  over -
+include "std.gorth"
+
+// prints asterisk and given string
+func print_item do
+  " * " puts p_str
 end
 
 func main do
-  argv 0
-  while dup argc < do
-    over strlen over over puts '\n' putc
-    + rot drop 1 + swap
-    1 +
-  end
+  argv while dup @32 dup 0 != do
+    dup strlen print_item
+    sizeof(ptr) +
+  end drop drop
+  0
 end
 ```
 Defines function with given name. You can use define and use your functions anywhere you want.
@@ -257,10 +278,12 @@ const M 10 end
 const CHAR_WIDTH M 4 * 3 + end
 ```
 Defines constant with given name and given value. Simple arithmetic operations can be used to calculate const value.
-Constants may be delcared inside functions. Local constants hide global ones with the same name.
+Constants may be delcared inside functions. Local constants CAN NOT HIDE global ones with the same name.
 
 For example:
 ```gorth
+include "std.gorth"
+
 const N 10 end
 
 func main do
@@ -269,7 +292,7 @@ func main do
   N puti '\n' putc
 end
 ```
-this code prints `10 20`, because local constant `N` (=20) in function `main` hides global constant `N` (=10).
+this code will not compile.
 
 ### Memory Allocations
 ```gorth
@@ -278,10 +301,12 @@ alloc array N 1 + end
 ```
 Allocates the region of memory of the given size. Simple arithmetic operations can be used to calculate allocated region size. Allocations can be declared inside functions.
 
-If local alloctaion has the same name as global, it hides global one.
+Local alloctaions CAN NOT HIDE global ones.
 
 For example:
 ```gorth
+include "std.gorth"
+
 alloc x 1 end
 
 func main do
@@ -292,4 +317,4 @@ func main do
   x @8 puti ' ' putc
 end
 ```
-this code prints `13 15`, because local allocation `x` in function `main` hides global allocation `x`.
+this code will not compile.
