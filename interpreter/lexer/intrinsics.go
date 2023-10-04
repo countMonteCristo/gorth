@@ -50,6 +50,7 @@ const (
 
 	IntrinsicArgc
 	IntrinsicArgv
+	IntrinsicEnv
 
 	IntrinsicOffset
 	IntrinsicReset
@@ -103,9 +104,10 @@ var IntrinsicName = map[IntrinsicType]string{
 
 	IntrinsicArgc: "argc",
 	IntrinsicArgv: "argv",
+	IntrinsicEnv:  "env",
 
 	IntrinsicOffset: "offset",
-	IntrinsicReset: "reset",
+	IntrinsicReset:  "reset",
 
 	IntrinsicSyscall: "syscall",
 }

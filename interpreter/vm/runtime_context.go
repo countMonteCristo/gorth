@@ -4,6 +4,7 @@ import (
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 	"fmt"
+	"os"
 )
 
 type ExitCodeType struct {
@@ -20,12 +21,11 @@ type RunTimeContext struct {
 	Args        []string
 	OpsCount    types.IntType
 	ExitCode    ExitCodeType
-	debug       bool
 }
 
-func NewRuntimeContext(memSize types.IntType) *RunTimeContext {
+func NewRuntimeContext(s *Settings) *RunTimeContext {
 	rc := &RunTimeContext{
-		Memory: InitMemory(memSize),
+		Memory: InitMemory(s.MemorySize),
 		Stack:  utils.Stack{}, ReturnStack: utils.Stack{},
 		Addr: 0, ScopeStack: utils.Stack{},
 		ExitCode: ExitCodeType{Code: 0},
@@ -38,14 +38,19 @@ func (rc *RunTimeContext) Argc() types.IntType {
 	return types.IntType(len(rc.Args))
 }
 
-func (rc *RunTimeContext) Prepare(ctx *CompileTimeContext, args []string, ops_count types.IntType, debug bool) {
+func (rc *RunTimeContext) Prepare(ctx *CompileTimeContext, args []string, ops_count types.IntType, s *Settings) {
+
+	env := []string{}
+	if s.Env {
+		env = os.Environ()
+	}
+
 	rc.OpsCount = ops_count
 	rc.ReturnStack.Push(rc.OpsCount) // for exit after hitting OpFuncEnd of main function
 
-	rc.Args = args                           // for OpArgc
-	rc.Memory.Prepare(args, &ctx.StringsMap) // load string literals and input args to memory
+	rc.Args = args                                // for OpArgc
+	rc.Memory.Prepare(args, env, &ctx.StringsMap) // load string literals and input args to memory
 
-	rc.debug = debug                 // debug mode
 	rc.Addr = ctx.Funcs["main"].Addr // script entry point address
 
 	// in case we have global allocs
@@ -53,20 +58,21 @@ func (rc *RunTimeContext) Prepare(ctx *CompileTimeContext, args []string, ops_co
 }
 
 func (rc *RunTimeContext) GetExitCode(ops []Op, err error) ExitCodeType {
-	switch {
-	case rc.Stack.Size() > 1:
-		rc.ExitCode.Code = types.IntType(1)
-		rc.ExitCode.Msg = fmt.Sprintf("Multiple values left in stack after script exit: %v", rc.Stack.Data)
-	case rc.Stack.Size() == 0:
-		rc.ExitCode.Code = types.IntType(2)
-		rc.ExitCode.Msg = "Empty stack after script exit"
-	default:
-		if err != nil {
-			rc.ExitCode.Code = types.IntType(3)
-			rc.ExitCode.Msg = err.Error()
-		} else {
+	if err == nil {
+		switch {
+		case rc.Stack.Size() > 1:
+			rc.ExitCode.Code = types.IntType(1)
+			rc.ExitCode.Msg = fmt.Sprintf("Multiple values left in stack after script exit: %v", rc.Stack.Data)
+		case rc.Stack.Size() == 0:
+			rc.ExitCode.Code = types.IntType(2)
+			rc.ExitCode.Msg = "Empty stack after script exit"
+		default:
 			rc.ExitCode.Code = rc.Stack.Pop().(types.IntType)
 		}
+	} else {
+		rc.ExitCode.Code = types.IntType(3)
+		rc.ExitCode.Msg = err.Error()
 	}
+
 	return rc.ExitCode
 }

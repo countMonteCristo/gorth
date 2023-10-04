@@ -7,6 +7,10 @@ import (
 	"fmt"
 )
 
+const (
+	sizeof_ptr = 4
+)
+
 type MemoryRegion struct {
 	Start types.IntType
 	Size  types.IntType
@@ -15,19 +19,23 @@ type MemoryRegion struct {
 
 // Memory for the Gorth programm represented as array of bytes.
 // It is divided into several pieces:
-// - String literals buffer: contains all the string literals from Gorth script, input arguments
-// Strings are stored as byte arrays. When you push string into stack, you actually push
+//   - String literals buffer: contains all the string literals from Gorth script, input arguments
+//     and environment variables as null-terminated strings
+//   - Pointers Region: contains lists of pointers to the argv[] end env[] strings
+//   - Operative Memory Reion (RAM) - this is the region where all allocations will be placed
+//
+// Strings are stored as null-terminated byte arrays. When you push string into stack, you actually push
 // the address and the size of the string to stack.
-// - Environment - TODO: add to String literals buffer
-// - Operative memory - the place where all the allocations are stored.
 type ByteMemory struct {
 	MemorySize types.IntType
 	Data       []byte
 
-	Argv types.IntType // pointer to the beginning of the input arguments array
+	Argv types.IntType // pointer to the null-terminated array of pointers to input arguments
+	Env  types.IntType // pointer to the null-terminated array of pointers to environment variables
 
-	StringsRegion      MemoryRegion
-	OperativeMemRegion MemoryRegion
+	StringsRegion      MemoryRegion // string literals
+	PtrsRegion         MemoryRegion // pointers to argv[] and env[]
+	OperativeMemRegion MemoryRegion // RAM
 }
 
 func InitMemory(mem_size types.IntType) ByteMemory {
@@ -40,32 +48,61 @@ func InitMemory(mem_size types.IntType) ByteMemory {
 	return mem
 }
 
-func (m *ByteMemory) Prepare(args []string, strings *map[string]types.IntType) {
-	literals_size := types.IntType(0)
+func (m *ByteMemory) saveString(start types.IntType, s *string) types.IntType {
+	bytes := []byte(*s)
+	copy(m.Data[start:], bytes)
+	return types.IntType(len(bytes) + 1)
+}
 
+func (m *ByteMemory) savePtrs(start types.IntType, ptrs *[]types.IntType) types.IntType {
+	for _, ptr := range *ptrs {
+		m.StoreToMem(start, ptr, sizeof_ptr)
+		start += types.IntType(sizeof_ptr)
+	}
+	return start
+}
+
+func (m *ByteMemory) Prepare(args, env []string, strings *map[string]types.IntType) {
+	ptr := m.StringsRegion.Start
+
+	// store string literals
 	for literal, addr := range *strings {
-		literal_bytes := []byte(literal)
-		copy(m.Data[addr:], literal_bytes)
-		literals_size += types.IntType(len(literal_bytes) + 1)
+		ptr += m.saveString(addr, &literal)
 	}
 
-	m.StringsRegion.Size = literals_size
-	m.StringsRegion.Ptr = m.StringsRegion.Start + literals_size
-
-	// add input args to string literals as null-terminated strings
-	m.Argv = types.IntType(m.StringsRegion.Ptr)
+	// store input args
+	argv_ptrs := make([]types.IntType, 0)
 	for _, arg := range args {
-		arg_bytes := []byte(arg)
-		copy(m.Data[m.StringsRegion.Ptr:], arg_bytes)
-		m.StringsRegion.Ptr += types.IntType(len(arg_bytes) + 1)
+		argv_ptrs = append(argv_ptrs, ptr)
+		ptr += m.saveString(ptr, &arg)
 	}
-	m.StringsRegion.Size = m.StringsRegion.Ptr - 1
+	argv_ptrs = append(argv_ptrs, 0)
 
-	op_start := m.StringsRegion.Start + m.StringsRegion.Size
+	// store env variables
+	env_ptrs := make([]types.IntType, 0)
+	for _, e := range env {
+		env_ptrs = append(env_ptrs, ptr)
+		ptr += m.saveString(ptr, &e)
+	}
+	env_ptrs = append(env_ptrs, 0)
+
+	// form StringsRegion
+	m.StringsRegion.Size = ptr - m.StringsRegion.Size
+	m.StringsRegion.Ptr = ptr
+
+	// form PtrsRegion and save pointers to it
+	m.PtrsRegion = MemoryRegion{Start: ptr, Ptr: ptr}
+	m.Argv = ptr
+	ptr = m.savePtrs(ptr, &argv_ptrs)
+	m.Env = ptr
+	ptr = m.savePtrs(ptr, &env_ptrs)
+	m.PtrsRegion.Size = ptr - m.PtrsRegion.Start
+
+	// form RAM region
 	m.OperativeMemRegion = MemoryRegion{
-		Start: op_start,
-		Size:  m.MemorySize - op_start,
-		Ptr:   op_start,
+		Start: ptr,
+		Size:  m.MemorySize - ptr,
+		Ptr:   ptr,
 	}
 }
 
@@ -124,7 +161,8 @@ var EscapedCharToString = map[byte]string{
 
 func (m *ByteMemory) PrintDebug() {
 	fmt.Printf("Allocated: %d byte(s) total\n", m.OperativeMemRegion.Ptr-m.OperativeMemRegion.Start)
-	fmt.Printf("String Literals (cap=%d, size=%d):\n", m.StringsRegion.Size, m.StringsRegion.Ptr-m.StringsRegion.Start)
+
+	fmt.Printf("String Literals (size=%d):\n", m.StringsRegion.Size)
 	data := make([]string, 0, m.StringsRegion.Ptr-m.StringsRegion.Start)
 	for _, b := range m.Data[m.StringsRegion.Start:m.StringsRegion.Ptr] {
 		char, exists := EscapedCharToString[b]
@@ -134,6 +172,15 @@ func (m *ByteMemory) PrintDebug() {
 		data = append(data, char)
 	}
 	fmt.Printf("  %v\n", data)
+
+	fmt.Printf("Pointers region (size=%d)\n", m.PtrsRegion.Size)
+	fmt.Printf("  Argv=%d Env=%d\n", m.Argv, m.Env)
+	ptrs := make([]types.IntType, 0)
+	for p := m.PtrsRegion.Start; p < m.PtrsRegion.Start+m.PtrsRegion.Size; p += sizeof_ptr {
+		ptrs = append(ptrs, m.LoadFromMem(p, sizeof_ptr))
+	}
+	fmt.Printf("  %v\n", ptrs)
+
 	fmt.Printf(
 		"Operative memory (cap=%d size=%d start=%d ptr=%d):\n",
 		m.OperativeMemRegion.Size,

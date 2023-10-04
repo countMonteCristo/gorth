@@ -1,5 +1,8 @@
 include "unix.gorth"
 
+const sizeof(int) 4 end
+const sizeof(ptr) sizeof(int) end
+
 // Consumes pointer to the null-terminated string, returns its length (exclude terminated \0)
 func strlen do // int -> int
   // p p+len
@@ -90,14 +93,7 @@ end
 
 // Consumes number of the input argument and returns pointer to it
 func argv_n do
-  argv swap 0
-  while over over - 0 > do
-    rot
-    dup strlen + 1 +
-    rot rot
-    1 +
-  end
-  drop drop
+  sizeof(ptr) * argv + @32
 end
 
 // Sets `size` count of bytes starting from `ptr` to `value`

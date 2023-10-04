@@ -21,11 +21,11 @@ func show_err_and_exit(err error) {
 	utils.Exit(1)
 }
 
-func InitInterpreter(arguments []string, pkg_dir string, debug bool) *Interpreter {
+func InitInterpreter(arguments []string, pkg_dir string, s *vm.Settings) *Interpreter {
 	i := &Interpreter{
 		lx:   lexer.Lexer{},
-		vm:   *vm.InitVM(),
-		c:    *vm.NewCompiler(debug),
+		vm:   *vm.InitVM(s),
+		c:    *vm.NewCompiler(s.Debug),
 		args: arguments,
 		imp: lexer.Importer{
 			Paths:    []string{pkg_dir},

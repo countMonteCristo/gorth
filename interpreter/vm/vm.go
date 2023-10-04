@@ -12,19 +12,17 @@ import (
 )
 
 type VM struct {
-	Ctx            CompileTimeContext
-	RecursionLimit int
-	MemorySize     types.IntType
-	Rc             RunTimeContext
+	Ctx CompileTimeContext
+	Rc  RunTimeContext
+	S   Settings
 }
 
-func InitVM() *VM {
+func InitVM(s *Settings) *VM {
 	vm := VM{
-		Ctx:            *InitContext(),
-		RecursionLimit: 1000,
-		MemorySize:     640 * 1024, // 640k is enough for everybody, huh?,
+		Ctx: *InitContext(),
+		S:   *s,
 	}
-	vm.Rc = *NewRuntimeContext(vm.MemorySize)
+	vm.Rc = *NewRuntimeContext(&vm.S)
 
 	return &vm
 }
@@ -183,6 +181,8 @@ func (vm *VM) Step(ops []Op) (err error) {
 			vm.Rc.Stack.Push(vm.Rc.Argc())
 		case lexer.IntrinsicArgv:
 			vm.Rc.Stack.Push(vm.Rc.Memory.Argv)
+		case lexer.IntrinsicEnv:
+			vm.Rc.Stack.Push(vm.Rc.Memory.Env)
 		case lexer.IntrinsicSyscall:
 			vm.ProcessSyscall()
 		default:
@@ -190,15 +190,15 @@ func (vm *VM) Step(ops []Op) (err error) {
 		}
 		vm.Rc.Addr++
 	case OpCall:
-		if vm.Rc.ReturnStack.Size() >= vm.RecursionLimit {
-			return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Recursion limit exceeded")
+		if vm.Rc.ReturnStack.Size() >= int(vm.S.CallStackSize) {
+			return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Call stack overflow")
 		}
 		vm.Rc.ReturnStack.Push(vm.Rc.Addr)
 		vm.Rc.Addr += op.Operand.(types.IntType)
 	case OpFuncBegin:
 		vm.Rc.Memory.OperativeMemRegion.Ptr += op.Operand.(types.IntType)
 		vm.Rc.Addr++
-		if vm.Rc.debug {
+		if vm.S.Debug {
 			vm.Rc.ScopeStack.Push(op.DebugInfo.(string))
 		}
 	case OpFuncEnd:
@@ -207,7 +207,7 @@ func (vm *VM) Step(ops []Op) (err error) {
 		}
 		vm.Rc.Addr = vm.Rc.ReturnStack.Pop().(types.IntType) + 1
 		vm.Rc.Memory.OperativeMemRegion.Ptr -= op.Operand.(types.IntType)
-		if vm.Rc.debug {
+		if vm.S.Debug {
 			vm.Rc.ScopeStack.Pop()
 		}
 	case OpPushLocalAlloc:
@@ -225,7 +225,7 @@ func (vm *VM) Step(ops []Op) (err error) {
 }
 
 func (vm *VM) PrepareRuntimeContext(ops []Op, args []string, debug bool) {
-	vm.Rc.Prepare(&vm.Ctx, args, types.IntType(len(ops)), debug)
+	vm.Rc.Prepare(&vm.Ctx, args, types.IntType(len(ops)), &vm.S)
 }
 
 func (vm *VM) Interprete(ops []Op, args []string) ExitCodeType {
@@ -249,7 +249,7 @@ loop:
 
 		switch cmd.Type {
 		case DebugCmdStack: // print stack
-			fmt.Println(vm.Rc.Stack.Data)
+			fmt.Printf("stack: %v return_stack: %v\n", vm.Rc.Stack.Data, vm.Rc.ReturnStack)
 			di.SendOK()
 		case DebugCmdMemory: // print memory
 			vm.Rc.Memory.PrintDebug()

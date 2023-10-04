@@ -16,14 +16,22 @@ var (
 	package_dir            = filepath.Dir(main_filepath)
 )
 
+const (
+	vm_memory_size  = 640 * 1024 // 640K is enough for everybody :)
+	recursion_limit = 1000
+)
+
 func main() {
 	debugFlag := flag.Bool("debug", false, "run with debuger mode")
+	envFlag := flag.Bool("env", false, "save environment variables to VM memory")
 	flag.Parse()
+
+	settings := vm.NewSettings(*debugFlag, *envFlag, vm_memory_size, recursion_limit)
 
 	gorth_script := flag.Args()[0]
 
 	if !*debugFlag {
-		i := interpreter.InitInterpreter(flag.Args(), package_dir, *debugFlag)
+		i := interpreter.InitInterpreter(flag.Args(), package_dir, settings)
 		exit_code := i.Run(gorth_script)
 		i.ProcessExit(exit_code)
 	}
@@ -31,7 +39,7 @@ func main() {
 	for {
 		once := true
 
-		i := interpreter.InitInterpreter(flag.Args(), package_dir, *debugFlag)
+		i := interpreter.InitInterpreter(flag.Args(), package_dir, settings)
 		debugger_interface := vm.NewDebugInterface()
 		i.RunDebug(gorth_script, debugger_interface)
 
