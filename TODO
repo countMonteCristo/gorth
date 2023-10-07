@@ -1,5 +1,5 @@
-[] Change if-block semantic:
-  [] now: <{case} if {...} else {...} end>; what i want it to be: <if {case1} do {...} elif {case2} do {..} else {...} end>, just like in `while` loops
+[*] Change if-block semantic:
+  [*] now: <{case} if {...} else {...} end>; what i want it to be: <if {case1} do {...} elif {case2} do {..} else {...} end>, just like in `while` loops
 
 [*] Change Strings:
   [*] now string is a pointer to a go-string in string literals array

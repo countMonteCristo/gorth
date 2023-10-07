@@ -210,12 +210,12 @@ Only two types are supported for now: `int` and `bool`.
 For now only 4 system calls are supported: `open`, `read`, `write` and `close`. See [cat.gorth](https://github.com/countMonteCristo/gorth/tree/main/Gorth/examples/cat.gorth) as an example.
 
 ## Control Flow
-### If-else-end
+### If-do-else-end
 ```gorth
 include "std.gorth"
 
 func main do
-  10 20 < if
+  if 10 20 < do
     30 puti '\n' putc
   else
     40 puti '\n' putc
@@ -227,19 +227,20 @@ end
 ```gorth
 include "std.gorth"
 
+// print all numbers
 func main do
   0 while dup 10 <= do
-    dup 2 = if
+    if dup 2 = do         // but skip 2
       1 +
       continue
     end
 
-    dup 2 % 0 = if
+    if dup 2 % 0 = do     // print only even ones
       dup puti '\n' putc
     end
 
     1 +
-    dup 6 > if
+    if dup 6 > do         // break if number is greater than 6
       break
     end
   end drop 0
