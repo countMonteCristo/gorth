@@ -11,7 +11,6 @@ type OpType int
 
 const (
 	OpPushInt OpType = iota
-	OpPushBool
 	OpIntrinsic
 
 	OpJump		// jumps to current_addr + op.Operand
@@ -30,7 +29,6 @@ const (
 var _ uint = OpCount - 9 // compile-time check
 var OpName = map[OpType]string{
 	OpPushInt:   "PUSH_INT",
-	OpPushBool:  "PUSH_BOOL",
 	OpIntrinsic: "INTRINSIC",
 
 	OpJump:     "JMP",
@@ -55,11 +53,7 @@ type Op struct {
 func (op *Op) Str(addr int64) (s string) {
 	var operand string
 
-	var _ uint = OpCount - 9 // compile-time check
-
 	switch op.Typ {
-	case OpPushBool:
-		operand = types.BoolName[op.Operand.(types.BoolType)]
 	case OpIntrinsic:
 		operand = lexer.IntrinsicName[op.Operand.(lexer.IntrinsicType)]
 	case OpPushInt, OpCall, OpPushLocalAlloc, OpPushGlobalAlloc:

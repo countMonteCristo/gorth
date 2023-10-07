@@ -76,7 +76,7 @@ func (vm *VM) ProcessSyscall() {
 func (vm *VM) Step(ops []Op) (err error) {
 	op := ops[vm.Rc.Addr]
 	switch op.Typ {
-	case OpPushInt, OpPushBool:
+	case OpPushInt:
 		vm.Rc.Stack.Push(op.Operand)
 		vm.Rc.Addr++
 	case OpCondJump:

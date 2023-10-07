@@ -56,7 +56,7 @@ func (c *Compiler) compileTokenChar(token *lexer.Token, scope_name string) error
 }
 
 func (c *Compiler) compileTokenBool(token *lexer.Token, scope_name string) error {
-	c.pushOps(scope_name, Op{Typ: OpPushBool, Operand: token.Value.(types.BoolType), OpToken: *token})
+	c.pushOps(scope_name, Op{Typ: OpPushInt, Operand: token.Value.(types.IntType), OpToken: *token})
 	return nil
 }
 
