@@ -14,15 +14,15 @@ func main do
   1 while dup N <= do
     dup puti ' ' putc
     dup 3 % 0 = over 5 % 0 =
-    over over && if
+    if over over && do
       "FizzBuzz" p_str
       drop drop
     else
-      if
+      if do
         "Buzz" p_str
         drop
       else
-        if
+        if do
           "Fizz" p_str
         else
           '\n' putc

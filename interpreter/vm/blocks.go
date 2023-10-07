@@ -16,10 +16,11 @@ type Block struct {
 	Addr  types.IntType // absolute block start address
 	Tok   lexer.Token
 	Jumps []Jump
+	Typ   lexer.KeywordType
 }
 
-func NewBlock(addr types.IntType, token *lexer.Token) *Block {
-	return &Block{Addr: addr, Tok: *token, Jumps: make([]Jump, 0)}
+func NewBlock(addr types.IntType, token *lexer.Token, typ lexer.KeywordType) *Block {
+	return &Block{Addr: addr, Tok: *token, Jumps: make([]Jump, 0), Typ: typ}
 }
 
 type Function struct {

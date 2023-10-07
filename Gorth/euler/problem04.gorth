@@ -24,9 +24,8 @@ func main do
       end
       swap drop over
 
-      = if
-        dup ans @32 >
-        if
+      if = do
+        if dup ans @32 > do
           ans !32
         else
           drop

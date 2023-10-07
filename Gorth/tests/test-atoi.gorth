@@ -3,7 +3,7 @@ include "std.gorth"
 func main do
   1 while dup argc < do
     dup argv_n dup strlen atoi
-    0 > if
+    if 0 > do
       drop "<error>" puts
     else
       puti

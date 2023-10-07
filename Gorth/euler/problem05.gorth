@@ -17,16 +17,14 @@ func main do
     while over 1 > do
       over over %
 
-      0 =
-      if
+      if 0 = do
         rot 1 + rot rot
         over over / rot drop swap
       else
         rot swap
         dup 1 - mults + @8 rot
 
-        over over <
-        if
+        if over over < do
           swap drop swap
           dup 1 - mults + rot swap !8
         else
@@ -41,8 +39,7 @@ func main do
 
     swap drop dup 1 - mults + @8 rot
 
-    over over <
-    if
+    if over over < do
       swap drop swap
       dup 1 - mults + rot swap !8
     else
@@ -56,8 +53,7 @@ func main do
   1 1 while dup N < do
     dup 1 - mults + @8
 
-    dup 0 >
-    if
+    if dup 0 > do
       while dup 0 > do
         rot rot swap over *
         rot rot swap

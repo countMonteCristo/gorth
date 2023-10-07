@@ -10,10 +10,10 @@ func main do
   0
   1 while dup 1000 < do
 
-    dup 3 % 0 = if
+    if dup 3 % 0 = do
       swap over + swap
     else
-      dup 5 % 0 = if
+      if dup 5 % 0 = do
         swap over + swap
       end
     end

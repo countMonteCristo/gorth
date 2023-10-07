@@ -35,7 +35,7 @@ func atou do  // ptr len -> uint
   over + swap                 // ptr len -> ptr_end ptr_begin
   while over over > do
     dup @8 '0' -              // load digit
-    dup 10 > over 0 < || if   // if char is not a digit - break and return -1
+    if dup 10 > over 0 < || do   // if char is not a digit - break and return -1
       drop -1 result !64 break
     end
     result @64 10 * +         // update result number
@@ -58,11 +58,11 @@ func atoi do  // ptr len -> int err
   1 sign_m !8                 // set sign
   0 err !8                    // set error to 0
 
-  over @8 '-' = if
+  if over @8 '-' = do
     -1 sign_m !8
     1 - swap 1 + swap
   else
-    over @8 '+' = if
+    if over @8 '+' = do
       1 - swap 1 + swap
     end
   end
@@ -71,7 +71,7 @@ func atoi do  // ptr len -> int err
   while over over > do
     dup @8 '0' -              // load digit
 
-    dup 10 > over 0 < || if   // if char is not a digit - break
+    if dup 10 > over 0 < || do   // if char is not a digit - break
       drop -1 result !64
       1 err !8
       break
@@ -83,7 +83,8 @@ func atoi do  // ptr len -> int err
   end
   drop drop
 
-  err @8 dup 0 > if 0
+  if err @8 dup 0 > do
+    0
   else
     result @64 sign_m @8 *
   end
@@ -112,25 +113,25 @@ end
 
 // Consumes two numbers and pushes minimum value
 func min do
-  over over > if swap end drop
+  if over over > do swap end drop
 end
 
 // Consumes two numbers and pushes maximum value
 func max do
-  over over < if swap end drop
+  if over over < do swap end drop
 end
 
 // Consumes one number and pushes its absolute value
 func abs do
-  dup 0 < if -1 * end
+  if dup 0 < do -1 * end
 end
 
 // Consumes one number and pushes its sign
 func sign do
-  dup 0 < if
+  if dup 0 < do
     drop -1
   else
-    dup 0 > if drop 1 else drop 0 end
+    if dup 0 > do drop 1 else drop 0 end
   end
 end
 
@@ -141,10 +142,10 @@ func strcmp do
     1 + swap 1 + swap
   end
 
-  over @8 over @8 over over > if
+  if over @8 over @8 over over > do
     drop drop drop drop 1
   else
-    < if
+    if < do
       drop drop -1
     else
       drop drop 0

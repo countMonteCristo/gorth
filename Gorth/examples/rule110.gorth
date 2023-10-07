@@ -10,7 +10,7 @@ func main do
   0 while dup N < do
     0 while dup N < do
       dup array + @8
-      1 = if '*' else ' ' end
+      if 1 = do '*' else ' ' end
       putc
       1 +
     end drop

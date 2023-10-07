@@ -10,8 +10,8 @@ const CHAR_WIDTH M 4 * 3 + end
 func main do
   "   |" puts
   1 while dup M <= do
-    dup 10 < if ' ' putc end
-    dup 100 < if ' ' putc end
+    if dup 10 < do ' ' putc end
+    if dup 100 < do ' ' putc end
     dup puti
     ' ' putc
     1 +
@@ -27,11 +27,11 @@ func main do
   1 while dup N <= do
     1 while dup M <= do
       // i j
-      dup 1 = if over dup 10 < if ' ' putc end puti " |" puts end
+      if dup 1 = do over if dup 10 < do ' ' putc end puti " |" puts end
 
       over over *
-      dup 10 < if ' ' putc end
-      dup 100 < if ' ' putc end
+      if dup 10 < do ' ' putc end
+      if dup 100 < do ' ' putc end
       puti
       " " puts
 

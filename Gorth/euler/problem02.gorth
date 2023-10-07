@@ -14,7 +14,7 @@ func main do
   0
   1 1 while over 4000000 < do
     // a+s a b
-    over 2 % 0 = if rot rot dup rot + rot rot swap end
+    if over 2 % 0 = do rot rot dup rot + rot rot swap end
     // b a+b
     swap over +
   end drop drop

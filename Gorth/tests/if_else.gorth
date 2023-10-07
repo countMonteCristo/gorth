@@ -1,42 +1,42 @@
 include "std/std.gorth"
 
 func main do
-  10 20 < if
+  if 10 20 < do
     30 p_int
   else
     40 p_int
   end
 
-  10 20 > if
+  if 10 20 > do
     50 p_int
   end
 
-  10 20 < if
+  if 10 20 < do
     60 p_int
   end
 
-  10 20 > if
+  if 10 20 > do
     70 p_int
   else
     80 p_int
   end
 
-  10 20 < if
-    30 40 <= if
+  if 10 20 < do
+    if 30 40 <= do
       90 p_int
     else
       100 p_int
     end
   end
 
-  10 20 > if
-    30 40 <= if
+  if 10 20 > do
+    if 30 40 <= do
       90 p_int
     else
       100 p_int
     end
   else
-    50 60 > if
+    if 50 60 > do
       110 p_int
     else
       120 p_int

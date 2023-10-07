@@ -1,19 +1,19 @@
 include "std/std.gorth"
 
 func main do
-  1 2 <= 3 4 = && if
+  if 1 2 <= 3 4 = && do
     10 p_int
   else
     20 p_int
   end
 
-  1 2 <= 3 4 = || if
+  if 1 2 <= 3 4 = || do
     30 p_int
   else
     40 p_int
   end
 
-  2 3 < ! if
+  if 2 3 < ! do
     50 p_int
   else
     60 p_int

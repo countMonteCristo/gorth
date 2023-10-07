@@ -10,9 +10,9 @@ func main do
   600851475143
   3 while over 1 > do
     // d n/d
-    over over % 0 = if
+    if over over % 0 = do
       over over / rot drop swap
-      rot over < if
+      if rot over < do
         swap over
       end
     else
