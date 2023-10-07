@@ -37,3 +37,7 @@ func (s *Stack) Top() (x interface{}) {
 func (s *Stack) Size() int {
 	return len(s.Data)
 }
+
+func (s *Stack) Empty() bool {
+	return s.Size() == 0
+}

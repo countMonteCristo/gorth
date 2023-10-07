@@ -5,6 +5,8 @@ import (
 	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
+
+	"golang.org/x/exp/slices"
 )
 
 type Compiler struct {
@@ -99,7 +101,7 @@ func (c *Compiler) compileIfBlock(token *lexer.Token, th *lexer.TokenHolder, ctx
 
 func (c *Compiler) compileElseBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext, scope_name string) error {
 
-	if c.Blocks.Size() == 0 {
+	if c.Blocks.Empty() {
 		return logger.FormatErrMsg(&token.Loc, "Unexpected `end` found")
 	}
 	block := c.Blocks.Pop().(*Block)
@@ -136,7 +138,7 @@ func (c *Compiler) compileWhileBlock(token *lexer.Token, th *lexer.TokenHolder, 
 }
 
 func (c *Compiler) compileDoBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext, scope_name string) error {
-	if c.Blocks.Size() == 0 {
+	if c.Blocks.Empty() {
 		return logger.FormatErrMsg(&token.Loc, "Unexpected `do` found")
 	}
 	block := c.Blocks.Pop().(*Block)
@@ -160,19 +162,18 @@ func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType, kw lex
 		return logger.FormatErrMsg(&token.Loc, "Only `break` and `continue` are supported as jumps, but got `%s`", lexer.KeywordName[kw])
 	}
 
-	if c.Blocks.Size() == 0 {
+	if c.Blocks.Empty() {
 		return logger.FormatErrMsg(&token.Loc, "Unexpected `%s` found", token.Text)
 	}
 
 	var i int
 	for i = len(c.Blocks.Data) - 1; i >= 0; i-- {
 		cur_block := c.Blocks.Data[i].(*Block)
+		t := &cur_block.Tok
 
-		if cur_block.Tok.Typ == lexer.TokenKeyword && cur_block.Tok.Value.(lexer.KeywordType) == lexer.KeywordDo {
-			if cur_block.Typ == lexer.KeywordWhile {
-				cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: kw, Addr: c.getCurrentAddr()})
-				break
-			}
+		if t.Typ == lexer.TokenKeyword && t.Value.(lexer.KeywordType) == lexer.KeywordDo && cur_block.Typ == lexer.KeywordWhile {
+			cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: kw, Addr: c.getCurrentAddr()})
+			break
 		}
 	}
 	if i < 0 {
@@ -192,12 +193,12 @@ func (c *Compiler) compileContinueKeyword(token *lexer.Token, scope_name string)
 }
 
 func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *CompileTimeContext, scope_name string) error {
-	if c.Blocks.Size() == 0 {
+	if c.Blocks.Empty() {
 		return logger.FormatErrMsg(&token.Loc, "Unexpected `end` found")
 	}
 	block := c.Blocks.Pop().(*Block)
 
-	if block.Typ != lexer.KeywordFunc && block.Typ != lexer.KeywordWhile && block.Typ != lexer.KeywordIf {
+	if !slices.Contains([]lexer.KeywordType{lexer.KeywordIf, lexer.KeywordWhile, lexer.KeywordFunc}, block.Typ) {
 		return logger.FormatErrMsg(&token.Loc, "`end` should close only `if`, `while` or `func` blocks, but not %s", block.Tok.Text)
 	}
 
@@ -206,19 +207,14 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *CompileTimeContext
 	}
 	block_start_kw := block.Tok.Value.(lexer.KeywordType)
 
-	op := Op{OpToken: *token, Operand: types.IntType(1)}
+	op := Op{OpToken: *token, Operand: types.IntType(1), Typ: OpEnd}
 	addr := c.getCurrentAddr()
+	do_end_diff := addr - block.Addr + 1
 
 	switch block_start_kw {
-	case lexer.KeywordIf, lexer.KeywordWhile:
-		return logger.FormatErrMsg(&block.Tok.Loc, "`%s` block must contain `do` before `end`", lexer.KeywordName[block_start_kw])
-	case lexer.KeywordElse:	// if-do-else-end
-		c.Ops[block.Addr].Operand = addr - block.Addr + 1
-		op.Typ = OpEnd
-		c.pushOps(scope_name, op)
 	case lexer.KeywordDo:
 		switch block.Typ {
-		case lexer.KeywordWhile:
+		case lexer.KeywordWhile: // while-do-end
 			do_while_addr_diff := c.Ops[block.Addr].Operand.(types.IntType)
 			for _, jump := range block.Jumps {
 				switch jump.Keyword {
@@ -230,30 +226,29 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *CompileTimeContext
 					return logger.FormatErrMsg(&block.Tok.Loc, "Unhandled jump-keyword: `%s`", lexer.KeywordName[jump.Keyword])
 				}
 			}
-			op.Operand = block.Addr + do_while_addr_diff - addr
-			c.Ops[block.Addr].Operand = addr - block.Addr + 1
-			op.Typ = OpEnd
-			c.pushOps(scope_name, op)
+			op.Operand = block.Addr + do_while_addr_diff - addr // end -> while
+			c.Ops[block.Addr].Operand = do_end_diff             // do -> end + 1 if condition is false
 		case lexer.KeywordIf: // if-do-end
-			c.Ops[block.Addr].Operand = addr - block.Addr + 1
-			op.Typ = OpEnd
-			c.pushOps(scope_name, op)
+			c.Ops[block.Addr].Operand = do_end_diff // do -> end + 1 if condition is false
 		default:
 			return logger.FormatErrMsg(&token.Loc, "Unhandled block type while compiling `end` keyword")
 		}
+	case lexer.KeywordElse: // if-do-else-end
+		c.Ops[block.Addr].Operand = do_end_diff // do -> end + 1 if condition is false
+	case lexer.KeywordFunc:
+		op.Typ, op.Data = OpFuncEnd, scope_name
 
+	case lexer.KeywordIf, lexer.KeywordWhile:
+		return logger.FormatErrMsg(&block.Tok.Loc, "`%s` block must contain `do` before `end`", lexer.KeywordName[block_start_kw])
 	case lexer.KeywordEnd:
 		return logger.FormatErrMsg(&token.Loc, "`end` may only close `if-else` or `while-do` blocks, but got `%s`", block.Tok.Text)
 	case lexer.KeywordBreak, lexer.KeywordContinue:
 		return logger.FormatErrMsg(&block.Tok.Loc, "`%s` keyword shouldn't be in blocks stack", lexer.KeywordName[block_start_kw])
-	case lexer.KeywordFunc:
-		func_end_op := Op{
-			OpToken: *token, Typ: OpFuncEnd, Operand: scope_name, Data: scope_name,
-		}
-		c.pushOps(scope_name, func_end_op)
+
 	default:
 		return logger.FormatErrMsg(&token.Loc, "Unhandled block start processing (processEndKeyword)")
 	}
+	c.pushOps(scope_name, op)
 	return nil
 }
 

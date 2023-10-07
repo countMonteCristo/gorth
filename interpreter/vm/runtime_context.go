@@ -63,7 +63,7 @@ func (rc *RunTimeContext) GetExitCode(ops []Op, err error) ExitCodeType {
 		case rc.Stack.Size() > 1:
 			rc.ExitCode.Code = types.IntType(1)
 			rc.ExitCode.Msg = fmt.Sprintf("Multiple values left in stack after script exit: %v", rc.Stack.Data)
-		case rc.Stack.Size() == 0:
+		case rc.Stack.Empty():
 			rc.ExitCode.Code = types.IntType(2)
 			rc.ExitCode.Msg = "Empty stack after script exit"
 		default:

@@ -204,7 +204,7 @@ func (vm *VM) Step(ops []Op) (err error) {
 			vm.Rc.ScopeStack.Push(op.DebugInfo.(string))
 		}
 	case OpFuncEnd:
-		if vm.Rc.ReturnStack.Size() == 0 {
+		if vm.Rc.ReturnStack.Empty() {
 			return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Return stack is empty")
 		}
 		vm.Rc.Addr = vm.Rc.ReturnStack.Pop().(types.IntType) + 1
