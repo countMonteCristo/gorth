@@ -95,7 +95,7 @@ func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope_name s
 
 func (c *Compiler) compileIfBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext, scope_name string) error {
 	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token, lexer.KeywordIf))
-	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpIf})
+	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpJump, Operand: types.IntType(1), Data: token.Text})
 	return c.compile(th, ctx, scope_name)
 }
 
@@ -126,14 +126,14 @@ func (c *Compiler) compileElseBlock(token *lexer.Token, th *lexer.TokenHolder, c
 	}
 
 	c.Blocks.Push(NewBlock(addr, token, block.Typ))
-	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpElse})
+	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpJump, Data: token.Text})
 
 	return nil
 }
 
 func (c *Compiler) compileWhileBlock(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext, scope_name string) error {
 	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token, lexer.KeywordWhile))
-	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpWhile})
+	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpJump, Data: token.Text, Operand: types.IntType(1)})
 	return c.compile(th, ctx, scope_name)
 }
 
@@ -153,7 +153,7 @@ func (c *Compiler) compileDoBlock(token *lexer.Token, th *lexer.TokenHolder, ctx
 
 	do_addr := c.getCurrentAddr()
 	c.Blocks.Push(NewBlock(do_addr, token, block.Typ))
-	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpDo, Operand: block.Addr - do_addr})
+	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpCondJump, Operand: block.Addr - do_addr, Data: token.Text})
 	return nil
 }
 
@@ -180,16 +180,16 @@ func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType, kw lex
 		return logger.FormatErrMsg(&token.Loc, "`%s` should be inside while-loop, but it doesn't", token.Text)
 	}
 
-	c.pushOps(scope_name, Op{OpToken: *token, Typ: op_type})
+	c.pushOps(scope_name, Op{OpToken: *token, Typ: op_type, Data: token.Text})
 	return nil
 }
 
 func (c *Compiler) compileBreakKeyword(token *lexer.Token, scope_name string) error {
-	return c.compileJumpKeyword(token, OpBreak, lexer.KeywordBreak, scope_name)
+	return c.compileJumpKeyword(token, OpJump, lexer.KeywordBreak, scope_name)
 }
 
 func (c *Compiler) compileContinueKeyword(token *lexer.Token, scope_name string) error {
-	return c.compileJumpKeyword(token, OpContinue, lexer.KeywordContinue, scope_name)
+	return c.compileJumpKeyword(token, OpJump, lexer.KeywordContinue, scope_name)
 }
 
 func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *CompileTimeContext, scope_name string) error {
@@ -207,7 +207,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *CompileTimeContext
 	}
 	block_start_kw := block.Tok.Value.(lexer.KeywordType)
 
-	op := Op{OpToken: *token, Operand: types.IntType(1), Typ: OpEnd}
+	op := Op{OpToken: *token, Operand: types.IntType(1), Typ: OpJump, Data: token.Text}
 	addr := c.getCurrentAddr()
 	do_end_diff := addr - block.Addr + 1
 

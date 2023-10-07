@@ -13,13 +13,9 @@ const (
 	OpPushInt OpType = iota
 	OpPushBool
 	OpIntrinsic
-	OpIf
-	OpElse
-	OpEnd
-	OpWhile
-	OpDo
-	OpBreak
-	OpContinue
+
+	OpJump		// jumps to current_addr + op.Operand
+	OpCondJump	// jumps to current_addr + op.Operand only if top value at stack is false
 
 	OpCall
 	OpFuncBegin
@@ -36,13 +32,9 @@ var OpName = map[OpType]string{
 	OpPushInt:   "PUSH_INT",
 	OpPushBool:  "PUSH_BOOL",
 	OpIntrinsic: "INTRINSIC",
-	OpIf:        "IF",
-	OpElse:      "ELSE",
-	OpEnd:       "END",
-	OpWhile:     "WHILE",
-	OpDo:        "DO",
-	OpBreak:     "BREAK",
-	OpContinue:  "CONTINUE",
+
+	OpJump:     "JMP",
+	OpCondJump: "CJMP",
 
 	OpCall:      "CALL",
 	OpFuncBegin: "FUNC_BEGIN",
@@ -63,28 +55,25 @@ type Op struct {
 func (op *Op) Str(addr int64) (s string) {
 	var operand string
 
-	// assert(OpCount == 9, "Unhandled Op in Op.str()")
 	var _ uint = OpCount - 9 // compile-time check
 
 	switch op.Typ {
-	case OpPushInt:
-		res, _ := op.Operand.(types.IntType)
-		operand = fmt.Sprint(res)
 	case OpPushBool:
 		operand = types.BoolName[op.Operand.(types.BoolType)]
 	case OpIntrinsic:
 		operand = lexer.IntrinsicName[op.Operand.(lexer.IntrinsicType)]
-	case OpIf, OpElse, OpDo, OpEnd, OpBreak, OpContinue, OpCall:
-		res, _ := op.Operand.(types.IntType)
+	case OpPushInt, OpCall, OpPushLocalAlloc, OpPushGlobalAlloc:
+		res, ok := op.Operand.(types.IntType)
+		if !ok {
+			logger.Crash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
+		}
 		operand = fmt.Sprint(res)
-	case OpWhile:
-		operand = ""
-	case OpFuncBegin, OpFuncEnd:
-		res, _ := op.Operand.(types.IntType)
+	case OpJump, OpCondJump, OpFuncBegin, OpFuncEnd:
+		res, ok := op.Operand.(types.IntType)
+		if !ok {
+			logger.Crash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
+		}
 		operand = fmt.Sprintf("%d (%s)", res, op.Data.(string))
-	case OpPushLocalAlloc, OpPushGlobalAlloc:
-		res, _ := op.Operand.(types.IntType)
-		operand = fmt.Sprint(res)
 	default:
 		logger.Crash(&op.OpToken.Loc, "Unhandled operation: `%s`", OpName[op.Typ])
 	}

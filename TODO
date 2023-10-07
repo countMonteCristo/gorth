@@ -37,6 +37,7 @@
     [*] Add `p` command for printing consts, allocs or functions
     [*] Add command for showing parts of memory as a slice
   [] Improve debugger
+    [] Add command to go out of current function
 
 [] Low-level interaction with OS
   [] syscalls
@@ -58,11 +59,11 @@
 [*] Split Gorth project into modules
   [] show compilation statuses and timing
 
-[] Add `break` and `continue` to while loops
+[*] Add `break` and `continue` to while loops
   [*] break
   [*] continue
-  [] Replace some ops (break, continue, else, end) with unconditional jump operation
-  [] Replace some other ops (if, do) with conditional jump operation
+  [*] Replace some ops (break, continue, end, if, else) with unconditional jump operation
+  [*] Replace some `do` with conditional jump operation
 
-[*] Improve error messsages (they should point to the source code as well as to the Gorth script)
-  [] Add debug levels
+[*] Improve error messsages
+  [*] Add debug levels

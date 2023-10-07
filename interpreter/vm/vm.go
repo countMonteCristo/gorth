@@ -79,19 +79,15 @@ func (vm *VM) Step(ops []Op) (err error) {
 	case OpPushInt, OpPushBool:
 		vm.Rc.Stack.Push(op.Operand)
 		vm.Rc.Addr++
-	case OpDo:
+	case OpCondJump:
 		top := vm.Rc.Stack.Pop().(types.BoolType)
 		if I2B(top) {
 			vm.Rc.Addr++
 		} else {
 			vm.Rc.Addr += op.Operand.(types.IntType)
 		}
-	case OpIf:
-		vm.Rc.Addr++
-	case OpElse, OpEnd, OpBreak, OpContinue:
+	case OpJump:
 		vm.Rc.Addr += op.Operand.(types.IntType)
-	case OpWhile:
-		vm.Rc.Addr++
 	case OpIntrinsic:
 		intrinsic := op.Operand.(lexer.IntrinsicType)
 		switch intrinsic {
