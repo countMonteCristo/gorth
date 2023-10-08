@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"Gorth/interpreter/logger"
+	"Gorth/interpreter/utils"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,13 @@ import (
 type Importer struct {
 	Paths    []string        // where to find imported files
 	Included map[string]bool // already included files
+}
+
+func NewImporter(pkg_dir string, include_paths utils.ArrayArgs) *Importer {
+	i := &Importer{Paths: make([]string, 0), Included: make(map[string]bool)}
+	i.Paths = append(i.Paths, pkg_dir)
+	i.Paths = append(i.Paths, include_paths...)
+	return i
 }
 
 func (i *Importer) Find(fn string) (string, bool) {

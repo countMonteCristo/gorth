@@ -22,7 +22,7 @@
   [*] `include` keyword
   [*] check for circular includes
   [*] do not import already imported files
-  [] support -I flag for providing additional include paths
+  [*] support -I flag for providing additional include paths
   [] packages?
 
 [] Compile-time type checking

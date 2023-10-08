@@ -3,6 +3,7 @@ package vm
 import (
 	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
+	"Gorth/interpreter/utils"
 	"os"
 	"strconv"
 )
@@ -12,9 +13,10 @@ type Settings struct {
 	Env           bool // store env variables to memory
 	MemorySize    types.IntType
 	CallStackSize int
+	IncludePaths  utils.ArrayArgs
 }
 
-func NewSettings(debug, env bool, mem types.IntType, call_stack_Size int) *Settings {
+func NewSettings(debug, env bool, mem types.IntType, call_stack_Size int, include_paths utils.ArrayArgs) *Settings {
 	value, exists := os.LookupEnv("GORTH_VM_MEMORY")
 	if exists {
 		val_int, err := strconv.ParseInt(value, 10, 64)
@@ -33,5 +35,7 @@ func NewSettings(debug, env bool, mem types.IntType, call_stack_Size int) *Setti
 		call_stack_Size = val_int
 	}
 
-	return &Settings{Debug: debug, Env: env, MemorySize: mem, CallStackSize: call_stack_Size}
+	return &Settings{
+		Debug: debug, Env: env, MemorySize: mem, CallStackSize: call_stack_Size, IncludePaths: include_paths,
+	}
 }

@@ -67,12 +67,13 @@ Record test outputs:
 
 ## Usage
 ```
-> ./bin/gorth [-debug] [-env] Gorth/examples/helloworld.gorth [args...]
+> ./bin/gorth [-debug] [-env] [-I include_dir] Gorth/examples/helloworld.gorth [args...]
 ```
 
 Supported flags:
 * `debug` - run interpreter in debug mode
 * `env` - adds environment variables to VM memory (turned off by default)
+* `I` - provide additional include directories (i.e. "-I dir1 -I dir2 ... -I dirN")
 
 ## Debugger
 Run script with debugger.

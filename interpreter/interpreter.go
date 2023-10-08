@@ -27,11 +27,10 @@ func InitInterpreter(arguments []string, pkg_dir string, s *vm.Settings) *Interp
 		vm:   *vm.InitVM(s),
 		c:    *vm.NewCompiler(s.Debug),
 		args: arguments,
-		imp: lexer.Importer{
-			Paths:    []string{pkg_dir},
-			Included: make(map[string]bool),
-		},
+		imp: *lexer.NewImporter(pkg_dir, s.IncludePaths),
 	}
+
+	i.imp.Paths = append(i.imp.Paths, s.IncludePaths...)
 	return i
 }
 

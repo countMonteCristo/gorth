@@ -64,3 +64,14 @@ func ReadFile(fn string) (lines []string) {
 
 	return
 }
+
+type ArrayArgs []string
+
+func (a *ArrayArgs) String() string {
+	return "input array args"
+}
+
+func (a *ArrayArgs) Set(value string) error {
+	*a = append(*a, value)
+	return nil
+}

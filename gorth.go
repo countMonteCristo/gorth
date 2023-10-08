@@ -2,6 +2,7 @@ package main
 
 import (
 	"Gorth/interpreter"
+	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
 	"bufio"
 	"flag"
@@ -22,11 +23,16 @@ const (
 )
 
 func main() {
+
+	var includePaths utils.ArrayArgs
+
 	debugFlag := flag.Bool("debug", false, "run with debuger mode")
 	envFlag := flag.Bool("env", false, "save environment variables to VM memory")
+	flag.Var(&includePaths, "I", "provide additional include paths")
+
 	flag.Parse()
 
-	settings := vm.NewSettings(*debugFlag, *envFlag, vm_memory_size, recursion_limit)
+	settings := vm.NewSettings(*debugFlag, *envFlag, vm_memory_size, recursion_limit, includePaths)
 
 	gorth_script := flag.Args()[0]
 
