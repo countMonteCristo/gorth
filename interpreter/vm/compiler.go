@@ -192,6 +192,15 @@ func (c *Compiler) compileContinueKeyword(token *lexer.Token, scope_name string)
 	return c.compileJumpKeyword(token, OpJump, lexer.KeywordContinue, scope_name)
 }
 
+func (c *Compiler) compileReturnKeyword(token *lexer.Token, scope *Scope) error {
+	if scope.ScopeName == GlobalScopeName {
+		return logger.FormatErrMsg(&token.Loc, "Could not `return` from global scope, only from function")
+	}
+
+	c.pushOps(scope.ScopeName, Op{OpToken: *token, Operand: scope.MemSize, Typ: OpFuncEnd, Data: scope.ScopeName})
+	return nil
+}
+
 func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *CompileTimeContext, scope_name string) error {
 	if c.Blocks.Empty() {
 		return logger.FormatErrMsg(&token.Loc, "Unexpected `end` found")
@@ -589,6 +598,10 @@ func (c *Compiler) compile(th *lexer.TokenHolder, ctx *CompileTimeContext, scope
 				}
 			case lexer.KeywordContinue:
 				if err := c.compileContinueKeyword(token, scope_name); err != nil {
+					return err
+				}
+			case lexer.KeywordReturn:
+				if err := c.compileReturnKeyword(token, scope); err != nil {
 					return err
 				}
 

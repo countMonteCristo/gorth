@@ -13,6 +13,7 @@ const (
 	KeywordDo
 	KeywordBreak
 	KeywordContinue
+	KeywordReturn
 
 	KeywordConst
 	KeywordAlloc
@@ -31,6 +32,7 @@ var KeywordName = map[KeywordType]string{
 	KeywordDo:       "do",
 	KeywordBreak:    "break",
 	KeywordContinue: "continue",
+	KeywordReturn:   "return",
 
 	KeywordConst: "const",
 	KeywordAlloc: "alloc",

@@ -273,6 +273,22 @@ end
 ```
 Defines function with given name. You can use define and use your functions anywhere you want.
 
+#### Return from function
+```gorth
+func foo do
+  0 while dup 10 < do
+    if dup 5 > do drop return end
+    dup puti
+    1 +
+  end drop
+end
+
+func main do
+  foo
+  0
+end
+```
+
 ### Constants
 ```gorth
 const N 10 end
