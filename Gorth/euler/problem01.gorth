@@ -6,7 +6,9 @@ include "std/std.gorth"
 //
 // Answer: 233168
 
-func main do
+func main
+  : int
+do
   0
   1 while dup 1000 < do
 

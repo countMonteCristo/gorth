@@ -1,6 +1,8 @@
 include "std/std.gorth"
 
-func main do
+func main
+  : int
+do
   // Equal
   1 2 = p_int
   2 1 = p_int

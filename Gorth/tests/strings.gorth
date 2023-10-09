@@ -1,6 +1,8 @@
 include "std/std.gorth"
 
-func main do
+func main
+  : int
+do
   "hello" drop "hello" drop strcmp p_int
   "hello" drop "hell" drop strcmp p_int
   "hello" drop "helloworld" drop strcmp p_int

@@ -10,7 +10,9 @@ include "std/std.gorth"
 //
 // Answer: 4613732
 
-func main do
+func main
+  : int
+do
   0
   1 1 while over 4000000 < do
     // a+s a b

@@ -10,7 +10,9 @@ include "std/std.gorth"
 const N 20 end
 alloc mults N end
 
-func main do
+func main
+  : int
+do
   2 while dup N <= do
 
     0 over 2

@@ -2,6 +2,6 @@
   "argv": [],
   "stdin": "",
   "stdout": "",
-  "stderr": "[ERROR] Redefinition of name `x` (Previously defined here: Gorth/tests/const-alloc-redefinition.gorth:2:9):\n  Gorth/tests/const-alloc-redefinition.gorth:3:9",
+  "stderr": "[ERROR] Redefinition of name `x` (Previously defined here: Gorth/tests/const-alloc-redefinition.gorth:4:9):\n  Gorth/tests/const-alloc-redefinition.gorth:5:9",
   "exit_code": 1
 }

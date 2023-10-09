@@ -1,6 +1,8 @@
 include "std/std.gorth"
 
-func main do
+func main
+  : int
+do
   if 1 2 <= 3 4 = && do
     10 p_int
   else

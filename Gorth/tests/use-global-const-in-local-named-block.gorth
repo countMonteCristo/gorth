@@ -2,7 +2,9 @@ include "std/std.gorth"
 
 const x 1 end
 
-func main do
+func main
+  : int
+do
   const y x 1 + end
   alloc z y x + 1 + end
   y puti '\n' putc

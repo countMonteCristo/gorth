@@ -1,7 +1,9 @@
 alloc f 4 end
 
-func f do end
+func f : do end
 
-func main do
+func main
+  : int
+do
   f
 end

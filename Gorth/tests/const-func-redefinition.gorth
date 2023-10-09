@@ -1,4 +1,6 @@
-func main do
+func main
+  : int
+do
   const main 10 end
   main puti
 end

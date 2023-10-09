@@ -1,6 +1,8 @@
 const x 99 end
 
-func main do
+func main
+  : int
+do
   alloc x 5 end
   0
 end

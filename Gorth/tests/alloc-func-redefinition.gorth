@@ -1,3 +1,5 @@
-func main do
+func main
+  : int
+do
   alloc main 4 end
 end

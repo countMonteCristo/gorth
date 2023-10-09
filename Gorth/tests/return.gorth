@@ -1,4 +1,4 @@
-func foo do
+func foo : do
   0 while dup 10 < do
     if dup 5 > do drop return end
     dup puti
@@ -6,7 +6,9 @@ func foo do
   end drop
 end
 
-func main do
+func main
+  : int
+do
   foo
   0
 end

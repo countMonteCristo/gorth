@@ -3,8 +3,12 @@ include "unix.gorth"
 const sizeof(int) 4 end
 const sizeof(ptr) sizeof(int) end
 
-// Consumes pointer to the null-terminated string, returns its length (exclude terminated \0)
-func strlen do // int -> int
+// Returns length of null-terminated string (exclude terminated \0)
+func strlen
+  ptr   // const char* string
+    :
+  int   // string length
+do
   // p p+len
   dup
   while dup @8 0 != do
@@ -13,9 +17,14 @@ func strlen do // int -> int
   swap -
 end
 
-// Copy memory chunk of length `len` from `src` to `dst`, returns nothing
+// Copy memory chunk of count `count` bytes from `source` to `destination`, returns nothing
 // WARNING: situations when src and dst are overlapped ARE NOT HANDLED!
-func memcpy do    // src len dst -> void
+func memcpy
+  ptr   // source
+  int   // count of copied bytes
+  ptr   // destination
+    :
+do
   rot rot over +
   while over over < do
     rot rot
@@ -28,7 +37,12 @@ end
 
 // Converts string to unsigned number
 // Returns -1 if convertion failed
-func atou do  // ptr len -> uint
+// TODO: return (number, errno) maybe?
+func atou
+  ptr int // pointer to string and its length
+    :
+  int     // converted number
+do
   alloc result 8 end          // allocate memory for result
   0 result !64                // clear memory
 
@@ -49,7 +63,11 @@ end
 // Converts string to signed number
 // Returns err=1 if conversion failed
 // TODO: signle '+' and '-' both converted to 0
-func atoi do  // ptr len -> int err
+func atoi
+  ptr int // pointer to string and its length
+    :
+  int     // converted number
+do
   alloc result 8 end          // allocate memory for result
   alloc sign_m 1 end
   alloc err 1 end
@@ -93,12 +111,22 @@ func atoi do  // ptr len -> int err
 end
 
 // Consumes number of the input argument and returns pointer to it
-func argv_n do
+func argv_n
+  int   // index of the argument
+  :
+  ptr   // pointer to argument as null-terminated string
+do
   sizeof(ptr) * argv + @32
 end
 
-// Sets `size` count of bytes starting from `ptr` to `value`
-func memset do  // value ptr size -> ptr
+// Sets `size` count of bytes starting from `pointer` to `value`
+func memset
+  int   // value
+  ptr   // pointer
+  int   // size
+    :
+  ptr   // pointer
+do
   alloc ptr 4 end
   over ptr !32
   over + // value ptr end
@@ -112,22 +140,30 @@ func memset do  // value ptr size -> ptr
 end
 
 // Consumes two numbers and pushes minimum value
-func min do
+func min
+  int int : int
+do
   if over over > do swap end drop
 end
 
 // Consumes two numbers and pushes maximum value
-func max do
+func max
+  int int : int
+do
   if over over < do swap end drop
 end
 
 // Consumes one number and pushes its absolute value
-func abs do
+func abs
+  int : int
+do
   if dup 0 < do -1 * end
 end
 
 // Consumes one number and pushes its sign
-func sign do
+func sign
+  int : int
+do
   if dup 0 < do
     drop -1
   else
@@ -137,7 +173,11 @@ end
 
 // Consumes two pointers to null-terminated strings, pushes 1 if the first string is
 // lexicografically bigger than the second, -1 if it is smaller and 0 if they are equal
-func strcmp do
+func strcmp
+  ptr ptr // str1, str2
+    :
+  int     // result
+do
   while over @8 over @8 over over = rot rot drop 0 != && do
     1 + swap 1 + swap
   end
@@ -154,11 +194,15 @@ func strcmp do
 end
 
 // Prints number and one new line
-func p_int do
+func p_int
+  int : // number
+do
   puti '\n' putc
 end
 
 // Prints string and one new line
-func p_str do
+func p_str
+  ptr int : // pointer to string and its length
+do
   puts '\n' putc
 end

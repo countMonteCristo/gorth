@@ -1,13 +1,15 @@
 include "std/std.gorth"
 
-func foo do
+func foo : do
   "foo\n" puts
 end
 
-func foo do
+func foo : do
   "bar\n" puts
 end
 
-func main do
+func main
+  : int
+do
   foo
 end

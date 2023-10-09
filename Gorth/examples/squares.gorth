@@ -4,7 +4,9 @@ include "std/std.gorth"
 
 const N 10 end
 
-func main do
+func main
+  : int
+do
   1 while dup N <= do
     dup dup * p_int
     1 +

@@ -2,6 +2,6 @@
   "argv": [],
   "stdin": "",
   "stdout": "",
-  "stderr": "[ERROR] Redefinition of name `main` (Previously defined here: Gorth/tests/const-func-redefinition.gorth:1:6):\n  Gorth/tests/const-func-redefinition.gorth:2:9",
+  "stderr": "[ERROR] Redefinition of name `main` (Previously defined here: Gorth/tests/const-func-redefinition.gorth:1:6):\n  Gorth/tests/const-func-redefinition.gorth:4:9",
   "exit_code": 1
 }

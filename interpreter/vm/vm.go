@@ -54,10 +54,9 @@ func (vm *VM) ProcessSyscall() {
 		vm.Rc.Stack.Push(types.IntType(err))
 	case unix.SYS_CLOSE:
 		fd := vm.Rc.Stack.Pop().(types.IntType)
-		r1, _, err := unix.Syscall(
+		_, _, err := unix.Syscall(
 			unix.SYS_CLOSE, uintptr(fd), 0, 0,
 		)
-		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
 	case unix.SYS_WRITE:
 		count := vm.Rc.Stack.Pop().(types.IntType)

@@ -1,6 +1,8 @@
 include "std.gorth"
 
-func main do
+func main
+  : int
+do
   1 while dup argc < do
     dup argv_n dup strlen atou puti ' ' putc
     1 +

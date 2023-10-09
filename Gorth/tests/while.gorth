@@ -1,6 +1,8 @@
 include "std/std.gorth"
 
-func main do
+func main
+  : int
+do
   0 while dup 10 <= do
     dup p_int
     1 +

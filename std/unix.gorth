@@ -43,37 +43,65 @@ const S_IFSOCK 49152 end
 const S_IFMT   61440 end
 
 // Execute `open` system call
-// ptr flags mode -> fd errno
-func open do
+func open
+  ptr   // const char* filename
+  int   // flags
+  int   // mode
+    :
+  int   // file descriptor
+  int   // errno
+do
   SYS_OPEN syscall
 end
 
 // Execute `read` system call
-// fd ptr count -> actual_count errno
-func read do
+func read
+  int   // file descriptor
+  ptr   // buffer
+  int   // bytes count to be read
+    :
+  int   // bytes have been read
+  int   // errno
+do
   SYS_READ syscall
 end
 
 // Execute `write` system call
-// fd ptr count -> actual_count errno
-func write do
+func write
+  int   // file descriptor
+  ptr   // buffer
+  int   // bytes count to be read
+    :
+  int   // bytes have been read
+  int   // errno
+do
   SYS_WRITE syscall
 end
 
 // Execute `close` system call
-// fd -> result errno
-func close do
+func close
+  int   // file descriptor
+    :
+  int   // errno
+do
   SYS_CLOSE syscall
 end
 
 // Prints string to stdout
-func puts do  // ptr len -> void
+func puts
+  ptr   // const char* string
+  int   // string length
+    :
+do
   STDOUT rot rot write
   drop drop
 end
 
 // Prints char to stdout
-func putc do  // char -> void
+func putc
+  int     // char
+    :
+do
   alloc buf 1 end
   buf !8
   buf 1 puts

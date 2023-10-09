@@ -1,6 +1,8 @@
 include "std/std.gorth"
 
-func main do
+func main
+  : int
+do
   if 10 20 < do
     30 p_int
   else

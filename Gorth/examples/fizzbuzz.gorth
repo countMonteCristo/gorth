@@ -10,7 +10,9 @@ include "std/std.gorth"
 
 const N 100 end
 
-func main do
+func main
+  : int
+do
   1 while dup N <= do
     dup puti ' ' putc
     dup 3 % 0 = over 5 % 0 =

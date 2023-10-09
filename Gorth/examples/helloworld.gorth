@@ -2,7 +2,9 @@ include "std/std.gorth"
 
 // `Hello world` example in Gorth
 
-func main do
+func main
+  : int
+do
   "Hello, world!" p_str
   0
 end

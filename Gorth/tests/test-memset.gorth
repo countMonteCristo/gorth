@@ -1,6 +1,8 @@
 include "std/std.gorth"
 
-func main do
+func main
+  : int
+do
   const N 10 end
   alloc buf N end
   'X' buf N 1 - memset

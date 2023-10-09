@@ -1,4 +1,6 @@
-func main do
+func main
+  : int
+do
   const x 20 end
   alloc x 5 end
   x puti

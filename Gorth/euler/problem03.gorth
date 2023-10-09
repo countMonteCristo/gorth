@@ -5,7 +5,9 @@ include "std/std.gorth"
 //
 // Answer: 6857
 
-func main do
+func main
+  : int
+do
   1
   600851475143
   3 while over 1 > do

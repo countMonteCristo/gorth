@@ -1,6 +1,8 @@
-func f do end
+func f : do end
 
-func main do
+func main
+  : int
+do
   const f 10 end
   f puti
 end

@@ -3,7 +3,9 @@ include "std.gorth"
 const N 64 end
 alloc buf N end
 
-func main do
+func main
+  : int
+do
   if argc 2 < do
     "No file provided to cat" p_str
   else
@@ -12,15 +14,14 @@ func main do
       "Can not open file: " puts
       1 argv_n dup strlen p_str
     else
-      true
-      while dup do
+      true while dup do
         over buf N read drop          // read chunk
         if dup 0 = do drop break end  // break if read 0 bytes
         buf swap puts                 // print readed bytes
-      end
-      drop close                      // close file
+      end drop
+      close                      // close file
     end
   end
-  drop drop
+  drop
   0
 end

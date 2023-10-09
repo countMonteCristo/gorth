@@ -1,7 +1,9 @@
 const f 10 end
 
-func f do end
+func f : do end
 
-func main do
+func main
+  : int
+do
   f
 end

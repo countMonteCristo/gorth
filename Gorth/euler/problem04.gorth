@@ -10,7 +10,9 @@ const N 1000 end
 const x 100 end
 alloc ans 4 end
 
-func main do
+func main
+  : int
+do
   x while dup N < do
     dup while dup N < do
       over over *

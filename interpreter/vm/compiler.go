@@ -324,8 +324,8 @@ func (c *Compiler) compileFuncSignature(token *lexer.Token, th *lexer.TokenHolde
 		return
 	}
 
-	if next := th.NextToken(); next.Typ == lexer.TokenKeyword && next.Value.(lexer.KeywordType) != lexer.KeywordDo {
-		err = logger.FormatErrMsg(&next.Loc, "Expected function signature, but got `%s` keyword", next.Text)
+	if n := th.NextToken(); n.Typ == lexer.TokenKeyword && !slices.Contains([]lexer.KeywordType{lexer.KeywordDo, lexer.KeywordColon}, n.Value.(lexer.KeywordType)) {
+		err = logger.FormatErrMsg(&n.Loc, "Expected function signature, but got `%s` keyword", n.Text)
 		return
 	}
 

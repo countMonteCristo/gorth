@@ -4,7 +4,9 @@ const N 100 end
 
 alloc array N 1 + end
 
-func main do
+func main
+  : int
+do
   1 array N 1 - + !8
 
   0 while dup N < do

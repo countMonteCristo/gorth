@@ -1,6 +1,8 @@
 include "std/std.gorth"
 
-func main do
+func main
+  : int
+do
   // Sum
   10 20 + p_int
   -5 7 + p_int

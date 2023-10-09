@@ -1,6 +1,8 @@
 include "std/std.gorth"
 
-func main do
+func main
+  : int
+do
   alloc buf 64 end
   "Hello, world!" buf memcpy
   buf dup strlen p_str

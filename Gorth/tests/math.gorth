@@ -1,6 +1,8 @@
 include "std/std.gorth"
 
-func main do
+func main
+  : int
+do
   3 5 max p_int
   2 2 max p_int
   6 1 max p_int
