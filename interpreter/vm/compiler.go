@@ -318,7 +318,53 @@ func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, 
 	return
 }
 
-func (c *Compiler) compileFuncDef(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext) (name_token lexer.Token, func_name string, err error) {
+func (c *Compiler) compileFuncSignature(token *lexer.Token, th *lexer.TokenHolder) (inputs, outputs []lexer.DataType, err error) {
+	if th.Empty() {
+		err = logger.FormatErrMsg(&token.Loc, "Expected function signature, but got nothing")
+		return
+	}
+
+	if next := th.NextToken(); next.Typ == lexer.TokenKeyword && next.Value.(lexer.KeywordType) != lexer.KeywordDo {
+		err = logger.FormatErrMsg(&next.Loc, "Expected function signature, but got `%s` keyword", next.Text)
+		return
+	}
+
+	curr := &inputs
+	for {
+		if th.Empty() {
+			err = logger.FormatErrMsg(&token.Loc, "Unexpected end of tokens while compiling function signature")
+			return
+		}
+
+		if n := th.NextToken(); n.Typ == lexer.TokenKeyword && n.Value.(lexer.KeywordType) == lexer.KeywordDo {
+			break
+		}
+
+		switch next := th.GetNextToken(); next.Typ {
+		case lexer.TokenWord:
+			datatype, ok := next.Value.(lexer.DataType)
+			if !ok {
+				err = logger.FormatErrMsg(&next.Loc, "Unexpected word `%s` in function signature", next.Text)
+				return
+			}
+			*curr = append(*curr, datatype)
+		case lexer.TokenKeyword:
+			if next.Value.(lexer.KeywordType) == lexer.KeywordColon {
+				curr = &outputs
+			} else {
+				err = logger.FormatErrMsg(&next.Loc, "Unexpected keyword `%s` in function signature", next.Text)
+				return
+			}
+		default:
+			err = logger.FormatErrMsg(&next.Loc, "Unexpected token type `%s` in function signature", next.Text)
+			return
+		}
+	}
+
+	return
+}
+
+func (c *Compiler) compileFuncDef(token *lexer.Token, th *lexer.TokenHolder, ctx *CompileTimeContext) (name_token lexer.Token, sig FuncSignature, err error) {
 	if th.Empty() {
 		err = logger.FormatErrMsg(&token.Loc, "Expected `%s` name, but got nothing", token.Text)
 		return
@@ -351,19 +397,24 @@ func (c *Compiler) compileFuncDef(token *lexer.Token, th *lexer.TokenHolder, ctx
 		return
 	}
 
-	func_name = name_token.Text
+	func_name := name_token.Text
 	ctx.GlobalScope().Names[func_name] = name_token
 
-	do_token := *th.GetNextToken()
+	inputs, outputs, err := c.compileFuncSignature(token, th)
+	if err != nil {
+		return
+	}
 
+	do_token := *th.GetNextToken()
 	if do_token.Typ != lexer.TokenKeyword {
-		err = logger.FormatErrMsg(&token.Loc, "Expected `do` to start the function name, but got `%s`", token.Text)
+		err = logger.FormatErrMsg(&do_token.Loc, "Expected `do` to start the function name, but got `%s`", do_token.Text)
 		return
 	}
 	if do_token.Value.(lexer.KeywordType) != lexer.KeywordDo {
-		err = logger.FormatErrMsg(&token.Loc, "Expected keyword `do` to start the function name, but got `%s`", token.Text)
+		err = logger.FormatErrMsg(&do_token.Loc, "Expected keyword `do` to start the function name, but got `%s`", do_token.Text)
 		return
 	}
+	sig = FuncSignature{Name: func_name, Inputs: inputs, Outputs: outputs}
 
 	return
 }
@@ -373,24 +424,24 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, ctx *C
 	if scope_name != GlobalScopeName {
 		return logger.FormatErrMsg(&token.Loc, "Cannot define functions inside a function %s", scope_name)
 	}
-	func_token, func_name, err := c.compileFuncDef(token, th, ctx)
+	func_token, signature, err := c.compileFuncDef(token, th, ctx)
 	if err != nil {
 		return err
 	}
 
-	new_scope := NewScope(func_name)
-	new_scope.Names[func_name] = func_token
-	ctx.Scopes[func_name] = new_scope
+	new_scope := NewScope(signature.Name)
+	new_scope.Names[signature.Name] = func_token
+	ctx.Scopes[signature.Name] = new_scope
 
 	func_addr := c.getCurrentAddr()
 	c.Blocks.Push(NewBlock(func_addr, token, lexer.KeywordFunc))
 
-	c.pushOps(func_name, Op{OpToken: *token, Typ: OpFuncBegin, Data: func_name})
-	if err = c.compile(th, ctx, func_name); err != nil {
+	c.pushOps(signature.Name, Op{OpToken: *token, Typ: OpFuncBegin, Data: signature.Name})
+	if err = c.compile(th, ctx, signature.Name); err != nil {
 		return err
 	}
 
-	ctx.Funcs[func_name] = Function{Addr: func_addr}
+	ctx.Funcs[signature.Name] = Function{Addr: func_addr, Sig: signature}
 
 	c.Ops[func_addr].Operand = new_scope.MemSize            // OpFuncBegin $MEM - allocates   $MEM bytes in RAM
 	c.Ops[c.getCurrentAddr()-1].Operand = new_scope.MemSize // OpFuncEnd $MEM   - deallocates $MEM bytes in RAM

@@ -23,7 +23,13 @@ func NewBlock(addr types.IntType, token *lexer.Token, typ lexer.KeywordType) *Bl
 	return &Block{Addr: addr, Tok: *token, Jumps: make([]Jump, 0), Typ: typ}
 }
 
-type Function struct {
+type FuncSignature struct {
 	Name    string
-	Addr    types.IntType
+	Inputs  []lexer.DataType
+	Outputs []lexer.DataType
+}
+
+type Function struct {
+	Sig  FuncSignature
+	Addr types.IntType
 }

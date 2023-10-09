@@ -242,6 +242,14 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 			return
 		}
 
+		datatype, exists := WordToDataType[word]
+		if exists {
+			// fmt.Printf("`%s` - is a type\n", word)
+			token.Typ = TokenWord
+			token.Value = datatype
+			return
+		}
+
 		// word is some name
 		// fmt.Printf("`%s` - is a word\n", word)
 		token.Typ = TokenWord
