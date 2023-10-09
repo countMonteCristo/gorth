@@ -157,7 +157,7 @@ func (c *Compiler) compileDoBlock(token *lexer.Token, th *lexer.TokenHolder, ctx
 	return nil
 }
 
-func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType, kw lexer.KeywordType, scope_name string) error {
+func (c *Compiler) compileJumpKeyword(token *lexer.Token, kw lexer.KeywordType, scope_name string) error {
 	if kw != lexer.KeywordContinue && kw != lexer.KeywordBreak {
 		return logger.FormatErrMsg(&token.Loc, "Only `break` and `continue` are supported as jumps, but got `%s`", lexer.KeywordName[kw])
 	}
@@ -180,16 +180,16 @@ func (c *Compiler) compileJumpKeyword(token *lexer.Token, op_type OpType, kw lex
 		return logger.FormatErrMsg(&token.Loc, "`%s` should be inside while-loop, but it doesn't", token.Text)
 	}
 
-	c.pushOps(scope_name, Op{OpToken: *token, Typ: op_type, Data: token.Text})
+	c.pushOps(scope_name, Op{OpToken: *token, Typ: OpJump, Data: token.Text})
 	return nil
 }
 
 func (c *Compiler) compileBreakKeyword(token *lexer.Token, scope_name string) error {
-	return c.compileJumpKeyword(token, OpJump, lexer.KeywordBreak, scope_name)
+	return c.compileJumpKeyword(token, lexer.KeywordBreak, scope_name)
 }
 
 func (c *Compiler) compileContinueKeyword(token *lexer.Token, scope_name string) error {
-	return c.compileJumpKeyword(token, OpJump, lexer.KeywordContinue, scope_name)
+	return c.compileJumpKeyword(token, lexer.KeywordContinue, scope_name)
 }
 
 func (c *Compiler) compileReturnKeyword(token *lexer.Token, scope *Scope) error {
@@ -197,7 +197,21 @@ func (c *Compiler) compileReturnKeyword(token *lexer.Token, scope *Scope) error 
 		return logger.FormatErrMsg(&token.Loc, "Could not `return` from global scope, only from function")
 	}
 
-	c.pushOps(scope.ScopeName, Op{OpToken: *token, Operand: scope.MemSize, Typ: OpFuncEnd, Data: scope.ScopeName})
+	var i int
+	for i = len(c.Blocks.Data) - 1; i >= 0; i-- {
+		cur_block := c.Blocks.Data[i].(*Block)
+		t := &cur_block.Tok
+
+		if t.Typ == lexer.TokenKeyword && t.Value.(lexer.KeywordType) == lexer.KeywordFunc {
+			cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: lexer.KeywordReturn, Addr: c.getCurrentAddr()})
+			break
+		}
+	}
+	if i < 0 {
+		return logger.FormatErrMsg(&token.Loc, "`%s` should be inside function, but it doesn't", token.Text)
+	}
+
+	c.pushOps(scope.ScopeName, Op{OpToken: *token, Operand: types.IntType(1), Typ: OpJump, Data: token.Text})
 	return nil
 }
 
@@ -245,6 +259,13 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *CompileTimeContext
 	case lexer.KeywordElse: // if-do-else-end
 		c.Ops[block.Addr].Operand = do_end_diff // do -> end + 1 if condition is false
 	case lexer.KeywordFunc:
+		for _, jump := range block.Jumps {
+			if jump.Keyword == lexer.KeywordReturn {
+				c.Ops[jump.Addr].Operand = addr - jump.Addr // return -> end
+			} else {
+				return logger.FormatErrMsg(&block.Tok.Loc, "Unhandled jump-keyword: `%s` in function", lexer.KeywordName[jump.Keyword])
+			}
+		}
 		op.Typ, op.Data = OpFuncEnd, scope_name
 
 	case lexer.KeywordIf, lexer.KeywordWhile:
@@ -370,21 +391,12 @@ func (c *Compiler) compileFuncDef(token *lexer.Token, th *lexer.TokenHolder, ctx
 		return
 	}
 
-	if token.Typ == lexer.TokenKeyword {
-		kw_type := token.Value.(lexer.KeywordType)
-		if kw_type != lexer.KeywordFunc {
-			err = logger.FormatErrMsg(&token.Loc, "Expected `func` keyword, but found %s", token.Text)
-			return
-		}
-	}
-
 	if token.Typ == lexer.TokenKeyword && token.Value.(lexer.KeywordType) != lexer.KeywordFunc {
 		err = logger.FormatErrMsg(&token.Loc, "Expected `func` keyword, but found %s", token.Text)
 		return
 	}
 
 	name_token = *th.GetNextToken()
-
 	if name_token.Typ != lexer.TokenWord {
 		err = logger.FormatErrMsg(&token.Loc, "Expected `%s` name to be a word, but got `%s`", token.Text, name_token.Text)
 		return
@@ -405,7 +417,7 @@ func (c *Compiler) compileFuncDef(token *lexer.Token, th *lexer.TokenHolder, ctx
 		return
 	}
 
-	do_token := *th.GetNextToken()
+	do_token := th.GetNextToken()
 	if do_token.Typ != lexer.TokenKeyword {
 		err = logger.FormatErrMsg(&do_token.Loc, "Expected `do` to start the function name, but got `%s`", do_token.Text)
 		return
