@@ -3,6 +3,7 @@ package vm
 import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/types"
+	"Gorth/interpreter/utils"
 )
 
 // Jumps are: break and continue
@@ -25,8 +26,8 @@ func NewBlock(addr types.IntType, token *lexer.Token, typ lexer.KeywordType) *Bl
 
 type FuncSignature struct {
 	Name    string
-	Inputs  []lexer.DataType
-	Outputs []lexer.DataType
+	Inputs  utils.Stack
+	Outputs utils.Stack
 }
 
 type Function struct {

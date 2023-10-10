@@ -24,11 +24,11 @@ do
         over over / rot drop swap
       else
         rot swap
-        dup 1 - mults + @8 rot
+        dup 1 - mults swap ptr+ @8 rot
 
         if over over < do
           swap drop swap
-          dup 1 - mults + rot swap !8
+          dup 1 - mults swap ptr+ rot swap !8
         else
           drop drop
         end
@@ -39,11 +39,11 @@ do
 
     end
 
-    swap drop dup 1 - mults + @8 rot
+    swap drop dup 1 - mults swap ptr+ @8 rot
 
     if over over < do
       swap drop swap
-      dup 1 - mults + rot swap !8
+      dup 1 - mults swap ptr+ rot swap !8
     else
       drop drop
     end drop
@@ -53,7 +53,7 @@ do
 
 
   1 1 while dup N < do
-    dup 1 - mults + @8
+    dup 1 - mults swap ptr+ @8
 
     if dup 0 > do
       while dup 0 > do

@@ -7,7 +7,7 @@ func main
   : int
 do
   if argc 2 < do
-    "No file provided to cat" p_str
+    "No file provided to cat" p_str 0
   else
     1 argv_n 0 0 open                 // open file
     if 0 != do

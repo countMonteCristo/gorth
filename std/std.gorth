@@ -3,6 +3,24 @@ include "unix.gorth"
 const sizeof(int) 4 end
 const sizeof(ptr) sizeof(int) end
 
+// Adds ptr diff to ptr
+func ptr+
+  ptr int
+    :
+  ptr
+do
+  swap cast(int) swap + cast(ptr)
+end
+
+// Get distance between 2 pointers
+func ptr-
+  ptr ptr
+    :
+  int
+do
+  cast(int) swap cast(int) swap -
+end
+
 // Returns length of null-terminated string (exclude terminated \0)
 func strlen
   ptr   // const char* string
@@ -12,9 +30,9 @@ do
   // p p+len
   dup
   while dup @8 0 != do
-    1 +
+    1 ptr+
   end
-  swap -
+  swap ptr-
 end
 
 // Copy memory chunk of count `count` bytes from `source` to `destination`, returns nothing
@@ -25,12 +43,12 @@ func memcpy
   ptr   // destination
     :
 do
-  rot rot over +
-  while over over < do
+  rot rot over swap ptr+
+  while over cast(int) over cast(int) < do
     rot rot
     dup @8
     rot dup rot swap !8
-    1 + swap 1 + rot
+    1 ptr+ swap 1 ptr+ rot
   end
   drop drop drop
 end
@@ -46,15 +64,15 @@ do
   alloc result 8 end          // allocate memory for result
   0 result !64                // clear memory
 
-  over + swap                 // ptr len -> ptr_end ptr_begin
-  while over over > do
+  over swap ptr+ swap         // ptr len -> ptr_end ptr_begin
+  while over cast(int) over cast(int) > do
     dup @8 '0' -              // load digit
     if dup 10 > over 0 < || do   // if char is not a digit - break and return -1
       drop -1 result !64 break
     end
     result @64 10 * +         // update result number
     result !64                // store result number in memory
-    1 +
+    1 ptr+
   end
   drop drop
   result @64
@@ -67,6 +85,7 @@ func atoi
   ptr int // pointer to string and its length
     :
   int     // converted number
+  int     // errno
 do
   alloc result 8 end          // allocate memory for result
   alloc sign_m 1 end
@@ -78,18 +97,18 @@ do
 
   if over @8 '-' = do
     -1 sign_m !8
-    1 - swap 1 + swap
+    1 - swap 1 ptr+ swap
   else
     if over @8 '+' = do
-      1 - swap 1 + swap
+      1 - swap 1 ptr+ swap
     end
   end
 
-  over + swap                 // ptr len -> ptr_end ptr_begin
-  while over over > do
+  over swap ptr+ swap         // ptr len -> ptr_end ptr_begin
+  while over cast(int) over cast(int) > do
     dup @8 '0' -              // load digit
 
-    if dup 10 > over 0 < || do   // if char is not a digit - break
+    if dup 10 > over 0 < ||  do   // if char is not a digit - break
       drop -1 result !64
       1 err !8
       break
@@ -97,16 +116,16 @@ do
 
     result @64 10 * +         // update result number
     result !64                // store result number in memory
-    1 +
+    1 ptr+
   end
   drop drop
 
-  if err @8 dup 0 > do
+  err @8
+  if dup 0 > do
     0
   else
     result @64 sign_m @8 *
   end
-
   swap
 end
 
@@ -116,7 +135,7 @@ func argv_n
   :
   ptr   // pointer to argument as null-terminated string
 do
-  sizeof(ptr) * argv + @32
+  sizeof(ptr) * argv swap ptr+ @32 cast(ptr)
 end
 
 // Sets `size` count of bytes starting from `pointer` to `value`
@@ -127,16 +146,16 @@ func memset
     :
   ptr   // pointer
 do
-  alloc ptr 4 end
-  over ptr !32
-  over + // value ptr end
-  while over over < do
-    rot rot // end value ptr
-    over over !8 // end value ptr
-    1 + rot // value ptr+1 end
+  alloc tmp 4 end
+  over cast(int) tmp !32
+  over swap ptr+ // value tmp end
+  while over cast(int) over cast(int) < do
+    rot rot // end value tmp
+    over over !8 // end value tmp
+    1 ptr+ rot // value tmp+1 end
   end
   drop drop drop
-  ptr @32
+  tmp @32 cast(ptr)
 end
 
 // Consumes two numbers and pushes minimum value
@@ -179,7 +198,7 @@ func strcmp
   int     // result
 do
   while over @8 over @8 over over = rot rot drop 0 != && do
-    1 + swap 1 + swap
+    1 ptr+ swap 1 ptr+ swap
   end
 
   if over @8 over @8 over over > do

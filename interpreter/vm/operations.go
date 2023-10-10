@@ -11,10 +11,13 @@ type OpType int
 
 const (
 	OpPushInt OpType = iota
+	OpPushBool
+	OpPushPtr
+
 	OpIntrinsic
 
-	OpJump		// jumps to current_addr + op.Operand
-	OpCondJump	// jumps to current_addr + op.Operand only if top value at stack is false
+	OpJump     // jumps to current_addr + op.Operand
+	OpCondJump // jumps to current_addr + op.Operand only if top value at stack is false
 
 	OpCall
 	OpFuncBegin
@@ -22,13 +25,13 @@ const (
 
 	OpPushLocalAlloc
 	OpPushGlobalAlloc
-
-	OpCount = iota
 )
 
-var _ uint = OpCount - 9 // compile-time check
 var OpName = map[OpType]string{
-	OpPushInt:   "PUSH_INT",
+	OpPushInt:  "PUSH_INT",
+	OpPushBool: "PUSH_BOOL",
+	OpPushPtr:  "PUSH_PTR",
+
 	OpIntrinsic: "INTRINSIC",
 
 	OpJump:     "JMP",
@@ -56,7 +59,7 @@ func (op *Op) Str(addr int64) (s string) {
 	switch op.Typ {
 	case OpIntrinsic:
 		operand = lexer.IntrinsicName[op.Operand.(lexer.IntrinsicType)]
-	case OpPushInt, OpCall, OpPushLocalAlloc, OpPushGlobalAlloc:
+	case OpPushInt, OpPushBool, OpCall, OpPushLocalAlloc, OpPushGlobalAlloc:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
 			logger.Crash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)

@@ -50,7 +50,9 @@ func NewTestCase(fn string) TestCase {
 		},
 		// TODO: build ./bin/gorth if it does not exist
 		Cmd: []string{
-			"./bin/gorth", fn,
+			"./bin/gorth",
+			"-check",
+			fn,
 		},
 	}
 }
@@ -82,8 +84,6 @@ func (t *TestCase) run() TestOutput {
 		fmt.Fprintf(os.Stderr, "An error occured: %s", err) //replace with logger, or anything you want
 	}
 	cmd.Wait()
-
-
 
 	return TestOutput{
 		Stdout: outbuf.String(), Stderr: errbuf.String(), ExitCode: cmd.ProcessState.ExitCode(),

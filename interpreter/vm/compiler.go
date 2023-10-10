@@ -10,13 +10,14 @@ import (
 )
 
 type Compiler struct {
-	Blocks utils.Stack
-	Ops    []Op
-	debug  bool
+	Blocks    utils.Stack
+	Ops       []Op
+	debug     bool
+	typecheck bool
 }
 
-func NewCompiler(debug bool) *Compiler {
-	return &Compiler{Blocks: utils.Stack{}, Ops: make([]Op, 0), debug: debug}
+func NewCompiler(debug, typecheck bool) *Compiler {
+	return &Compiler{Blocks: utils.Stack{}, Ops: make([]Op, 0), debug: debug, typecheck: typecheck}
 }
 
 func (c *Compiler) getCurrentAddr() (addr types.IntType) {
@@ -44,7 +45,7 @@ func (c *Compiler) compileTokenString(token *lexer.Token, ctx *CompileTimeContex
 		return logger.FormatErrMsg(&token.Loc, "Unknown string literal at compile-time: `%s`", literal)
 	}
 	c.pushOps(scope_name,
-		Op{Typ: OpPushInt, Operand: literal_addr, OpToken: *token},
+		Op{Typ: OpPushPtr, Operand: literal_addr, OpToken: *token},
 		Op{Typ: OpPushInt, Operand: types.IntType(len(literal)), OpToken: *token},
 	)
 	return nil
@@ -56,7 +57,7 @@ func (c *Compiler) compileTokenChar(token *lexer.Token, scope_name string) error
 }
 
 func (c *Compiler) compileTokenBool(token *lexer.Token, scope_name string) error {
-	c.pushOps(scope_name, Op{Typ: OpPushInt, Operand: token.Value.(types.IntType), OpToken: *token})
+	c.pushOps(scope_name, Op{Typ: OpPushBool, Operand: token.Value.(types.IntType), OpToken: *token})
 	return nil
 }
 
@@ -89,7 +90,7 @@ func (c *Compiler) compileGlobalAlloc(token *lexer.Token, scope *Scope) error {
 }
 
 func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope_name string) error {
-	c.pushOps(scope_name, Op{Typ: OpCall, Operand: f.Addr - c.getCurrentAddr(), OpToken: *token})
+	c.pushOps(scope_name, Op{Typ: OpCall, Operand: f.Addr - c.getCurrentAddr(), OpToken: *token, Data: f.Sig.Name})
 	return nil
 }
 
@@ -244,7 +245,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, ctx *CompileTimeContext
 				case lexer.KeywordBreak:
 					c.Ops[jump.Addr].Operand = addr - jump.Addr + 1 // break -> end + 1
 				case lexer.KeywordContinue:
-					c.Ops[jump.Addr].Operand = block.Addr + do_while_addr_diff - jump.Addr // continue -> while
+					c.Ops[jump.Addr].Operand = addr - jump.Addr // continue -> end
 				default:
 					return logger.FormatErrMsg(&block.Tok.Loc, "Unhandled jump-keyword: `%s`", lexer.KeywordName[jump.Keyword])
 				}
@@ -339,7 +340,7 @@ func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, 
 	return
 }
 
-func (c *Compiler) compileFuncSignature(token *lexer.Token, th *lexer.TokenHolder) (inputs, outputs []lexer.DataType, err error) {
+func (c *Compiler) compileFuncSignature(token *lexer.Token, th *lexer.TokenHolder) (inputs, outputs utils.Stack, err error) {
 	if th.Empty() {
 		err = logger.FormatErrMsg(&token.Loc, "Expected function signature, but got nothing")
 		return
@@ -368,7 +369,7 @@ func (c *Compiler) compileFuncSignature(token *lexer.Token, th *lexer.TokenHolde
 				err = logger.FormatErrMsg(&next.Loc, "Unexpected word `%s` in function signature", next.Text)
 				return
 			}
-			*curr = append(*curr, datatype)
+			curr.Push(datatype)
 		case lexer.TokenKeyword:
 			if next.Value.(lexer.KeywordType) == lexer.KeywordColon {
 				curr = &outputs
@@ -436,6 +437,10 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, ctx *C
 	if scope_name != GlobalScopeName {
 		return logger.FormatErrMsg(&token.Loc, "Cannot define functions inside a function %s", scope_name)
 	}
+	if _, exists := ctx.Funcs["main"]; exists {
+		return logger.FormatErrMsg(&token.Loc, "Cannot define functions after `main`")
+	}
+
 	func_token, signature, err := c.compileFuncDef(token, th, ctx)
 	if err != nil {
 		return err
@@ -719,9 +724,19 @@ func (c *Compiler) CompileTokens(th *lexer.TokenHolder, ctx *CompileTimeContext)
 		return logger.FormatErrMsg(&top.Tok.Loc, "Unclosed `%s`-block", top.Tok.Text)
 	}
 
-	_, exists := ctx.Funcs["main"]
+	// TODO: set entry point to `OpJump main`` instead of `OpFuncBegin main`
+	f, exists := ctx.Funcs["main"]
 	if !exists {
 		return logger.FormatErrMsg(nil, "No entry point found (function `main` was not defined)")
+	}
+	c.pushOps(GlobalScopeName, Op{Typ: OpCall, Operand: f.Addr - c.getCurrentAddr(), Data: f.Sig.Name})
+
+	if c.typecheck {
+		tc := NewTypeChecker(ctx)
+		if err := tc.TypeCheckProgram(&c.Ops); err != nil {
+			return err
+		}
+		// fmt.Println("[TypeCheck] OK")
 	}
 
 	return nil

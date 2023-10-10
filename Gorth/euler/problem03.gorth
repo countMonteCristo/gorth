@@ -14,9 +14,9 @@ do
     // d n/d
     if over over % 0 = do
       over over / rot drop swap
-      if rot over < do
-        swap over
-      end
+
+      rot over max rot rot  // save max prime factor
+
     else
       2 +
     end

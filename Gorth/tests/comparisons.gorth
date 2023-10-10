@@ -4,34 +4,34 @@ func main
   : int
 do
   // Equal
-  1 2 = p_int
-  2 1 = p_int
-  1 1 = p_int
+  1 2 = cast(int) p_int
+  2 1 = cast(int) p_int
+  1 1 = cast(int) p_int
 
   // Not Equal
-  3 4 != p_int
-  4 3 != p_int
-  3 3 != p_int
+  3 4 != cast(int) p_int
+  4 3 != cast(int) p_int
+  3 3 != cast(int) p_int
 
   // Less Than or Equal
-  5 6 <= p_int
-  6 5 <= p_int
-  5 5 <= p_int
+  5 6 <= cast(int) p_int
+  6 5 <= cast(int) p_int
+  5 5 <= cast(int) p_int
 
   // Greater Than or Equal
-  7 8 >= p_int
-  8 7 >= p_int
-  7 7 >= p_int
+  7 8 >= cast(int) p_int
+  8 7 >= cast(int) p_int
+  7 7 >= cast(int) p_int
 
   // Greater Than
-  9 10 > p_int
-  10 9 > p_int
-  9 9  > p_int
+  9 10 > cast(int) p_int
+  10 9 > cast(int) p_int
+  9 9  > cast(int) p_int
 
   // Less Than
-  11 12 < p_int
-  12 11 < p_int
-  11 11 < p_int
+  11 12 < cast(int) p_int
+  12 11 < cast(int) p_int
+  11 11 < cast(int) p_int
 
   0
 end

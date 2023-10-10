@@ -38,6 +38,7 @@ const (
 	IntrinsicPuti
 
 	IntrinsicDebug
+	IntrinsicTypeDebug
 
 	IntrinsicLoad8
 	IntrinsicStore8
@@ -55,7 +56,12 @@ const (
 	IntrinsicOffset
 	IntrinsicReset
 
-	IntrinsicSyscall
+	IntrinsicSyscall1
+	IntrinsicSyscall3
+
+	IntrinsicCastInt
+	IntrinsicCastPtr
+	IntrinsicCastBool
 )
 
 var IntrinsicName = map[IntrinsicType]string{
@@ -91,7 +97,8 @@ var IntrinsicName = map[IntrinsicType]string{
 
 	IntrinsicPuti: "puti",
 
-	IntrinsicDebug: "???",
+	IntrinsicDebug:     "???",
+	IntrinsicTypeDebug: "!!!",
 
 	IntrinsicLoad8:   "@8",
 	IntrinsicStore8:  "!8",
@@ -109,7 +116,12 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicOffset: "offset",
 	IntrinsicReset:  "reset",
 
-	IntrinsicSyscall: "syscall",
+	IntrinsicSyscall1: "syscall1",
+	IntrinsicSyscall3: "syscall3",
+
+	IntrinsicCastInt:  "cast(int)",
+	IntrinsicCastPtr:  "cast(ptr)",
+	IntrinsicCastBool: "cast(bool)",
 }
 
 var WordToIntrinsic = utils.RevMap(IntrinsicName).(map[string]IntrinsicType)

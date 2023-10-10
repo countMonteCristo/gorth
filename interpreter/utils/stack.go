@@ -8,6 +8,14 @@ type Stack struct {
 	Data []interface{}
 }
 
+func NewStack[T any](x []T) *Stack {
+	s := &Stack{}
+	for _, i := range x {
+		s.Push(i)
+	}
+	return s
+}
+
 func (s *Stack) Push(x interface{}) {
 	s.Data = append(s.Data, x)
 }
@@ -40,4 +48,22 @@ func (s *Stack) Size() int {
 
 func (s *Stack) Empty() bool {
 	return s.Size() == 0
+}
+
+func (s *Stack) Copy() *Stack {
+	n := &Stack{Data: make([]interface{}, s.Size())}
+	copy(n.Data, s.Data)
+	return n
+}
+
+func StacksAreEqual[T comparable](s, v *Stack) bool {
+	if s.Size() != v.Size() {
+		return false
+	}
+	for i := range s.Data {
+		if s.Data[i].(T) != v.Data[i].(T) {
+			return false
+		}
+	}
+	return true
 }

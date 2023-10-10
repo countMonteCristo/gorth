@@ -5,11 +5,13 @@ func main
 do
   1 while dup argc < do
     dup argv_n dup strlen atoi
+
     if 0 > do
       drop "<error>" puts
     else
       puti
     end
+
     ' ' putc
     1 +
   end drop

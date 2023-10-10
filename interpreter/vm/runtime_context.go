@@ -51,7 +51,8 @@ func (rc *RunTimeContext) Prepare(ctx *CompileTimeContext, args []string, ops_co
 	rc.Args = args                                // for OpArgc
 	rc.Memory.Prepare(args, env, &ctx.StringsMap) // load string literals and input args to memory
 
-	rc.Addr = ctx.Funcs["main"].Addr // script entry point address
+	// rc.Addr = ctx.Funcs["main"].Addr // script entry point address
+	rc.Addr = ops_count - 1 // script entry point address (last op should be OpCall to main)
 
 	// in case we have global allocs
 	rc.Memory.OperativeMemRegion.Ptr = rc.Memory.OperativeMemRegion.Start + ctx.GlobalScope().MemSize

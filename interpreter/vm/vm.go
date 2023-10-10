@@ -31,7 +31,21 @@ func (vm *VM) PreprocessTokens(th *lexer.TokenHolder) {
 	vm.Ctx.PreprocessStringLiterals(th, vm.Rc.Memory.StringsRegion.Start)
 }
 
-func (vm *VM) ProcessSyscall() {
+func (vm *VM) ProcessSyscall1() {
+	switch syscall_id := vm.Rc.Stack.Pop().(types.IntType); syscall_id {
+	case unix.SYS_CLOSE:
+		fd := vm.Rc.Stack.Pop().(types.IntType)
+		r1, _, err := unix.Syscall(
+			unix.SYS_CLOSE, uintptr(fd), 0, 0,
+		)
+		vm.Rc.Stack.Push(types.IntType(r1))
+		vm.Rc.Stack.Push(types.IntType(err))
+	default:
+		logger.Crash(nil, "syscall1 for #%d is not implemented yet\n", syscall_id)
+	}
+}
+
+func (vm *VM) ProcessSyscall3() {
 	syscall_id := vm.Rc.Stack.Pop().(types.IntType)
 	switch syscall_id {
 	case unix.SYS_OPEN:
@@ -52,12 +66,6 @@ func (vm *VM) ProcessSyscall() {
 		)
 		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_CLOSE:
-		fd := vm.Rc.Stack.Pop().(types.IntType)
-		_, _, err := unix.Syscall(
-			unix.SYS_CLOSE, uintptr(fd), 0, 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(err))
 	case unix.SYS_WRITE:
 		count := vm.Rc.Stack.Pop().(types.IntType)
 		ptr := vm.Rc.Stack.Pop().(types.IntType)
@@ -68,14 +76,14 @@ func (vm *VM) ProcessSyscall() {
 		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
 	default:
-		panic(fmt.Sprintf("Syscall #%d is not implemented yet\n", syscall_id))
+		logger.Crash(nil, "syscall3 for #%d is not implemented yet\n", syscall_id)
 	}
 }
 
 func (vm *VM) Step(ops []Op) (err error) {
 	op := ops[vm.Rc.Addr]
 	switch op.Typ {
-	case OpPushInt:
+	case OpPushInt, OpPushBool, OpPushPtr:
 		vm.Rc.Stack.Push(op.Operand)
 		vm.Rc.Addr++
 	case OpCondJump:
@@ -165,6 +173,8 @@ func (vm *VM) Step(ops []Op) (err error) {
 				vm.Rc.Memory.Data[vm.Rc.Memory.OperativeMemRegion.Start:vm.Rc.Memory.OperativeMemRegion.Ptr],
 				vm.Rc.Stack.Data,
 			)
+		case lexer.IntrinsicTypeDebug:
+			// do nothing
 		case lexer.IntrinsicLoad8, lexer.IntrinsicLoad16, lexer.IntrinsicLoad32, lexer.IntrinsicLoad64:
 			ptr := vm.Rc.Stack.Pop().(types.IntType)
 			val := vm.Rc.Memory.LoadFromMem(ptr, LoadSizes[intrinsic])
@@ -180,8 +190,15 @@ func (vm *VM) Step(ops []Op) (err error) {
 			vm.Rc.Stack.Push(vm.Rc.Memory.Argv)
 		case lexer.IntrinsicEnv:
 			vm.Rc.Stack.Push(vm.Rc.Memory.Env)
-		case lexer.IntrinsicSyscall:
-			vm.ProcessSyscall()
+
+		case lexer.IntrinsicSyscall1:
+			vm.ProcessSyscall1()
+		case lexer.IntrinsicSyscall3:
+			vm.ProcessSyscall3()
+
+		case lexer.IntrinsicCastInt, lexer.IntrinsicCastPtr, lexer.IntrinsicCastBool:
+			// do nothing
+
 		default:
 			return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Unhandled intrinsic: `%s`", op.OpToken.Text)
 		}

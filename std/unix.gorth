@@ -51,7 +51,7 @@ func open
   int   // file descriptor
   int   // errno
 do
-  SYS_OPEN syscall
+  SYS_OPEN syscall3
 end
 
 // Execute `read` system call
@@ -63,7 +63,7 @@ func read
   int   // bytes have been read
   int   // errno
 do
-  SYS_READ syscall
+  SYS_READ syscall3
 end
 
 // Execute `write` system call
@@ -75,7 +75,7 @@ func write
   int   // bytes have been read
   int   // errno
 do
-  SYS_WRITE syscall
+  SYS_WRITE syscall3
 end
 
 // Execute `close` system call
@@ -84,7 +84,7 @@ func close
     :
   int   // errno
 do
-  SYS_CLOSE syscall
+  SYS_CLOSE syscall1 swap drop // SYS_CLOSE returns {unused} {errno}, just drop {unused}
 end
 
 // Prints string to stdout
