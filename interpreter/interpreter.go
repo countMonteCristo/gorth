@@ -26,7 +26,7 @@ func show_err_and_exit(err error) {
 	utils.Exit(1)
 }
 
-func NewInterpreter(arguments []string, pkg_dir string, s *vm.Settings) *Interpreter {
+func NewInterpreter(arguments []string, pkg_dir string, s *vm.VmSettings) *Interpreter {
 	i := &Interpreter{
 		lexer:       lexer.Lexer{},
 		vm:          *vm.NewVM(s, compiler.GlobalScopeName),
@@ -57,16 +57,16 @@ func (i *Interpreter) Prepare(fn string) {
 
 func (i *Interpreter) Run(fn string) vm.ExitCodeType {
 	i.Prepare(fn)
-	return i.vm.Interprete(i.compiler.Ops, i.args, &i.compiler.Ctx.StringsMap, i.compiler.Ctx.GlobalScope().MemSize, i.compiler.EntryPointAddr())
+	return i.vm.Interprete(i.compiler.Ops, i.args)
 }
 
 func (i *Interpreter) RunDebug(fn string) {
 	i.Prepare(fn)
-	i.vm.Rc.PrepareMemory(&i.compiler.Ctx.StringsMap, i.compiler.Ctx.GlobalScope().MemSize, i.args, &i.vm.S)
+	i.vm.Rc.PrepareMemory(i.args, &i.vm.S)
 	i.debugger = *debugger.NewDebugger(&i.vm)
 
 	for {
-		i.vm.Rc.Reset(i.compiler.EntryPointAddr())
+		i.vm.Rc.Reset()
 		go i.debugger.Debug(i.compiler.Ops, i.args, &i.compiler.Ctx)
 		res := i.debugger.Run()
 		if res == debugger.DebugQuit {

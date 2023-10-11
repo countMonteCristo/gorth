@@ -12,10 +12,10 @@ import (
 
 type VM struct {
 	Rc RunTimeContext
-	S  Settings
+	S  VmSettings
 }
 
-func NewVM(s *Settings, global_scope_name string) *VM {
+func NewVM(s *VmSettings, global_scope_name string) *VM {
 	vm := VM{
 		S: *s,
 	}
@@ -178,7 +178,7 @@ func (vm *VM) Step(ops []Op) (err error) {
 			vm.Rc.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic])
 
 		case lexer.IntrinsicArgc:
-			vm.Rc.Stack.Push(vm.Rc.Argc())
+			vm.Rc.Stack.Push(vm.Rc.Argc)
 		case lexer.IntrinsicArgv:
 			vm.Rc.Stack.Push(vm.Rc.Memory.Argv)
 		case lexer.IntrinsicEnv:
@@ -231,13 +231,13 @@ func (vm *VM) Step(ops []Op) (err error) {
 	return
 }
 
-func (vm *VM) PrepareRuntimeContext(ops []Op, args []string, literals *map[string]types.IntType, global_mem_size types.IntType, entry_point_addr types.IntType) {
-	vm.Rc.PrepareMemory(literals, global_mem_size, args, &vm.S)
-	vm.Rc.Reset(entry_point_addr)
+func (vm *VM) PrepareRuntimeContext(ops []Op, args []string) {
+	vm.Rc.PrepareMemory(args, &vm.S)
+	vm.Rc.Reset()
 }
 
-func (vm *VM) Interprete(ops []Op, args []string, literals *map[string]types.IntType, global_mem_size, entry_point_addr types.IntType) ExitCodeType {
-	vm.PrepareRuntimeContext(ops, args, literals, global_mem_size, entry_point_addr)
+func (vm *VM) Interprete(ops []Op, args []string) ExitCodeType {
+	vm.PrepareRuntimeContext(ops, args)
 	var err error = nil
 	for vm.Rc.Addr < vm.Rc.OpsCount {
 		err = vm.Step(ops)

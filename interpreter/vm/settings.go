@@ -8,7 +8,7 @@ import (
 	"strconv"
 )
 
-type Settings struct {
+type VmSettings struct {
 	Debug         bool // debug mode
 	Env           bool // store env variables to memory
 	TypeCheck     bool // do type checking before running the program
@@ -18,7 +18,7 @@ type Settings struct {
 }
 
 // TODO: add flags for memory and call_stack instead of reading env?
-func NewSettings(debug, env, typecheck bool, mem types.IntType, call_stack_Size int, include_paths utils.ArrayArgs) *Settings {
+func NewSettings(debug, env, typecheck bool, mem types.IntType, call_stack_Size int, include_paths utils.ArrayArgs) *VmSettings {
 	value, exists := os.LookupEnv("GORTH_VM_MEMORY")
 	if exists {
 		val_int, err := strconv.ParseInt(value, 10, 64)
@@ -37,7 +37,7 @@ func NewSettings(debug, env, typecheck bool, mem types.IntType, call_stack_Size 
 		call_stack_Size = val_int
 	}
 
-	return &Settings{
+	return &VmSettings{
 		Debug: debug, Env: env, TypeCheck: typecheck, MemorySize: mem, CallStackSize: call_stack_Size,
 		IncludePaths: include_paths,
 	}

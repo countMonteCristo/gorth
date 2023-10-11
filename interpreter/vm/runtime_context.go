@@ -32,14 +32,14 @@ type RunTimeContext struct {
 	ReturnStack  utils.Stack
 	ScopeStack   utils.Stack
 	Addr         types.IntType
-	Args         []string
+	Argc         types.IntType
 	OpsCount     types.IntType
 	ExitCode     ExitCodeType
 	Settings     RuntimeSettings
 	global_scope string
 }
 
-func NewRuntimeContext(s *Settings, global_scope_name string) *RunTimeContext {
+func NewRuntimeContext(s *VmSettings, global_scope_name string) *RunTimeContext {
 	rc := &RunTimeContext{
 		Memory: NewMemory(s.MemorySize),
 		Stack:  utils.Stack{}, ReturnStack: utils.Stack{},
@@ -52,11 +52,7 @@ func NewRuntimeContext(s *Settings, global_scope_name string) *RunTimeContext {
 	return rc
 }
 
-func (rc *RunTimeContext) Argc() types.IntType {
-	return types.IntType(len(rc.Args))
-}
-
-func (rc *RunTimeContext) Reset(entry_point types.IntType) {
+func (rc *RunTimeContext) Reset() {
 	rc.Stack.Clear()
 	rc.ReturnStack.Clear()
 	rc.ScopeStack.Clear()
@@ -67,18 +63,17 @@ func (rc *RunTimeContext) Reset(entry_point types.IntType) {
 	rc.ReturnStack.Push(rc.OpsCount) // for exit after hitting OpFuncEnd of main function
 }
 
-func (rc *RunTimeContext) PrepareMemory(litearls *map[string]types.IntType, global_mem_size types.IntType, args []string, s *Settings) {
-
+func (rc *RunTimeContext) PrepareMemory(args []string, s *VmSettings) {
 	env := []string{}
 	if s.Env {
 		env = os.Environ()
 	}
 
-	rc.Args = args                         // for OpArgc
-	rc.Memory.Prepare(args, env, litearls) // load string literals and input args to memory
+	rc.Argc = types.IntType(len(args))                       // for OpArgc
+	rc.Memory.Prepare(args, env, rc.Settings.StringLiterals) // load string literals and input args to memory
 
 	// in case we have global allocs
-	rc.Memory.OperativeMemRegion.Ptr = rc.Memory.OperativeMemRegion.Start + global_mem_size
+	rc.Memory.OperativeMemRegion.Ptr = rc.Memory.OperativeMemRegion.Start + rc.Settings.GlobalMemorySize
 }
 
 func (rc *RunTimeContext) GetExitCode(ops []Op, err error) ExitCodeType {
