@@ -26,8 +26,8 @@
   [] packages?
 
 [] Compile-time type checking
-  [] using stack for types
-  [] use function signatures
+  [*] using stack for types
+  [*] use function signatures
   [] generic functions
 
 [] Improve interpreter

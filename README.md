@@ -13,7 +13,7 @@
 ```gorth
 include "std.gorth"
 
-func main do
+func main : int do
   "Hello, world!\n" puts
   0
 end
@@ -23,7 +23,7 @@ end
 ```gorth
 include "std.gorth"
 
-func main do
+func main : int do
   argv while dup @32 dup 0 != do
     dup strlen p_str
     sizeof(ptr) +
@@ -67,12 +67,13 @@ Record test outputs:
 
 ## Usage
 ```
-> ./bin/gorth [-debug] [-env] [-I include_dir] Gorth/examples/helloworld.gorth [args...]
+> ./bin/gorth [-debug] [-env] [-check] [-I include_dir] Gorth/examples/helloworld.gorth [args...]
 ```
 
 Supported flags:
 * `debug` - run interpreter in debug mode
 * `env` - adds environment variables to VM memory (turned off by default)
+* `check` - perform type checking before running the script
 * `I` - provide additional include directories (i.e. "-I dir1 -I dir2 ... -I dirN")
 
 ## Debugger
@@ -104,7 +105,7 @@ Integer literal is a sequence of decimal digits (optionally starts with + or -).
 
 Example:
 ```gorth
-func main do
+func main : int do
   1 2 + puti
   0
 end
@@ -118,7 +119,7 @@ Example:
 ```gorth
 include "std.gorth"
 
-func main do
+func main : int do
   "Hello, world!" p_str
   0
 end
@@ -132,72 +133,72 @@ Example:
 ```gorth
 include "std.gorth"
 
-func main do
+func main : int do
   '\n' putc
   0
 end
 ```
 
 ## Types
-Only two types are supported for now: `int` and `bool`.
+Only three types are supported for now: `int`, `bool` and `ptr`.
 
 ## Intrincisc
 ### Stack manipulation
 | Name    | Signature        | Description                                 |
 | ---     | ---              | ---                                         |
-| `dup`   | `a -- a a`       | duplicate an element on top of the stack.   |
-| `swap`  | `a b -- b a`     | swap 2 elements on the top of the stack.    |
-| `drop`  | `a b -- a`       | drops the top element of the stack.         |
-| `over`  | `a b -- a b a`   | copy the element below the top of the stack |
-| `rot`   | `a b c -- c a b` | rotate the top three stack elements.        |
+| `dup`   | `a : a a`       | duplicate an element on top of the stack.   |
+| `swap`  | `a b : b a`     | swap 2 elements on the top of the stack.    |
+| `drop`  | `a b : a`       | drops the top element of the stack.         |
+| `over`  | `a b : a b a`   | copy the element below the top of the stack |
+| `rot`   | `a b c : c a b` | rotate the top three stack elements.        |
 
 ### Comparison
 | Name | Signature                              | Description                                                  |
 | ---  | ---                                    | ---                                                          |
-| `=`  | `[a: int] [b: int] -- [a == b : bool]` | checks if two elements on top of the stack are equal.        |
-| `!=` | `[a: int] [b: int] -- [a != b : bool]` | checks if two elements on top of the stack are not equal.    |
-| `>`  | `[a: int] [b: int] -- [a > b  : bool]` | applies the greater comparison on top two elements.          |
-| `<`  | `[a: int] [b: int] -- [a < b  : bool]` | applies the less comparison on top two elements.             |
-| `>=` | `[a: int] [b: int] -- [a >= b : bool]` | applies the greater or equal comparison on top two elements  |
-| `<=` | `[a: int] [b: int] -- [a <= b : bool]` | applies the greater or equal comparison on top two elements. |
+| `=`  | `[a: int] [b: int] : [a == b : bool]` | checks if two elements on top of the stack are equal.        |
+| `!=` | `[a: int] [b: int] : [a != b : bool]` | checks if two elements on top of the stack are not equal.    |
+| `>`  | `[a: int] [b: int] : [a > b  : bool]` | applies the greater comparison on top two elements.          |
+| `<`  | `[a: int] [b: int] : [a < b  : bool]` | applies the less comparison on top two elements.             |
+| `>=` | `[a: int] [b: int] : [a >= b : bool]` | applies the greater or equal comparison on top two elements  |
+| `<=` | `[a: int] [b: int] : [a <= b : bool]` | applies the greater or equal comparison on top two elements. |
 
 ### Arithmetic
 | Name | Signature                           | Description                                              |
 | ---  | ---                                 | ---                                                      |
-| `+`  | `[a: int] [b: int] -- [a + b: int]` | sums up two elements on the top of the stack.            |
-| `-`  | `[a: int] [b: int] -- [a - b: int]` | subtracts two elements on the top of the stack           |
-| `*`  | `[a: int] [b: int] -- [a * b: int]` | multiples two elements on top of the stack               |
-| `/`  | `[a: int] [b: int] -- [a / b: int]` | integer division of two elements on the top of the stack |
-| `%`  | `[a: int] [b: int] -- [a / b: int]` | gets the reminder after integer diviion `a` by `b`       |
+| `+`  | `[a: int] [b: int] : [a + b: int]` | sums up two elements on the top of the stack.            |
+| `-`  | `[a: int] [b: int] : [a - b: int]` | subtracts two elements on the top of the stack           |
+| `*`  | `[a: int] [b: int] : [a * b: int]` | multiples two elements on top of the stack               |
+| `/`  | `[a: int] [b: int] : [a / b: int]` | integer division of two elements on the top of the stack |
+| `%`  | `[a: int] [b: int] : [a / b: int]` | gets the reminder after integer diviion `a` by `b`       |
 
 ### Bitwise
 | Name | Signature                            | Description     |
 | ---  | ---                                  | ---             |
-| `>>` | `[a: int] [b: int] -- [a >> b: int]` | right bit shift |
-| `<<` | `[a: int] [b: int] -- [a << b: int]` | left bit shift  |
-| `\|` | `[a: int] [b: int] -- [a \| b: int]` | bit `or`        |
-| `&`  | `[a: int] [b: int] -- [a & b: int]`  | bit `and`       |
-| `^`  | `[a: int] [b: int] -- [a ^ b: int]`  | bit `xor`       |
-| `~`  | `[a: int]          -- [~b: int]`     | bit `not`       |
+| `>>` | `[a: int] [b: int] : [a >> b: int]` | right bit shift |
+| `<<` | `[a: int] [b: int] : [a << b: int]` | left bit shift  |
+| `\|` | `[a: int] [b: int] : [a \| b: int]` | bit `or`        |
+| `&`  | `[a: int] [b: int] : [a & b: int]`  | bit `and`       |
+| `^`  | `[a: int] [b: int] : [a ^ b: int]`  | bit `xor`       |
+| `~`  | `[a: int]          : [~b: int]`     | bit `not`       |
 
 ### Logical
 | Name   | Signature                                 | Description |
 | ---    | ---                                       | ---         |
-| `&&`   | `[a: bool] [b: bool] -- [a && b: bool]`   | logical AND |
-| `\|\|` | `[a: bool] [b: bool] -- [a \|\| b: bool]` | logical OR  |
-| `!`    | `[a: bool] -- [!a: bool]`                 | logical NOT |
+| `&&`   | `[a: bool] [b: bool] : [a && b: bool]`   | logical AND |
+| `\|\|` | `[a: bool] [b: bool] : [a \|\| b: bool]` | logical OR  |
+| `!`    | `[a: bool] : [!a: bool]`                 | logical NOT |
 
 ### Memory
 | Name         | Signature                      |Description                                        |
 | ---          | ---                            | ---                                               |
-| `!8`         | `[byte: int] [place: ptr] -- ` | store a given byte at the address on the stack    |
-| `@8`         | `[place: ptr] -- [byte: int]`  | load a byte from the address on the stack         |
-| `!16`        | `[byte: int] [place: ptr] --`  | store an 2-byte word at the address on the stack  |
-| `@16`        | `[place: ptr] -- [byte: int]`  | load an 2-byte word from the address on the stack |
-| `!32`        | `[byte: int] [place: ptr] --`  | store an 4-byte word at the address on the stack  |
-| `@32`        | `[place: ptr] -- [byte: int]`  | load an 4-byte word from the address on the stack |
-| `!64`        | `[byte: int] [place: ptr] --`  | store an 8-byte word at the address on the stack  |
-| `@64`        | `[place: ptr] -- [byte: int]`  | load an 8-byte word from the address on the stack |
+| `!8`         | `[byte: int] [place: ptr] : ` | store a given byte at the address on the stack    |
+| `@8`         | `[place: ptr] : [byte: int]`  | load a byte from the address on the stack         |
+| `!16`        | `[byte: int] [place: ptr] :`  | store an 2-byte word at the address on the stack  |
+| `@16`        | `[place: ptr] : [byte: int]`  | load an 2-byte word from the address on the stack |
+| `!32`        | `[byte: int] [place: ptr] :`  | store an 4-byte word at the address on the stack  |
+| `@32`        | `[place: ptr] : [byte: int]`  | load an 4-byte word from the address on the stack |
+| `!64`        | `[byte: int] [place: ptr] :`  | store an 8-byte word at the address on the stack  |
+| `@64`        | `[place: ptr] : [byte: int]`  | load an 8-byte word from the address on the stack |
 
 ### Misc
 - `???` - prints stack state
@@ -215,7 +216,7 @@ For now only 4 system calls are supported: `open`, `read`, `write` and `close`. 
 ```gorth
 include "std.gorth"
 
-func main do
+func main : int do
   if 10 20 < do
     30 puti '\n' putc
   else
@@ -229,7 +230,7 @@ end
 include "std.gorth"
 
 // print all numbers
-func main do
+func main : int do
   0 while dup 10 <= do
     if dup 2 = do         // but skip 2
       1 +
@@ -263,7 +264,7 @@ func print_item do
   " * " puts p_str
 end
 
-func main do
+func main : int do
   argv while dup @32 dup 0 != do
     dup strlen print_item
     sizeof(ptr) +
@@ -272,6 +273,17 @@ func main do
 end
 ```
 Defines function with given name. You can use define and use your functions anywhere you want.
+
+Function definition looks like this:
+```gorth
+func <function_name>
+  <input_type_1> <input_type_2> ... <input_type_M>
+    :
+  <output_type_1> <output_type_2> ... <output_type_N> do
+  // your code goes here
+end
+```
+where all of `input_type_K` and `output_type_L` are from set {`int`, `bool`, `ptr`}. `any` type is not allowed.
 
 #### Return from function
 ```gorth
@@ -283,7 +295,7 @@ func foo do
   end drop
 end
 
-func main do
+func main : int do
   foo
   0
 end
@@ -304,7 +316,7 @@ include "std.gorth"
 
 const N 10 end
 
-func main do
+func main : int do
   N puti ' ' putc
   const N 20 end
   N puti '\n' putc
@@ -327,7 +339,7 @@ include "std.gorth"
 
 alloc x 1 end
 
-func main do
+func main : int do
   13 x !8
   x @8 puti ' ' putc
   alloc x 1 end
@@ -336,3 +348,14 @@ func main do
 end
 ```
 this code will not compile.
+
+# Type checking
+You can run your script with `-check` option to enable type checking.
+
+The process of type checking is quite similar to the process of interpretation the script. Type checker process all the script operations using types instead of actual number. Here are some type checking rules:
+* only one iteration of while-loop is processed, and after it the type stack should reamin the same as before
+* both branches of if-else block are processed individually, and the results should be the same
+* every function gets the type stack filled with the types corresponding to its input type list and should push to the type stack arguments corresponding to its output type list (`any` can match any type)
+* in case of no `else` in if-block the "true" branch should not change the type stack
+* in case of having `break` or `continue` inside the while-loop the state of the type stack will be saved and checked at the end of processing the loop
+* in case of having `return` inside if-block or while-loop the state of the type stack will be saved and checked at the end of processing the function
