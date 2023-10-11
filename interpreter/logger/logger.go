@@ -6,12 +6,22 @@ import (
 	"os"
 )
 
-func formatLevelErr(loc *utils.Location, m ModuleType, l LogLevelType, msg string, args ...any) error {
-	path := ""
+func FormatLoc(loc *utils.Location) (path string) {
 	if loc != nil {
-		path = fmt.Sprintf(":\n  %s:%d:%d", loc.Filepath, loc.Line+1, loc.Column+1)
+		path = fmt.Sprintf("%s:%d:%d", loc.Filepath, loc.Line+1, loc.Column+1)
 	}
-	return fmt.Errorf("[%s] [%s] %s%s", LogLevelToStr(l), ModuleToStr(m), fmt.Sprintf(msg, args...), path)
+	return
+}
+
+func FormatAddLoc(loc *utils.Location) (path string) {
+	if loc != nil {
+		path = fmt.Sprintf(":\n  %s", FormatLoc(loc))
+	}
+	return
+}
+
+func formatLevelErr(loc *utils.Location, m ModuleType, l LogLevelType, msg string, args ...any) error {
+	return fmt.Errorf("[%s] [%s] %s%s", LogLevelToStr(l), ModuleToStr(m), fmt.Sprintf(msg, args...), FormatAddLoc(loc))
 }
 
 func formatErrMsg(loc *utils.Location, m ModuleType, msg string, args ...any) error {
@@ -39,26 +49,12 @@ func TypeCheckerError(loc *utils.Location, msg string, args ...any) error {
 }
 
 func FormatInfoMsg(loc *utils.Location, msg string, args ...any) string {
-	path := ""
-	if loc != nil {
-		path = fmt.Sprintf(": %s:%d:%d", loc.Filepath, loc.Line+1, loc.Column+1)
-	}
-	return fmt.Sprintf("[%s] %s%s", LogLevelToStr(Info), fmt.Sprintf(msg, args...), path)
+	return fmt.Sprintf("[%s] %s%s", LogLevelToStr(Info), fmt.Sprintf(msg, args...), FormatAddLoc(loc))
 }
 
 func FormatNoneMsg(loc *utils.Location, msg string, args ...any) string {
-	path := ""
-	if loc != nil {
-		path = fmt.Sprintf(": %s:%d:%d", loc.Filepath, loc.Line+1, loc.Column+1)
-	}
-	return fmt.Sprintf("%s%s", fmt.Sprintf(msg, args...), path)
+	return fmt.Sprintf("%s: %s", fmt.Sprintf(msg, args...), FormatLoc(loc))
 }
-
-// func Crash(loc *utils.Location, msg string, args ...any) {
-// 	err := VmRuntimeError(loc, msg, args...)
-// 	fmt.Fprintln(os.Stderr, err.Error())
-// 	utils.Exit(1)
-// }
 
 func crash(loc *utils.Location, m ModuleType, msg string, args ...any) {
 	err := formatCrashMsg(loc, m, msg, args...)

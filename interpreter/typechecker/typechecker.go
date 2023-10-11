@@ -33,31 +33,38 @@ func NewTypeChecker(enabled bool) *TypeChecker {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+type TypeCheckerJumpResult struct {
+	Stack utils.Stack
+	Token *lexer.Token
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
 type TypeCheckerOutputs struct {
-	Index  int
-	Stacks []utils.Stack // slice of possible type stacks
+	Index   int
+	Results []TypeCheckerJumpResult // slice of possible type stacks
 }
 
 func NewTypeCheckerOutputs() *TypeCheckerOutputs {
-	return &TypeCheckerOutputs{Index: -1, Stacks: make([]utils.Stack, 0)}
+	return &TypeCheckerOutputs{Index: -1, Results: make([]TypeCheckerJumpResult, 0)}
 }
 
 func (tco *TypeCheckerOutputs) SameOutputs() bool {
-	if len(tco.Stacks) == 0 {
-		logger.TypeCheckerCrash(nil, "FATAL ERROR: TypeCheckerOutputs has empty Stacks field")
+	if len(tco.Results) == 0 {
+		logger.TypeCheckerCrash(nil, "FATAL ERROR: TypeCheckerOutputs has empty Results field")
 	}
-	for i := 0; i < len(tco.Stacks)-1; i++ {
-		if !utils.StacksAreEqual[lexer.DataType](&tco.Stacks[i], &tco.Stacks[i+1]) {
+	for i := 0; i < len(tco.Results)-1; i++ {
+		if !utils.StacksAreEqual[lexer.DataType](&tco.Results[i].Stack, &tco.Results[i+1].Stack) {
 			return false
 		}
 	}
 	return true
 }
 
-func (tco *TypeCheckerOutputs) FormatStacks() string {
+func (tco *TypeCheckerOutputs) FormatStacks(indent string) string {
 	items := make([]string, 0)
-	for _, s := range tco.Stacks {
-		items = append(items, fmt.Sprintf("%s", s.Data))
+	for _, s := range tco.Results {
+		items = append(items, fmt.Sprintf("%s%s: %s", indent, logger.FormatLoc(&s.Token.Loc), s.Stack.Data))
 	}
 	return strings.Join(items, "\n")
 }
@@ -66,8 +73,8 @@ func OutputsAreSame(f, s *TypeCheckerOutputs) bool {
 	if f.Index != s.Index {
 		return false
 	}
-	for i := range f.Stacks {
-		if !utils.StacksAreEqual[lexer.DataType](&f.Stacks[i], &s.Stacks[i]) {
+	for i := range f.Results {
+		if !utils.StacksAreEqual[lexer.DataType](&f.Results[i].Stack, &s.Results[i].Stack) {
 			return false
 		}
 	}
@@ -113,22 +120,22 @@ func (cs *TypeCheckerContextStack) Push(c *TypeCheckerContext) {
 
 func (cs *TypeCheckerContextStack) Pop() *TypeCheckerContext {
 	if cs.stack.Empty() {
-		logger.TypeCheckerCrash(nil, "[TypeCheck] FATAL ERROR: pop from empty TypeCheckerContextStack")
+		logger.TypeCheckerCrash(nil, "Pop from empty TypeCheckerContextStack")
 	}
 	c, ok := cs.stack.Pop().(*TypeCheckerContext)
 	if !ok {
-		logger.TypeCheckerCrash(nil, "[TypeCheck] FATAL ERROR: pop item from TypeCheckerContextStack has bad type")
+		logger.TypeCheckerCrash(nil, "Pop item from TypeCheckerContextStack has bad type")
 	}
 	return c
 }
 
 func (cs *TypeCheckerContextStack) Top() *TypeCheckerContext {
 	if cs.stack.Empty() {
-		logger.TypeCheckerCrash(nil, "[TypeCheck] FATAL ERROR: top from empty TypeCheckerContextStack")
+		logger.TypeCheckerCrash(nil, "Top from empty TypeCheckerContextStack")
 	}
 	c, ok := cs.stack.Top().(*TypeCheckerContext)
 	if !ok {
-		logger.TypeCheckerCrash(nil, "[TypeCheck] FATAL ERROR: top item from TypeCheckerContextStack has bad type")
+		logger.TypeCheckerCrash(nil, "Top item from TypeCheckerContextStack has bad type")
 	}
 	return c
 }
@@ -144,7 +151,7 @@ func (cs *TypeCheckerContextStack) GetContext(t context_type) *TypeCheckerContex
 			return ctx
 		}
 	}
-	logger.TypeCheckerCrash(nil, "[TypeCheck] FATAL ERROR: Cannot find closest context for %d", t)
+	logger.TypeCheckerCrash(nil, "Cannot find closest context for %d", t)
 	return nil
 }
 
@@ -169,8 +176,6 @@ func ContextStacksAreSame(f, s *TypeCheckerContextStack) bool {
 }
 */
 
-// ---------------------------------------------------------------------------------------------------------------------
-// TODO: Update error messages: provide locations
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (tc *TypeChecker) enoughArgsCount(stack *utils.Stack, count int, token *lexer.Token) (err error) {
@@ -321,14 +326,17 @@ func (tc *TypeChecker) typeCheckSimpleOps(op *vm.Op, ctx *TypeCheckerContext) er
 
 func (tc *TypeChecker) typeCheckFunc(ops *[]vm.Op, i int, contextStack *TypeCheckerContextStack) (index int, err error) {
 	index = -1
+	contextStackSize := contextStack.Size()
 
 	ctx := contextStack.Top().Clone(context_type_func)
 	contextStack.Push(ctx)
 
 	func_name := (*ops)[i].Data.(string)
+	loc := &(*ops)[i].OpToken.Loc
+
 	f, exists := tc.Ctx.Funcs[func_name]
 	if !exists {
-		err = logger.TypeCheckerError(&(*ops)[i].OpToken.Loc, "No such function: `%s`", func_name)
+		err = logger.TypeCheckerError(loc, "No such function: `%s`", func_name)
 		return
 	}
 	for _, t := range f.Sig.Inputs.Data {
@@ -339,20 +347,31 @@ func (tc *TypeChecker) typeCheckFunc(ops *[]vm.Op, i int, contextStack *TypeChec
 		return
 	}
 
-	// TODO: check that contextStack preserves its size and popped item has Typ = context_type_func
-	outputs := contextStack.Pop().Outputs
+	top := contextStack.Pop()
+	if contextStack.Size() != contextStackSize {
+		logger.TypeCheckerCrash(loc, "Function `%s` type checking does not preserve contextStack.Size()", func_name)
+	}
+	if top.Typ != context_type_func {
+		logger.TypeCheckerCrash(
+			loc, "The type of context has changed after function `%s` type checking. Expected %d but got %d",
+			func_name, context_type_func, top.Typ,
+		)
+	}
+
+	outputs := top.Outputs
 	if !outputs.SameOutputs() {
 		err = logger.TypeCheckerError(
 			nil, "Function `%s` could finish with different output types:\n%s",
-			func_name, outputs.FormatStacks(),
+			func_name, outputs.FormatStacks(" * "),
 		)
 		return
 	}
 
-	if !utils.StacksAreEqual[lexer.DataType](&f.Sig.Outputs, &outputs.Stacks[0]) {
+	final_stack := &outputs.Results[0].Stack
+	if !utils.StacksAreEqual[lexer.DataType](&f.Sig.Outputs, final_stack) {
 		err = logger.TypeCheckerError(
-			nil, "Function `%s` does not fit to its signature. Expected `%s` but got `%s`",
-			func_name, f.Sig.Outputs.Data, outputs.Stacks[0].Data,
+			loc, "Function `%s` does not fit to its signature. Expected `%s` but got `%s`",
+			func_name, f.Sig.Outputs.Data, final_stack.Data,
 		)
 		return
 	}
@@ -363,6 +382,7 @@ func (tc *TypeChecker) typeCheckFunc(ops *[]vm.Op, i int, contextStack *TypeChec
 
 func (tc *TypeChecker) typeCheckWhileBlock(ops *[]vm.Op, i int, contextStack *TypeCheckerContextStack) (int, error) {
 	index := -1
+	contextStackSize := contextStack.Size()
 
 	ctx := contextStack.Top().Clone(context_type_while)
 	contextStack.Push(ctx)
@@ -378,25 +398,32 @@ func (tc *TypeChecker) typeCheckWhileBlock(ops *[]vm.Op, i int, contextStack *Ty
 	if err := tc.typeCheck(ops, i+1, contextStack); err != nil {
 		return i, err
 	}
-	// i = contextStack.Top().Outputs.Index
 
-	if contextStack.Top().Terminated {
-		index = contextStack.Top().Outputs.Index
-		contextStack.Pop()
-		contextStack.Top().Terminated = true
+	top := contextStack.Pop()
+	if contextStack.Size() != contextStackSize {
+		logger.TypeCheckerCrash(loc, "While-loop type checking does not preserve contextStack.Size()")
+	}
+	if top.Typ != context_type_func {
+		logger.TypeCheckerCrash(
+			loc, "The type of context has changed after while-loop type checking. Expected %d but got %d",
+			context_type_func, top.Typ,
+		)
+	}
+
+	if top.Terminated {
+		index = top.Outputs.Index
+		top.Terminated = true
 	} else {
-		top := contextStack.Pop()
-
 		if !top.Outputs.SameOutputs() {
 			return index, logger.TypeCheckerError(
-				loc, "While-loop could finish with different stack results:\n%s",
-				top.Outputs.FormatStacks(),
+				nil, "While-loop (%s) could finish with different stack results:\n%s",
+				logger.FormatLoc(loc), top.Outputs.FormatStacks(" * "),
 			)
 		}
 
-		if !utils.StacksAreEqual[lexer.DataType](&contextStack.Top().Stack, &top.Outputs.Stacks[0]) {
+		if !utils.StacksAreEqual[lexer.DataType](&contextStack.Top().Stack, &top.Outputs.Results[0].Stack) {
 			return index, logger.TypeCheckerError(
-				loc, "While-loop iteration changes stack. Expected: %s actual: %s",
+				loc, "While-loop iteration changes stack. Expected `%s` but got `%s`",
 				contextStack.Top().Stack.Data, top.Stack.Data,
 			)
 		}
@@ -439,25 +466,36 @@ func (tc *TypeChecker) typeCheckIfBlock(ops *[]vm.Op, i int, contextStack *TypeC
 			return index, err
 		}
 
-		if false_stack.Top().Terminated {
-			if true_stack.Top().Terminated {
-				// TODO: check only top contexts maybe?
-				if !ContextsAreSame(true_stack.Top(), false_stack.Top()) {
-					return index, logger.TypeCheckerError(loc, "`true` and `false` branch results of if-else-block does not match (both has return)")
+		false_ctx := false_stack.Top()
+		true_ctx := true_stack.Top()
+		if false_ctx.Terminated {
+			if true_ctx.Terminated {
+				if !ContextsAreSame(true_ctx, false_ctx) {
+					return index, logger.TypeCheckerError(
+						nil, "`true` and `false` branch results of if-else-end block (%s) do not match (both have return):\ntrue:  %s (%s)\nfalse: %s (%s)",
+						logger.FormatLoc(loc),
+						true_ctx.Stack.Data, logger.FormatLoc(&do_op.OpToken.Loc),
+						false_ctx.Stack.Data, logger.FormatLoc(&(*ops)[j].OpToken.Loc),
+					)
 				}
-				top.Stack = false_stack.Top().Stack
-				index = false_stack.Top().Outputs.Index // go to OpFuncEnd
+				top.Stack = false_ctx.Stack
+				index = false_ctx.Outputs.Index // go to OpFuncEnd
 				top.Terminated = true
 			} else {
-				top.Stack = true_stack.Top().Stack
+				top.Stack = true_ctx.Stack
 				index = j + int((*ops)[j].Operand.(types.IntType)) // go to end+1
 			}
 		} else {
-			if !true_stack.Top().Terminated && !ContextsAreSame(true_stack.Top(), false_stack.Top()) {
-				return index, logger.TypeCheckerError(loc, "`true` and `false` branch results of if-else-block does not match")
+			if !true_ctx.Terminated && !ContextsAreSame(true_ctx, false_ctx) {
+				return index, logger.TypeCheckerError(
+					nil, "`true` and `false` branch results of if-else-end block (%s) do not match:\ntrue:  %s (%s)\nfalse: %s (%s)",
+					logger.FormatLoc(loc),
+					true_ctx.Stack.Data, logger.FormatLoc(&do_op.OpToken.Loc),
+					false_ctx.Stack.Data, logger.FormatLoc(&(*ops)[j].OpToken.Loc),
+				)
 			}
-			top.Stack = false_stack.Top().Stack
-			index = false_stack.Top().Outputs.Index + 1 // go to end+1
+			top.Stack = false_ctx.Stack
+			index = false_ctx.Outputs.Index + 1 // go to end+1
 		}
 		return index, nil
 	case vm.OpJumpEnd: // if-do-end, so if-branch should preserve the stack
@@ -467,7 +505,7 @@ func (tc *TypeChecker) typeCheckIfBlock(ops *[]vm.Op, i int, contextStack *TypeC
 
 		false_stack := contextStack.Clone()
 		ctx2 := top.Clone(context_type_if)
-		ctx2.Outputs.Stacks = append(ctx2.Outputs.Stacks, ctx2.Stack)
+		ctx2.Outputs.Results = append(ctx2.Outputs.Results, TypeCheckerJumpResult{Stack: ctx2.Stack, Token: &(*ops)[j].OpToken})
 		ctx2.Outputs.Index = j
 		false_stack.Push(ctx2)
 
@@ -475,10 +513,17 @@ func (tc *TypeChecker) typeCheckIfBlock(ops *[]vm.Op, i int, contextStack *TypeC
 			return index, err
 		}
 
-		if !true_stack.Top().Terminated && !ContextsAreSame(true_stack.Top(), false_stack.Top()) {
-			return index, logger.TypeCheckerError(loc, "`true` branch results of if-block differs from `false`")
+		false_ctx := false_stack.Top()
+		true_ctx := true_stack.Top()
+		if !true_ctx.Terminated && !ContextsAreSame(true_ctx, false_ctx) {
+			return index, logger.TypeCheckerError(
+				nil, "`true` and `false` branch results of if-end-block (%s) do not match:\ntrue:  %s (%s)\nfalse: %s (%s)",
+				logger.FormatLoc(loc),
+				true_ctx.Stack.Data, logger.FormatLoc(&do_op.OpToken.Loc),
+				false_ctx.Stack.Data, logger.FormatLoc(&(*ops)[j].OpToken.Loc),
+			)
 		}
-		top.Stack = false_stack.Top().Stack
+		top.Stack = false_ctx.Stack
 		index = j + 1 // go to end+1
 		return index, nil
 	default:
@@ -510,7 +555,9 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			switch block_type {
 			case vm.OpJumpReturn:
 				func_ctx := contextStack.GetContext(context_type_func)
-				func_ctx.Outputs.Stacks = append(func_ctx.Outputs.Stacks, *ctx.Stack.Copy())
+				func_ctx.Outputs.Results = append(func_ctx.Outputs.Results, TypeCheckerJumpResult{
+					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
+				})
 				func_ctx.Outputs.Index = i + int(op.Operand.(types.IntType))
 
 				if ctx.Typ == context_type_if || ctx.Typ == context_type_while {
@@ -520,12 +567,16 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 				return nil
 
 			case vm.OpJumpEnd:
-				ctx.Outputs.Stacks = append(ctx.Outputs.Stacks, *ctx.Stack.Copy())
+				ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
+					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
+				})
 				ctx.Outputs.Index = i
 				return nil
 			case vm.OpJumpBreak, vm.OpJumpContinue:
 				while_ctx := contextStack.GetContext(context_type_while)
-				while_ctx.Outputs.Stacks = append(while_ctx.Outputs.Stacks, *ctx.Stack.Copy())
+				while_ctx.Outputs.Results = append(while_ctx.Outputs.Results, TypeCheckerJumpResult{
+					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
+				})
 
 				while_ctx.Outputs.Index = i + int(op.Operand.(types.IntType))
 				if block_type == vm.OpJumpBreak {
@@ -550,7 +601,9 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 					return
 				}
 			case vm.OpJumpElse:
-				ctx.Outputs.Stacks = append(ctx.Outputs.Stacks, *ctx.Stack.Copy())
+				ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
+					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
+				})
 				ctx.Outputs.Index = i + int(op.Operand.(types.IntType)) - 1
 				return nil
 			default:
@@ -570,7 +623,9 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 				return
 			}
 		case vm.OpFuncEnd:
-			ctx.Outputs.Stacks = append(ctx.Outputs.Stacks, *ctx.Stack.Copy())
+			ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
+				Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
+			})
 			ctx.Outputs.Index = i
 			return nil
 
@@ -592,9 +647,11 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 
 	top := contextStack.Top()
 	if top.Typ != context_type_global || contextStack.Size() != 1 {
-		logger.TypeCheckerCrash(nil, "FATAL ERROR: out of ops but got non-empty contextStack or non-global context.Typ")
+		logger.TypeCheckerCrash(nil, "Out of ops but got non-empty contextStack or non-global context.Typ")
 	}
-	top.Outputs.Stacks = append(top.Outputs.Stacks, *ctx.Stack.Copy())
+	top.Outputs.Results = append(top.Outputs.Results, TypeCheckerJumpResult{
+		Stack: *ctx.Stack.Copy(), Token: nil,
+	})
 	top.Outputs.Index = len(*ops)
 
 	return nil
@@ -617,14 +674,14 @@ func (tc *TypeChecker) TypeCheckProgram(ops *[]vm.Op, ctx *compiler.CompileTimeC
 	}
 
 	context = contextStack.Pop()
-	// if context.Outputs.Index != len(*ops) {
-	// 	return logger.FormatErrMsg(nil, "[TypeCheck] Not all ops were typechecked (have %d in total, but end=%d)", len(*ops), context.Outputs.Index)
-	// }
-	if len(context.Outputs.Stacks) != 1 {
-		return logger.TypeCheckerError(nil, "There should be only one stack in TypeCheckerOutputs but got %d", len(context.Outputs.Stacks))
+	if context.Outputs.Index != len(*ops) {
+		return logger.TypeCheckerError(nil, "Not all ops were typechecked (have %d in total, but end=%d)", len(*ops), context.Outputs.Index)
+	}
+	if len(context.Outputs.Results) != 1 {
+		return logger.TypeCheckerError(nil, "There should be only one stack in TypeCheckerOutputs but got %d", len(context.Outputs.Results))
 	}
 
-	s := context.Outputs.Stacks[0]
+	s := context.Outputs.Results[0].Stack
 	if !(context.Typ == context_type_global && s.Size() == 1 && s.Top().(lexer.DataType) == lexer.DataTypeInt) {
 		return logger.TypeCheckerError(nil, "Expected typecheck stack to contain `int` as exit code at the end, but got %s", s.Data)
 	}
