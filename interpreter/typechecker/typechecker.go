@@ -231,7 +231,7 @@ func (tc *TypeChecker) popTypeContract(op *vm.Op, stack *utils.Stack, expected l
 	return
 }
 
-func (tc *TypeChecker) popTypesContract(op *vm.Op, stack *utils.Stack, contract *lexer.Contract) (d lexer.DataTypes, err error) {
+func (tc *TypeChecker) popTypesContract(op *vm.Op, stack *utils.Stack, contract *Contract) (d lexer.DataTypes, err error) {
 	if err = tc.enoughArgsCount(stack, contract.Inputs.Size(), &op.OpToken); err != nil {
 		return
 	}
@@ -268,7 +268,7 @@ func (tc *TypeChecker) typeCheckOutputs(op *vm.Op, outputs lexer.DataTypes, expe
 }
 
 func (tc *TypeChecker) typeCheckIntrinsic(op *vm.Op, stack *utils.Stack, i lexer.IntrinsicType, ctx *TypeCheckerContext) error {
-	contract, err_msg := lexer.GetIntrinsicContract(i)
+	contract, err_msg := GetIntrinsicContract(i)
 	if err_msg != "" {
 		return logger.TypeCheckerError(&op.OpToken.Loc, "No contract for intrinsic found: %s", err_msg)
 	}
@@ -278,12 +278,12 @@ func (tc *TypeChecker) typeCheckIntrinsic(op *vm.Op, stack *utils.Stack, i lexer
 		return err
 	}
 
-	logic, err_msg := lexer.GetIntrinsicLogic(i)
+	logic, err_msg := GetIntrinsicLogic(i)
 	if err_msg != "" {
 		return logger.TypeCheckerError(&op.OpToken.Loc, "No logic for intrinsic found: %s", err_msg)
 	}
 
-	f := lexer.DefaultCustomFunc
+	f := DefaultCustomFunc
 	if i == lexer.IntrinsicTypeDebug {
 		f = func() lexer.DataTypes {
 			fmt.Println(logger.FormatInfoMsg(&op.OpToken.Loc, "[TypeCheck DEBUG] stack: %s", ctx.Stack.Data))
