@@ -11,7 +11,7 @@ const (
 	None
 )
 
-func LogMsgTypeToStr(level LogLevelType) string {
+func LogLevelToStr(level LogLevelType) string {
 	switch level {
 	case Fatal:
 		return "FATAL"

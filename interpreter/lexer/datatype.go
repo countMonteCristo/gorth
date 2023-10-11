@@ -11,14 +11,14 @@ type DataTypes []DataType
 
 // TODO: add `any` datatype?
 const (
-	// DataTypeAny DataType = iota
-	DataTypeInt DataType = iota
+	DataTypeAny DataType = iota
+	DataTypeInt
 	DataTypePtr
 	DataTypeBool
 )
 
 var DataTypeName = map[DataType]string{
-	// DataTypeAny: "any",
+	DataTypeAny: "any",
 	DataTypeInt:  "int",
 	DataTypePtr:  "ptr",
 	DataTypeBool: "bool",

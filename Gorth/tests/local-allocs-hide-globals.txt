@@ -2,6 +2,6 @@
   "argv": [],
   "stdin": "",
   "stdout": "",
-  "stderr": "[ERROR] Redefinition of global name `x` (Previously defined here: Gorth/tests/local-allocs-hide-globals.gorth:3:7):\n  Gorth/tests/local-allocs-hide-globals.gorth:7:9",
+  "stderr": "[ERROR] [COMPILER] Redefinition of global name `x` (Previously defined here: Gorth/tests/local-allocs-hide-globals.gorth:3:7):\n  Gorth/tests/local-allocs-hide-globals.gorth:7:9",
   "exit_code": 1
 }

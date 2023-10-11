@@ -125,3 +125,4 @@ var IntrinsicName = map[IntrinsicType]string{
 }
 
 var WordToIntrinsic = utils.RevMap(IntrinsicName).(map[string]IntrinsicType)
+

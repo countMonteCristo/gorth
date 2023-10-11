@@ -2,6 +2,6 @@
   "argv": [],
   "stdin": "",
   "stdout": "",
-  "stderr": "[ERROR] Redefinition of global name `foo` in function definition (Previously defined here: Gorth/tests/function-redefinition.gorth:3:6):\n  Gorth/tests/function-redefinition.gorth:7:6",
+  "stderr": "[ERROR] [COMPILER] Redefinition of global name `foo` in function definition (Previously defined here: Gorth/tests/function-redefinition.gorth:3:6):\n  Gorth/tests/function-redefinition.gorth:7:6",
   "exit_code": 1
 }

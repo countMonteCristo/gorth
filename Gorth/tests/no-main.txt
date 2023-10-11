@@ -2,6 +2,6 @@
   "argv": [],
   "stdin": "",
   "stdout": "",
-  "stderr": "[ERROR] No entry point found (function `main` was not defined)",
+  "stderr": "[ERROR] [COMPILER] No entry point found (function `main` was not defined)",
   "exit_code": 1
 }

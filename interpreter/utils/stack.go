@@ -56,6 +56,14 @@ func (s *Stack) Copy() *Stack {
 	return n
 }
 
+func StackAsSlice[T any](s *Stack) []T {
+	result := make([]T, s.Size())
+	for i, item := range s.Data {
+		result[i] = item.(T)
+	}
+	return result
+}
+
 func StacksAreEqual[T comparable](s, v *Stack) bool {
 	if s.Size() != v.Size() {
 		return false
