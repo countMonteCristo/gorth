@@ -403,7 +403,7 @@ func (tc *TypeChecker) typeCheckWhileBlock(ops *[]vm.Op, i int, contextStack *Ty
 	if contextStack.Size() != contextStackSize {
 		logger.TypeCheckerCrash(loc, "While-loop type checking does not preserve contextStack.Size()")
 	}
-	if top.Typ != context_type_func {
+	if top.Typ != context_type_while {
 		logger.TypeCheckerCrash(
 			loc, "The type of context has changed after while-loop type checking. Expected %d but got %d",
 			context_type_func, top.Typ,
