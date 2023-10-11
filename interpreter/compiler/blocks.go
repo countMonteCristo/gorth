@@ -1,4 +1,4 @@
-package vm
+package compiler
 
 import (
 	"Gorth/interpreter/lexer"

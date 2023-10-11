@@ -1,7 +1,10 @@
 package interpreter
 
 import (
+	"Gorth/interpreter/compiler"
+	"Gorth/interpreter/debugger"
 	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/typechecker"
 	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
 	"fmt"
@@ -9,11 +12,13 @@ import (
 )
 
 type Interpreter struct {
-	lx   lexer.Lexer
-	vm   vm.VM
-	c    vm.Compiler
-	args []string
-	imp  lexer.Importer
+	lexer       lexer.Lexer
+	vm          vm.VM
+	compiler    compiler.Compiler
+	typechecker typechecker.TypeChecker
+	importer    lexer.Importer
+	debugger    debugger.Debugger
+	args        []string
 }
 
 func show_err_and_exit(err error) {
@@ -21,40 +26,53 @@ func show_err_and_exit(err error) {
 	utils.Exit(1)
 }
 
-func InitInterpreter(arguments []string, pkg_dir string, s *vm.Settings) *Interpreter {
+func NewInterpreter(arguments []string, pkg_dir string, s *vm.Settings) *Interpreter {
 	i := &Interpreter{
-		lx:   lexer.Lexer{},
-		vm:   *vm.InitVM(s),
-		c:    *vm.NewCompiler(s.Debug, s.TypeChek),
-		args: arguments,
-		imp:  *lexer.NewImporter(pkg_dir, s.IncludePaths),
+		lexer:       lexer.Lexer{},
+		vm:          *vm.NewVM(s, compiler.GlobalScopeName),
+		compiler:    *compiler.NewCompiler(s.Debug),
+		typechecker: *typechecker.NewTypeChecker(s.TypeCheck),
+		args:        arguments,
+		importer:    *lexer.NewImporter(pkg_dir, s.IncludePaths),
 	}
 
-	i.imp.Paths = append(i.imp.Paths, s.IncludePaths...)
+	i.importer.Paths = append(i.importer.Paths, s.IncludePaths...)
 	return i
 }
 
 func (i *Interpreter) Prepare(fn string) {
-	th, err := i.lx.ProcessFile(fn, []string{}, &i.imp)
+	tokens, err := i.lexer.ProcessFile(fn, []string{}, &i.importer)
 	if err != nil {
 		show_err_and_exit(err)
 	}
 
-	i.vm.PreprocessTokens(th)
-	err = i.c.CompileTokens(th, &i.vm.Ctx)
-	if err != nil {
+	if err = i.compiler.CompileTokens(tokens, &i.vm.Rc.Settings); err != nil {
+		show_err_and_exit(err)
+	}
+
+	if err = i.typechecker.TypeCheckProgram(&i.compiler.Ops, &i.compiler.Ctx); err != nil {
 		show_err_and_exit(err)
 	}
 }
 
 func (i *Interpreter) Run(fn string) vm.ExitCodeType {
 	i.Prepare(fn)
-	return i.vm.Interprete(i.c.Ops, i.args)
+	return i.vm.Interprete(i.compiler.Ops, i.args, &i.compiler.Ctx.StringsMap, i.compiler.Ctx.GlobalScope().MemSize, i.compiler.EntryPointAddr())
 }
 
-func (i *Interpreter) RunDebug(fn string, di *vm.DebugInterface) {
+func (i *Interpreter) RunDebug(fn string) {
 	i.Prepare(fn)
-	go i.vm.InterpreteDebug(i.c.Ops, i.args, di)
+	i.vm.Rc.PrepareMemory(&i.compiler.Ctx.StringsMap, i.compiler.Ctx.GlobalScope().MemSize, i.args, &i.vm.S)
+	i.debugger = *debugger.NewDebugger(&i.vm)
+
+	for {
+		i.vm.Rc.Reset(i.compiler.EntryPointAddr())
+		go i.debugger.Debug(i.compiler.Ops, i.args, &i.compiler.Ctx)
+		res := i.debugger.Run()
+		if res == debugger.DebugQuit {
+			break
+		}
+	}
 }
 
 func (i *Interpreter) ProcessExit(exit_code vm.ExitCodeType) {

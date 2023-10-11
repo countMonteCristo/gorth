@@ -4,10 +4,7 @@ import (
 	"Gorth/interpreter"
 	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
-	"bufio"
 	"flag"
-	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 )
@@ -36,50 +33,53 @@ func main() {
 	settings := vm.NewSettings(*debugFlag, *envFlag, *tcFlag, vm_memory_size, recursion_limit, includePaths)
 
 	gorth_script := flag.Args()[0]
+	i := interpreter.NewInterpreter(flag.Args(), package_dir, settings)
 
 	if !*debugFlag {
-		i := interpreter.InitInterpreter(flag.Args(), package_dir, settings)
 		exit_code := i.Run(gorth_script)
 		i.ProcessExit(exit_code)
+	} else {
+		i.RunDebug(gorth_script)
 	}
 
-	for {
-		once := true
+	// for {
+	// 	once := true
 
-		i := interpreter.InitInterpreter(flag.Args(), package_dir, settings)
-		debugger_interface := vm.NewDebugInterface()
-		i.RunDebug(gorth_script, debugger_interface)
+	// 	i := interpreter.NewInterpreter(flag.Args(), package_dir, settings)
+	// 	// debugger_interface := debugger.NewDebugInterface()
+	// 	i.RunDebug(gorth_script)
 
-		scanner := bufio.NewScanner(os.Stdin)
-		for {
-			fmt.Print("> ")
-			scanner.Scan()
-			input := scanner.Text()
+	// 	scanner := bufio.NewScanner(os.Stdin)
+	// 	for {
+	// 		fmt.Print("> ")
+	// 		scanner.Scan()
+	// 		input := scanner.Text()
 
-			cmd, ok := vm.ParseDebuggerCommand(input)
-			if !ok {
-				fmt.Printf("Bad command: <%s>\n", input)
-				continue
-			}
+	// 		cmd, ok := debugger.ParseDebuggerCommand(input)
+	// 		if !ok {
+	// 			fmt.Printf("Bad command: <%s>\n", input)
+	// 			continue
+	// 		}
 
-			response := debugger_interface.Communicate(cmd)
-			if response.Status == vm.DebugCommandStatusFailed {
-				fmt.Printf("[FAILED] %s\n", response.Msg)
-			}
+	// 		response := debugger_interface.Communicate(cmd)
+	// 		if response.Status == debugger.DebugCommandStatusFailed {
+	// 			fmt.Printf("[FAILED] %s\n", response.Msg)
+	// 		}
 
-			if cmd.Type == vm.DebugCmdQuit {
-				break
-			}
+	// 		if cmd.Type == debugger.DebugCmdQuit {
+	// 			break
+	// 		}
 
-			if cmd.Type == vm.DebugCmdRestart {
-				fmt.Printf("[INFO] Restart script\n")
-				once = false
-				break
-			}
-		}
+	// 		if cmd.Type == debugger.DebugCmdRestart {
+	// 			fmt.Printf("[INFO] Restart script\n")
+	// 			once = false
+	// 			break
+	// 		}
+	// 	}
 
-		if once {
-			break
-		}
-	}
+	// 	if once {
+	// 		break
+	// 	}
+	// }
+
 }

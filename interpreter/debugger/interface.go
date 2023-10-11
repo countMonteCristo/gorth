@@ -1,7 +1,8 @@
-package vm
+package debugger
 
 import (
 	"Gorth/interpreter/types"
+	"Gorth/interpreter/vm"
 	"fmt"
 	"strconv"
 	"strings"
@@ -26,6 +27,13 @@ const (
 	DebugCmdHelp
 	DebugCmdQuit
 	DebugCmdRestart
+)
+
+type DebugTransition int
+
+const (
+	DebugRestart DebugTransition = iota
+	DebugQuit
 )
 
 var Str2DebugCommandType = map[string]DebugCommandType{
@@ -62,7 +70,7 @@ type DebugCommand struct {
 	ArgList []string
 }
 
-func InitDebugCommand(input string) *DebugCommand {
+func NewDebugCommand(input string) *DebugCommand {
 	parts := strings.Fields(input)
 	if len(parts) == 0 {
 		return nil
@@ -132,7 +140,7 @@ func (di *DebugInterface) SendFailed(msg string) {
 	}
 }
 
-func (di *DebugInterface) IsBreakpoint(ctx *RunTimeContext, ops []Op) (types.IntType, bool) {
+func (di *DebugInterface) IsBreakpoint(ctx *vm.RunTimeContext, ops []vm.Op) (types.IntType, bool) {
 	_, exists := di.BreakPoints[ctx.Addr]
 	if exists {
 		return ctx.Addr, true
@@ -140,7 +148,7 @@ func (di *DebugInterface) IsBreakpoint(ctx *RunTimeContext, ops []Op) (types.Int
 	return -1, false
 }
 
-func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []Op, ctx *RunTimeContext) {
+func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []vm.Op, ctx *vm.RunTimeContext) {
 	path_column := make([]string, 0)
 	markers_column := make([]string, 0)
 	cmd_column := make([]string, 0)
@@ -178,7 +186,7 @@ func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []Op, ct
 }
 
 func ParseDebuggerCommand(input string) (*DebugCommand, bool) {
-	cmd := InitDebugCommand(input)
+	cmd := NewDebugCommand(input)
 	if cmd == nil {
 		return cmd, false
 	}

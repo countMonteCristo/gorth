@@ -1,8 +1,9 @@
-package vm
+package compiler
 
 import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/types"
+	"Gorth/interpreter/vm"
 	"fmt"
 )
 
@@ -44,7 +45,7 @@ type CompileTimeContext struct {
 	Offset     types.IntType
 }
 
-func InitContext() *CompileTimeContext {
+func NewCompileTimeContext() *CompileTimeContext {
 	ctx := &CompileTimeContext{
 		StringsMap: make(map[string]types.IntType),
 		Funcs:      make(map[string]Function),
@@ -56,19 +57,20 @@ func InitContext() *CompileTimeContext {
 	return ctx
 }
 
-func (ctx *CompileTimeContext) PreprocessStringLiterals(th *lexer.TokenHolder, start types.IntType) {
+func (ctx *CompileTimeContext) PreprocessStringLiterals(tokens *lexer.TokenHolder, start types.IntType) {
 	address := start
 
-	th.Reset()
-	for !th.Empty() {
-		token := th.GetNextToken()
-		if token.Typ == lexer.TokenString {
-			literal := token.Value.(string)
-			_, exists := ctx.StringsMap[literal]
-			if !exists {
-				ctx.StringsMap[literal] = address
-				address += types.IntType(len(literal) + 1) // save literals as null-terminated strings
-			}
+	tokens.Reset()
+	for !tokens.Empty() {
+		token := tokens.GetNextToken()
+		if token.Typ != lexer.TokenString {
+			continue
+		}
+		literal := token.Value.(string)
+
+		if _, exists := ctx.StringsMap[literal]; !exists {
+			ctx.StringsMap[literal] = address
+			address += types.IntType(len(literal) + 1) // save literals as null-terminated strings
 		}
 	}
 }
@@ -125,7 +127,7 @@ func (c *CompileTimeContext) GetAlloc(name, scope_name string) (Allocation, Scop
 	return Allocation{}, ScopeUnknown
 }
 
-func (c *CompileTimeContext) GetAllocInfo(name, scope_name string, mem *ByteMemory) (types.IntType, []byte) {
+func (c *CompileTimeContext) GetAllocInfo(name, scope_name string, mem *vm.ByteMemory) (types.IntType, []byte) {
 	alloc := c.Scopes[scope_name].Allocs[name]
 	var alloc_ptr types.IntType
 	if scope_name != GlobalScopeName {
@@ -142,7 +144,7 @@ func (c *CompileTimeContext) DebugConsts(scope_name string) {
 		fmt.Printf("%s=%d ", const_name, const_value)
 	}
 }
-func (c *CompileTimeContext) DebugAllocs(scope_name string, mem *ByteMemory) {
+func (c *CompileTimeContext) DebugAllocs(scope_name string, mem *vm.ByteMemory) {
 	for alloc_name, alloc := range c.Scopes[scope_name].Allocs {
 		alloc_ptr, alloc_mem := c.GetAllocInfo(alloc_name, scope_name, mem)
 		fmt.Printf("%s(%d,%d)=%d ", alloc_name, alloc_ptr, alloc.Size, alloc_mem)
@@ -166,7 +168,7 @@ func (c *CompileTimeContext) DebugConstNames(names []string, scope_name string) 
 	return n_found
 }
 
-func (c *CompileTimeContext) DebugAllocNames(names []string, scope_name string, mem *ByteMemory) int {
+func (c *CompileTimeContext) DebugAllocNames(names []string, scope_name string, mem *vm.ByteMemory) int {
 	n_found := 0
 	for _, name := range names {
 		alloc, exists := c.GetLocalAlloc(name, scope_name)

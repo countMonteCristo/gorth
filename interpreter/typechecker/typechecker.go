@@ -1,10 +1,12 @@
-package vm
+package typechecker
 
 import (
+	"Gorth/interpreter/compiler"
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
+	"Gorth/interpreter/vm"
 	"fmt"
 	"strings"
 )
@@ -21,11 +23,12 @@ const (
 // ---------------------------------------------------------------------------------------------------------------------
 
 type TypeChecker struct {
-	Ctx *CompileTimeContext
+	Ctx     *compiler.CompileTimeContext
+	enabled bool
 }
 
-func NewTypeChecker(ctx *CompileTimeContext) *TypeChecker {
-	return &TypeChecker{Ctx: ctx}
+func NewTypeChecker(enabled bool) *TypeChecker {
+	return &TypeChecker{enabled: enabled}
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -177,7 +180,7 @@ func (tc *TypeChecker) enoughArgsCount(stack *utils.Stack, count int, token *lex
 	return
 }
 
-func (tc *TypeChecker) popType(op *Op, stack *utils.Stack, expected lexer.DataType) error {
+func (tc *TypeChecker) popType(op *vm.Op, stack *utils.Stack, expected lexer.DataType) error {
 	if err := tc.enoughArgsCount(stack, 1, &op.OpToken); err != nil {
 		return err
 	}
@@ -198,7 +201,7 @@ func (tc *TypeChecker) popType(op *Op, stack *utils.Stack, expected lexer.DataTy
 	return nil
 }
 
-func (tc *TypeChecker) popTypes(op *Op, stack, expected *utils.Stack) error {
+func (tc *TypeChecker) popTypes(op *vm.Op, stack, expected *utils.Stack) error {
 	if err := tc.enoughArgsCount(stack, expected.Size(), &op.OpToken); err != nil {
 		return err
 	}
@@ -212,7 +215,7 @@ func (tc *TypeChecker) popTypes(op *Op, stack, expected *utils.Stack) error {
 	return nil
 }
 
-func (tc *TypeChecker) popTypeContract(op *Op, stack *utils.Stack, expected lexer.DataType) (actual lexer.DataType, err error) {
+func (tc *TypeChecker) popTypeContract(op *vm.Op, stack *utils.Stack, expected lexer.DataType) (actual lexer.DataType, err error) {
 	actual, ok := stack.Pop().(lexer.DataType)
 	if !ok {
 		err = logger.TypeCheckerError(&op.OpToken.Loc, "Cannot convert stack item to DataType")
@@ -228,7 +231,7 @@ func (tc *TypeChecker) popTypeContract(op *Op, stack *utils.Stack, expected lexe
 	return
 }
 
-func (tc *TypeChecker) popTypesContract(op *Op, stack *utils.Stack, contract *lexer.Contract) (d lexer.DataTypes, err error) {
+func (tc *TypeChecker) popTypesContract(op *vm.Op, stack *utils.Stack, contract *lexer.Contract) (d lexer.DataTypes, err error) {
 	if err = tc.enoughArgsCount(stack, contract.Inputs.Size(), &op.OpToken); err != nil {
 		return
 	}
@@ -244,7 +247,7 @@ func (tc *TypeChecker) popTypesContract(op *Op, stack *utils.Stack, contract *le
 	return
 }
 
-func (tc *TypeChecker) typeCheckOutputs(op *Op, outputs lexer.DataTypes, expected *utils.Stack) error {
+func (tc *TypeChecker) typeCheckOutputs(op *vm.Op, outputs lexer.DataTypes, expected *utils.Stack) error {
 	if len(outputs) != expected.Size() {
 		return logger.TypeCheckerError(
 			&op.OpToken.Loc, "Outputs for `%s` don't fit to its contract(expected: %s actual: %s)",
@@ -264,7 +267,7 @@ func (tc *TypeChecker) typeCheckOutputs(op *Op, outputs lexer.DataTypes, expecte
 	return nil
 }
 
-func (tc *TypeChecker) typeCheckIntrinsic(op *Op, stack *utils.Stack, i lexer.IntrinsicType, ctx *TypeCheckerContext) error {
+func (tc *TypeChecker) typeCheckIntrinsic(op *vm.Op, stack *utils.Stack, i lexer.IntrinsicType, ctx *TypeCheckerContext) error {
 	contract, err_msg := lexer.GetIntrinsicContract(i)
 	if err_msg != "" {
 		return logger.TypeCheckerError(&op.OpToken.Loc, "No contract for intrinsic found: %s", err_msg)
@@ -299,7 +302,7 @@ func (tc *TypeChecker) typeCheckIntrinsic(op *Op, stack *utils.Stack, i lexer.In
 	return nil
 }
 
-func (tc *TypeChecker) typeCheckFunc(ops *[]Op, i int, contextStack *TypeCheckerContextStack) (index int, err error) {
+func (tc *TypeChecker) typeCheckFunc(ops *[]vm.Op, i int, contextStack *TypeCheckerContextStack) (index int, err error) {
 	index = -1
 
 	ctx := contextStack.Top().Clone(context_type_func)
@@ -341,7 +344,7 @@ func (tc *TypeChecker) typeCheckFunc(ops *[]Op, i int, contextStack *TypeChecker
 	return
 }
 
-func (tc *TypeChecker) typeCheckWhileBlock(ops *[]Op, i int, contextStack *TypeCheckerContextStack) (int, error) {
+func (tc *TypeChecker) typeCheckWhileBlock(ops *[]vm.Op, i int, contextStack *TypeCheckerContextStack) (int, error) {
 	index := -1
 
 	ctx := contextStack.Top().Clone(context_type_while)
@@ -385,7 +388,7 @@ func (tc *TypeChecker) typeCheckWhileBlock(ops *[]Op, i int, contextStack *TypeC
 	return index, nil
 }
 
-func (tc *TypeChecker) typeCheckIfBlock(ops *[]Op, i int, contextStack *TypeCheckerContextStack) (int, error) {
+func (tc *TypeChecker) typeCheckIfBlock(ops *[]vm.Op, i int, contextStack *TypeCheckerContextStack) (int, error) {
 	index := -1
 
 	loc := &(*ops)[i].OpToken.Loc
@@ -466,224 +469,29 @@ func (tc *TypeChecker) typeCheckIfBlock(ops *[]Op, i int, contextStack *TypeChec
 	}
 }
 
-func (tc *TypeChecker) typeCheck(ops *[]Op, start int, contextStack *TypeCheckerContextStack) ( /*o *TypeCheckerOutputs, */ err error) {
+func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeCheckerContextStack) ( /*o *TypeCheckerOutputs, */ err error) {
 	ctx := contextStack.Top()
 
 	for i := start; i < len(*ops); {
 		op := &(*ops)[i]
 
 		switch op.Typ {
-		case OpPushInt:
+		case vm.OpPushInt:
 			ctx.Stack.Push(lexer.DataTypeInt)
 			i++
-		case OpPushBool:
+		case vm.OpPushBool:
 			ctx.Stack.Push(lexer.DataTypeBool)
 			i++
-		case OpPushPtr:
+		case vm.OpPushPtr:
 			ctx.Stack.Push(lexer.DataTypePtr)
 			i++
-		case OpIntrinsic:
+		case vm.OpIntrinsic:
 			if err = tc.typeCheckIntrinsic(op, &ctx.Stack, op.Operand.(lexer.IntrinsicType), ctx); err != nil {
 				return
 			}
-			/*
-				switch intrinsic := op.Operand.(lexer.IntrinsicType); intrinsic {
-				case lexer.IntrinsicEq, lexer.IntrinsicNe, lexer.IntrinsicGe, lexer.IntrinsicGt, lexer.IntrinsicLe, lexer.IntrinsicLt:
-					// if err = tc.popTypes(op, &ctx.Stack, utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt})); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Push(lexer.DataTypeBool)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicPlus, lexer.IntrinsicMinus, lexer.IntrinsicMul, lexer.IntrinsicDiv, lexer.IntrinsicMod,
-					lexer.IntrinsicBitAnd, lexer.IntrinsicBitOr, lexer.IntrinsicBitXor,
-					lexer.IntrinsicShl, lexer.IntrinsicShr:
-					// if err = tc.popTypes(op, &ctx.Stack, utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt})); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Push(lexer.DataTypeInt)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicBitNot:
-					// if err = tc.popType(op, &ctx.Stack, lexer.DataTypeInt); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Push(lexer.DataTypeInt)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicLogicalAnd, lexer.IntrinsicLogicalOr:
-					// if err = tc.popTypes(op, &ctx.Stack, utils.NewStack([]lexer.DataType{lexer.DataTypeBool, lexer.DataTypeBool})); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Push(lexer.DataTypeBool)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicLogicalNot:
-					// if err = tc.popType(op, &ctx.Stack, lexer.DataTypeBool); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Push(lexer.DataTypeBool)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicDup:
-					// if err = tc.enoughArgsCount(&ctx.Stack, 1, &op.OpToken); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Push(ctx.Stack.Top().(lexer.DataType))
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicSwap:
-					// if err = tc.enoughArgsCount(&ctx.Stack, 2, &op.OpToken); err != nil {
-					// 	return
-					// }
-					// b := ctx.Stack.Pop().(lexer.DataType)
-					// a := ctx.Stack.Pop().(lexer.DataType)
-					// ctx.Stack.Push(b)
-					// ctx.Stack.Push(a)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicDrop:
-					// if err = tc.enoughArgsCount(&ctx.Stack, 1, &op.OpToken); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Pop()
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicOver:
-					// if err = tc.enoughArgsCount(&ctx.Stack, 2, &op.OpToken); err != nil {
-					// 	return
-					// }
-					// a := ctx.Stack.Data[ctx.Stack.Size()-2].(lexer.DataType)
-					// ctx.Stack.Push(a)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicRot:
-					// if err = tc.enoughArgsCount(&ctx.Stack, 3, &op.OpToken); err != nil {
-					// 	return
-					// }
-					// c := ctx.Stack.Pop().(lexer.DataType)
-					// b := ctx.Stack.Pop().(lexer.DataType)
-					// a := ctx.Stack.Pop().(lexer.DataType)
-					// ctx.Stack.Push(b)
-					// ctx.Stack.Push(c)
-					// ctx.Stack.Push(a)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicPuti:
-					// if err = tc.popType(op, &ctx.Stack, lexer.DataTypeInt); err != nil {
-					// 	return
-					// }
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-
-				case lexer.IntrinsicDebug:
-					// nothing to do
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicTypeDebug:
-					// fmt.Println(logger.FormatInfoMsg(&op.OpToken.Loc, "[TypeCheck DEBUG] stack: %s", ctx.Stack.Data))
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-
-				case lexer.IntrinsicLoad8, lexer.IntrinsicLoad16, lexer.IntrinsicLoad32, lexer.IntrinsicLoad64:
-					// if err = tc.popType(op, &ctx.Stack, lexer.DataTypePtr); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Push(lexer.DataTypeInt)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicStore8, lexer.IntrinsicStore16, lexer.IntrinsicStore32, lexer.IntrinsicStore64:
-					// if err = tc.popTypes(op, &ctx.Stack, utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypePtr})); err != nil {
-					// 	return
-					// }
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicArgc:
-					// ctx.Stack.Push(lexer.DataTypeInt)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicArgv, lexer.IntrinsicEnv:
-					// ctx.Stack.Push(lexer.DataTypePtr)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicSyscall1:
-					// if err = tc.enoughArgsCount(&ctx.Stack, 2, &op.OpToken); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Pop()
-					// ctx.Stack.Pop()
-					// ctx.Stack.Push(lexer.DataTypeInt)
-					// ctx.Stack.Push(lexer.DataTypeInt)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicSyscall3:
-					// if err = tc.enoughArgsCount(&ctx.Stack, 4, &op.OpToken); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Pop()
-					// ctx.Stack.Pop()
-					// ctx.Stack.Pop()
-					// ctx.Stack.Pop()
-					// ctx.Stack.Push(lexer.DataTypeInt)
-					// ctx.Stack.Push(lexer.DataTypeInt)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-
-				case lexer.IntrinsicCastBool:
-					// if err = tc.enoughArgsCount(&ctx.Stack, 1, &op.OpToken); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Pop()
-					// ctx.Stack.Push(lexer.DataTypeBool)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicCastInt:
-					// if err = tc.enoughArgsCount(&ctx.Stack, 1, &op.OpToken); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Pop()
-					// ctx.Stack.Push(lexer.DataTypeInt)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-				case lexer.IntrinsicCastPtr:
-					// if err = tc.enoughArgsCount(&ctx.Stack, 1, &op.OpToken); err != nil {
-					// 	return
-					// }
-					// ctx.Stack.Pop()
-					// ctx.Stack.Push(lexer.DataTypePtr)
-					if err = tc.typeCheckIntrinsic(op, &ctx.Stack, intrinsic, ctx); err != nil {
-						return
-					}
-
-				default:
-					err = logger.TypeCheckerError(&op.OpToken.Loc, "Unexpected intrinsic `%s`", op.OpToken.Text)
-					return
-				}
-			*/
 			i++
 
-		case OpJump:
+		case vm.OpJump:
 			// process if-else-end, while-break-continue-end and return differently
 			block_type := op.Data.(string)
 			switch block_type {
@@ -738,24 +546,24 @@ func (tc *TypeChecker) typeCheck(ops *[]Op, start int, contextStack *TypeChecker
 
 			}
 
-		case OpCondJump:
+		case vm.OpCondJump:
 			if err = tc.popType(op, &ctx.Stack, lexer.DataTypeBool); err != nil {
 				return
 			}
 			ctx.Outputs.Index = i
 			return
 
-		case OpFuncBegin:
+		case vm.OpFuncBegin:
 			i, err = tc.typeCheckFunc(ops, i, contextStack)
 			if err != nil {
 				return
 			}
-		case OpFuncEnd:
+		case vm.OpFuncEnd:
 			ctx.Outputs.Stacks = append(ctx.Outputs.Stacks, *ctx.Stack.Copy())
 			ctx.Outputs.Index = i
 			return nil
 
-		case OpCall:
+		case vm.OpCall:
 			f := tc.Ctx.Funcs[op.Data.(string)]
 			if err = tc.popTypes(op, &ctx.Stack, &f.Sig.Inputs); err != nil {
 				return
@@ -765,11 +573,11 @@ func (tc *TypeChecker) typeCheck(ops *[]Op, start int, contextStack *TypeChecker
 			}
 			i++
 
-		case OpPushGlobalAlloc, OpPushLocalAlloc:
+		case vm.OpPushGlobalAlloc, vm.OpPushLocalAlloc:
 			ctx.Stack.Push(lexer.DataTypePtr)
 			i++
 		default:
-			err = logger.TypeCheckerError(&op.OpToken.Loc, "Type check for `%s` op is not implemented yet", OpName[op.Typ])
+			err = logger.TypeCheckerError(&op.OpToken.Loc, "Type check for `%s` op is not implemented yet", vm.OpName[op.Typ])
 			return
 		}
 	}
@@ -784,7 +592,12 @@ func (tc *TypeChecker) typeCheck(ops *[]Op, start int, contextStack *TypeChecker
 	return nil
 }
 
-func (tc *TypeChecker) TypeCheckProgram(ops *[]Op) error {
+func (tc *TypeChecker) TypeCheckProgram(ops *[]vm.Op, ctx *compiler.CompileTimeContext) error {
+	if !tc.enabled {
+		return nil
+	}
+
+	tc.Ctx = ctx
 
 	contextStack := NewTypeCheckerContextStack()
 	context := NewTypeCheckerContext(context_type_global)

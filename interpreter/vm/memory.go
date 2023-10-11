@@ -38,7 +38,7 @@ type ByteMemory struct {
 	OperativeMemRegion MemoryRegion // RAM
 }
 
-func InitMemory(mem_size types.IntType) ByteMemory {
+func NewMemory(mem_size types.IntType) ByteMemory {
 	mem := ByteMemory{
 		Data:          make([]byte, mem_size),
 		MemorySize:    mem_size,

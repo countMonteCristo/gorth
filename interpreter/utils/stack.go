@@ -56,6 +56,10 @@ func (s *Stack) Copy() *Stack {
 	return n
 }
 
+func (s *Stack) Clear() {
+	s.Data = make([]interface{}, 0)
+}
+
 func StackAsSlice[T any](s *Stack) []T {
 	result := make([]T, s.Size())
 	for i, item := range s.Data {

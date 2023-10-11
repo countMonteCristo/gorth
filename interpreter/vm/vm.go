@@ -5,30 +5,23 @@ import (
 	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
 	"fmt"
-	"sort"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
 
 type VM struct {
-	Ctx CompileTimeContext
-	Rc  RunTimeContext
-	S   Settings
+	Rc RunTimeContext
+	S  Settings
 }
 
-func InitVM(s *Settings) *VM {
+func NewVM(s *Settings, global_scope_name string) *VM {
 	vm := VM{
-		Ctx: *InitContext(),
-		S:   *s,
+		S: *s,
 	}
-	vm.Rc = *NewRuntimeContext(&vm.S)
+	vm.Rc = *NewRuntimeContext(&vm.S, global_scope_name)
 
 	return &vm
-}
-
-func (vm *VM) PreprocessTokens(th *lexer.TokenHolder) {
-	vm.Ctx.PreprocessStringLiterals(th, vm.Rc.Memory.StringsRegion.Start)
 }
 
 func (vm *VM) ProcessSyscall1() {
@@ -238,12 +231,13 @@ func (vm *VM) Step(ops []Op) (err error) {
 	return
 }
 
-func (vm *VM) PrepareRuntimeContext(ops []Op, args []string, debug bool) {
-	vm.Rc.Prepare(&vm.Ctx, args, types.IntType(len(ops)), &vm.S)
+func (vm *VM) PrepareRuntimeContext(ops []Op, args []string, literals *map[string]types.IntType, global_mem_size types.IntType, entry_point_addr types.IntType) {
+	vm.Rc.PrepareMemory(literals, global_mem_size, args, &vm.S)
+	vm.Rc.Reset(entry_point_addr)
 }
 
-func (vm *VM) Interprete(ops []Op, args []string) ExitCodeType {
-	vm.PrepareRuntimeContext(ops, args, false)
+func (vm *VM) Interprete(ops []Op, args []string, literals *map[string]types.IntType, global_mem_size, entry_point_addr types.IntType) ExitCodeType {
+	vm.PrepareRuntimeContext(ops, args, literals, global_mem_size, entry_point_addr)
 	var err error = nil
 	for vm.Rc.Addr < vm.Rc.OpsCount {
 		err = vm.Step(ops)
@@ -252,259 +246,4 @@ func (vm *VM) Interprete(ops []Op, args []string) ExitCodeType {
 		}
 	}
 	return vm.Rc.GetExitCode(ops, err)
-}
-
-func (vm *VM) InterpreteDebug(ops []Op, args []string, di *DebugInterface) {
-	vm.PrepareRuntimeContext(ops, args, true)
-
-loop:
-	for {
-		cmd := <-di.Commands
-
-		switch cmd.Type {
-		case DebugCmdStack: // print stack
-			fmt.Printf("stack: %v return_stack: %v\n", vm.Rc.Stack.Data, vm.Rc.ReturnStack)
-			di.SendOK()
-		case DebugCmdMemory: // print memory
-			vm.Rc.Memory.PrintDebug()
-			di.SendOK()
-		case DebugCmdOperativeMemory:
-			chunk := cmd.Args.([]int)
-			start, size := chunk[0], chunk[1]
-			if start >= int(vm.Rc.Memory.MemorySize) {
-				di.SendFailed(fmt.Sprintf("Start address %d is out of bounds", start))
-				continue
-			}
-			end := start + size
-			if end >= int(vm.Rc.Memory.MemorySize) {
-				end = int(vm.Rc.Memory.MemorySize) - 1
-			}
-			memory_chunk := vm.Rc.Memory.Data[start:end]
-			fmt.Printf("addr=%d size=%d: %v\n", start, size, memory_chunk)
-			di.SendOK()
-		case DebugCmdPrint:
-			names := cmd.Args.([]string)
-			scope_name := vm.Rc.ScopeStack.Top().(string)
-			n_found := vm.Ctx.DebugConstNames(names, scope_name) +
-				vm.Ctx.DebugAllocNames(names, scope_name, &vm.Rc.Memory) +
-				vm.Ctx.DebugFuncNames(names)
-			if n_found > 0 {
-				di.SendOK()
-			} else {
-				di.SendFailed(fmt.Sprintf("Failed to print values for names: %v", names))
-			}
-		case DebugCmdQuit, DebugCmdRestart: // quit or restart
-			di.SendOK()
-			break loop
-		case DebugCmdStep: // step
-			if vm.Rc.Addr >= vm.Rc.OpsCount {
-				di.SendFailed("Can not step: script finished")
-			} else {
-				steps_count := cmd.Args.(int)
-				var err error = nil
-				for i := 0; i < steps_count && vm.Rc.Addr < vm.Rc.OpsCount; i++ {
-					err = vm.Step(ops)
-					if err != nil {
-						break
-					}
-
-					addr, is_bp := di.IsBreakpoint(&vm.Rc, ops)
-					if is_bp {
-						fmt.Printf("[INFO] Break at address %d\n", addr)
-						break
-					}
-				}
-
-				if err != nil {
-					di.SendFailed(fmt.Sprintf("Script failed because of: %s", err.Error()))
-				} else {
-					if vm.Rc.Addr >= vm.Rc.OpsCount {
-						ec := vm.Rc.GetExitCode(ops, err)
-						fmt.Printf("[INFO] Script finished with exit code %d", ec.Code)
-						if len(ec.Msg) > 0 {
-							fmt.Printf(": %s", ec.Msg)
-						}
-						fmt.Println()
-					}
-					di.SendOK()
-				}
-			}
-		case DebugCmdContinue: // continue
-			if vm.Rc.Addr >= vm.Rc.OpsCount {
-				di.SendFailed("Can not continue: script finished")
-			} else {
-				var err error = nil
-				for vm.Rc.Addr < vm.Rc.OpsCount {
-					err = vm.Step(ops)
-					if err != nil {
-						break
-					}
-
-					addr, is_bp := di.IsBreakpoint(&vm.Rc, ops)
-					if is_bp {
-						fmt.Printf("[INFO] Break at address %d\n", addr)
-						break
-					}
-				}
-
-				if err != nil {
-					di.SendFailed(fmt.Sprintf("Script failed because of: %s", err.Error()))
-				} else {
-					if vm.Rc.Addr >= vm.Rc.OpsCount {
-						ec := vm.Rc.GetExitCode(ops, err)
-						fmt.Printf("[INFO] Script finished with exit code %d", ec.Code)
-						if len(ec.Msg) > 0 {
-							fmt.Printf(": %s", ec.Msg)
-						}
-						fmt.Println()
-					}
-					di.SendOK()
-				}
-			}
-		case DebugCmdBreakpointSet:
-			bps := cmd.Args.(BreakPointList)
-
-			found_names := make([]string, 0, len(bps.Funcs))
-			for _, func_name := range bps.Funcs {
-				function, exists := vm.Ctx.Funcs[func_name]
-				if !exists {
-					fmt.Printf("[WARN] Can not set break point to unknown function `%s`, skip\n", func_name)
-				} else {
-					found_names = append(found_names, func_name)
-					di.BreakPoints[function.Addr] = true
-				}
-			}
-
-			found_addr := make([]types.IntType, 0, len(bps.Addr))
-			for _, addr := range bps.Addr {
-				if addr >= vm.Rc.OpsCount || addr < 0 {
-					fmt.Printf("[WARN] Address %d is out of bounds. skip\n", addr)
-				} else {
-					di.BreakPoints[addr] = true
-					found_addr = append(found_addr, addr)
-				}
-			}
-
-			if len(found_names) > 0 {
-				fmt.Printf("[INFO] Set break point to functions %v\n", found_names)
-			}
-			if len(found_addr) > 0 {
-				fmt.Printf("[INFO] Set break point for addresses %v\n", found_addr)
-			}
-
-			if len(found_names)+len(found_addr) > 0 {
-				di.SendOK()
-			} else {
-				di.SendFailed(
-					fmt.Sprintf("Can not set break points for functions=%v and addresses=%v", bps.Funcs, bps.Addr),
-				)
-			}
-		case DebugCmdBreakpointList:
-			addresses := make([]types.IntType, 0, len(di.BreakPoints))
-			for addr := range di.BreakPoints {
-				addresses = append(addresses, addr)
-			}
-			sort.Slice(addresses, func(i, j int) bool { return addresses[i] < addresses[j] })
-			for _, addr := range addresses {
-				fmt.Printf("b%s\n", ops[addr].Str(addr))
-			}
-			if len(addresses) == 0 {
-				fmt.Println("[INFO] No breakpoints were set")
-			}
-			di.SendOK()
-		case DebugCmdBreakpointRemove:
-			bps := cmd.Args.(BreakPointList)
-
-			removed_names := make([]string, 0, len(bps.Funcs))
-			for _, func_name := range bps.Funcs {
-				function, exists := vm.Ctx.Funcs[func_name]
-				if !exists {
-					fmt.Printf("[WARN] Can not remove break point from unknown function `%s`\n", func_name)
-				} else {
-					_, exists := di.BreakPoints[function.Addr]
-					if !exists {
-						fmt.Printf("[WARN] Can not remove break point from function `%s` - it was not set\n", func_name)
-					} else {
-						removed_names = append(removed_names, func_name)
-						delete(di.BreakPoints, function.Addr)
-					}
-				}
-			}
-
-			removed_addr := make([]types.IntType, 0, len(bps.Addr))
-			for _, addr := range bps.Addr {
-				_, exists := di.BreakPoints[addr]
-				if !exists {
-					fmt.Printf("[WARN] Can not remove break point from address `%d` - it was not set, skip\n", addr)
-				} else {
-					removed_addr = append(removed_addr, addr)
-					delete(di.BreakPoints, addr)
-				}
-			}
-
-			if len(removed_names) > 0 {
-				fmt.Printf("[INFO] Remove break points from functions %v\n", removed_names)
-			}
-			if len(removed_addr) > 0 {
-				fmt.Printf("[INFO] Remove break points from addresses %v\n", removed_addr)
-			}
-
-			if len(removed_names)+len(removed_addr) > 0 {
-				di.SendOK()
-			} else {
-				di.SendFailed(
-					fmt.Sprintf("Can not remove break points for functions=%v and addresses=%v", bps.Funcs, bps.Addr),
-				)
-			}
-		case DebugCmdToken: // token
-			if vm.Rc.Addr >= vm.Rc.OpsCount {
-				di.SendFailed("Can not print token: script finished")
-			} else {
-				token := ops[vm.Rc.Addr].OpToken
-				fmt.Printf("%s:%d:%d Token(%s)\n", token.Loc.Filepath, token.Loc.Line+1, token.Loc.Column+1, token.Text)
-				di.SendOK()
-			}
-		case DebugCmdOperation: // operation
-			if vm.Rc.Addr >= vm.Rc.OpsCount {
-				di.SendFailed("Can not print operation: script finished")
-			} else {
-				context_size := cmd.Args.(types.IntType)
-				di.PrintOpsList(vm.Rc.Addr-context_size, vm.Rc.Addr+context_size, ops, &vm.Rc)
-				di.SendOK()
-			}
-		case DebugCmdOperationList: // print ops list
-			di.PrintOpsList(0, vm.Rc.OpsCount-1, ops, &vm.Rc)
-			di.SendOK()
-		case DebugCmdEnv: // env - consts and allocs
-			typ := cmd.Args.(string)
-			if vm.Rc.Addr >= vm.Rc.OpsCount {
-				di.SendFailed("Can not print environment: script finished")
-			} else {
-				current_scope_name := vm.Rc.ScopeStack.Top().(string)
-
-				if typ == "all" || typ == "local" {
-					fmt.Printf("Scope: <%s>\n", current_scope_name)
-					if current_scope_name != GlobalScopeName {
-						fmt.Printf("Locals: ")
-						vm.Ctx.DebugConsts(current_scope_name)
-						vm.Ctx.DebugAllocs(current_scope_name, &vm.Rc.Memory)
-						fmt.Println()
-					}
-				}
-
-				if typ == "all" || typ == "global" {
-					fmt.Printf("Globals: ")
-					vm.Ctx.DebugConsts(GlobalScopeName)
-					vm.Ctx.DebugAllocs(GlobalScopeName, &vm.Rc.Memory)
-					fmt.Println()
-				}
-
-				di.SendOK()
-			}
-		case DebugCmdHelp:
-			di.SendOK()
-		default:
-			di.SendFailed(fmt.Sprintf("Unknown command: '%s'", cmd.Name))
-		}
-	}
 }

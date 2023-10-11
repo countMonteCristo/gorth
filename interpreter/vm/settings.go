@@ -11,7 +11,7 @@ import (
 type Settings struct {
 	Debug         bool // debug mode
 	Env           bool // store env variables to memory
-	TypeChek      bool // do type checking before running the program
+	TypeCheck     bool // do type checking before running the program
 	MemorySize    types.IntType
 	CallStackSize int
 	IncludePaths  utils.ArrayArgs
@@ -38,7 +38,7 @@ func NewSettings(debug, env, typecheck bool, mem types.IntType, call_stack_Size 
 	}
 
 	return &Settings{
-		Debug: debug, Env: env, TypeChek: typecheck, MemorySize: mem, CallStackSize: call_stack_Size,
+		Debug: debug, Env: env, TypeCheck: typecheck, MemorySize: mem, CallStackSize: call_stack_Size,
 		IncludePaths: include_paths,
 	}
 }
