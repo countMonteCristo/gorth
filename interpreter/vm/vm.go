@@ -34,7 +34,7 @@ func (vm *VM) ProcessSyscall1() {
 		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
 	default:
-		logger.Crash(nil, "syscall1 for #%d is not implemented yet\n", syscall_id)
+		logger.VmCrash(nil, "syscall1 for #%d is not implemented yet\n", syscall_id)
 	}
 }
 
@@ -69,7 +69,7 @@ func (vm *VM) ProcessSyscall3() {
 		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
 	default:
-		logger.Crash(nil, "syscall3 for #%d is not implemented yet\n", syscall_id)
+		logger.VmCrash(nil, "syscall3 for #%d is not implemented yet\n", syscall_id)
 	}
 }
 
@@ -98,28 +98,28 @@ func (vm *VM) Step(ops []Op) (err error) {
 		case lexer.IntrinsicDiv:
 			b := vm.Rc.Stack.Pop().(types.IntType)
 			if b == 0 {
-				return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Division by zero")
+				return logger.VmRuntimeError(&op.OpToken.Loc, "Division by zero")
 			}
 			a := vm.Rc.Stack.Pop().(types.IntType)
 			vm.Rc.Stack.Push(a / b)
 		case lexer.IntrinsicMod:
 			b := vm.Rc.Stack.Pop().(types.IntType)
 			if b == 0 {
-				return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Division by zero")
+				return logger.VmRuntimeError(&op.OpToken.Loc, "Division by zero")
 			}
 			a := vm.Rc.Stack.Pop().(types.IntType)
 			vm.Rc.Stack.Push(a % b)
 		case lexer.IntrinsicShl:
 			b := vm.Rc.Stack.Pop().(types.IntType)
 			if b < 0 {
-				return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Negative shift amount in `<<`: %d", b)
+				return logger.VmRuntimeError(&op.OpToken.Loc, "Negative shift amount in `<<`: %d", b)
 			}
 			a := vm.Rc.Stack.Pop().(types.IntType)
 			vm.Rc.Stack.Push(a << b)
 		case lexer.IntrinsicShr:
 			b := vm.Rc.Stack.Pop().(types.IntType)
 			if b < 0 {
-				return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Negative shift amount in `>>`: %d", b)
+				return logger.VmRuntimeError(&op.OpToken.Loc, "Negative shift amount in `>>`: %d", b)
 			}
 			a := vm.Rc.Stack.Pop().(types.IntType)
 			vm.Rc.Stack.Push(a >> b)
@@ -193,12 +193,12 @@ func (vm *VM) Step(ops []Op) (err error) {
 			// do nothing
 
 		default:
-			return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Unhandled intrinsic: `%s`", op.OpToken.Text)
+			return logger.VmRuntimeError(&op.OpToken.Loc, "Unhandled intrinsic: `%s`", op.OpToken.Text)
 		}
 		vm.Rc.Addr++
 	case OpCall:
 		if vm.Rc.ReturnStack.Size() >= int(vm.S.CallStackSize) {
-			return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Call stack overflow")
+			return logger.VmRuntimeError(&op.OpToken.Loc, "Call stack overflow")
 		}
 		vm.Rc.ReturnStack.Push(vm.Rc.Addr)
 		vm.Rc.Addr += op.Operand.(types.IntType)
@@ -210,7 +210,7 @@ func (vm *VM) Step(ops []Op) (err error) {
 		}
 	case OpFuncEnd:
 		if vm.Rc.ReturnStack.Empty() {
-			return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Return stack is empty")
+			return logger.VmRuntimeError(&op.OpToken.Loc, "Return stack is empty")
 		}
 		vm.Rc.Addr = vm.Rc.ReturnStack.Pop().(types.IntType) + 1
 		vm.Rc.Memory.OperativeMemRegion.Ptr -= op.Operand.(types.IntType)
@@ -226,7 +226,7 @@ func (vm *VM) Step(ops []Op) (err error) {
 		vm.Rc.Stack.Push(addr)
 		vm.Rc.Addr++
 	default:
-		return logger.FormatRuntimeErrMsg(&op.OpToken.Loc, "Unhandled operation: `%s`", OpName[op.Typ])
+		return logger.VmRuntimeError(&op.OpToken.Loc, "Unhandled operation: `%s`", OpName[op.Typ])
 	}
 	return
 }

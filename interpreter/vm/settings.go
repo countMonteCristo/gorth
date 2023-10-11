@@ -23,7 +23,7 @@ func NewSettings(debug, env, typecheck bool, mem types.IntType, call_stack_Size 
 	if exists {
 		val_int, err := strconv.ParseInt(value, 10, 64)
 		if err != nil || val_int <= 0 {
-			logger.Crash(nil, "Incorrect value for env variable GORTH_VM_MEMORY: %s", value)
+			logger.VmCrash(nil, "Incorrect value for env variable GORTH_VM_MEMORY: %s", value)
 		}
 		mem = val_int
 	}
@@ -32,7 +32,7 @@ func NewSettings(debug, env, typecheck bool, mem types.IntType, call_stack_Size 
 	if exists {
 		val_int, err := strconv.Atoi(value)
 		if err != nil || val_int <= 0 {
-			logger.Crash(nil, "Incorrect value for env variable GORTH_VM_CALL_STACK: %s", value)
+			logger.VmCrash(nil, "Incorrect value for env variable GORTH_VM_CALL_STACK: %s", value)
 		}
 		call_stack_Size = val_int
 	}

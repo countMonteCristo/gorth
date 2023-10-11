@@ -3,12 +3,15 @@ package typechecker
 import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/utils"
+	"Gorth/interpreter/vm"
 )
 
 type Contract struct {
 	Inputs  *utils.Stack
 	Outputs *utils.Stack
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 var intrinsicContract = map[lexer.IntrinsicType]*Contract{
 	lexer.IntrinsicPlus: {
@@ -272,3 +275,40 @@ func GetIntrinsicLogic(i lexer.IntrinsicType) (IntrinsicLogicFunc, string) {
 		return nil, "unknown intrinsic"
 	}
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+var simpleOperationContract = map[vm.OpType]*Contract{
+	vm.OpPushInt:{
+		Inputs:  utils.NewStack([]lexer.DataType{}),
+		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+	},
+	vm.OpPushBool:{
+		Inputs:  utils.NewStack([]lexer.DataType{}),
+		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
+	},
+	vm.OpPushPtr:{
+		Inputs:  utils.NewStack([]lexer.DataType{}),
+		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
+	},
+	vm.OpPushLocalAlloc:
+	{
+		Inputs:  utils.NewStack([]lexer.DataType{}),
+		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
+	},
+	vm.OpPushGlobalAlloc:
+	{
+		Inputs:  utils.NewStack([]lexer.DataType{}),
+		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
+	},
+}
+
+func GetSimpleOpContract(o vm.OpType) (*Contract, string) {
+	contract, ok := simpleOperationContract[o]
+	if !ok {
+		return nil, "unknown simple operation"
+	}
+	return contract, ""
+}
+
+// ---------------------------------------------------------------------------------------------------------------------

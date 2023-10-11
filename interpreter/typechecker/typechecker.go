@@ -44,7 +44,7 @@ func NewTypeCheckerOutputs() *TypeCheckerOutputs {
 
 func (tco *TypeCheckerOutputs) SameOutputs() bool {
 	if len(tco.Stacks) == 0 {
-		logger.Crash(nil, "[TypeCheck] FATAL ERROR: TypeCheckerOutputs has empty Stacks field")
+		logger.TypeCheckerCrash(nil, "FATAL ERROR: TypeCheckerOutputs has empty Stacks field")
 	}
 	for i := 0; i < len(tco.Stacks)-1; i++ {
 		if !utils.StacksAreEqual[lexer.DataType](&tco.Stacks[i], &tco.Stacks[i+1]) {
@@ -113,22 +113,22 @@ func (cs *TypeCheckerContextStack) Push(c *TypeCheckerContext) {
 
 func (cs *TypeCheckerContextStack) Pop() *TypeCheckerContext {
 	if cs.stack.Empty() {
-		logger.Crash(nil, "[TypeCheck] FATAL ERROR: pop from empty TypeCheckerContextStack")
+		logger.TypeCheckerCrash(nil, "[TypeCheck] FATAL ERROR: pop from empty TypeCheckerContextStack")
 	}
 	c, ok := cs.stack.Pop().(*TypeCheckerContext)
 	if !ok {
-		logger.Crash(nil, "[TypeCheck] FATAL ERROR: pop item from TypeCheckerContextStack has bad type")
+		logger.TypeCheckerCrash(nil, "[TypeCheck] FATAL ERROR: pop item from TypeCheckerContextStack has bad type")
 	}
 	return c
 }
 
 func (cs *TypeCheckerContextStack) Top() *TypeCheckerContext {
 	if cs.stack.Empty() {
-		logger.Crash(nil, "[TypeCheck] FATAL ERROR: top from empty TypeCheckerContextStack")
+		logger.TypeCheckerCrash(nil, "[TypeCheck] FATAL ERROR: top from empty TypeCheckerContextStack")
 	}
 	c, ok := cs.stack.Top().(*TypeCheckerContext)
 	if !ok {
-		logger.Crash(nil, "[TypeCheck] FATAL ERROR: top item from TypeCheckerContextStack has bad type")
+		logger.TypeCheckerCrash(nil, "[TypeCheck] FATAL ERROR: top item from TypeCheckerContextStack has bad type")
 	}
 	return c
 }
@@ -144,7 +144,7 @@ func (cs *TypeCheckerContextStack) GetContext(t context_type) *TypeCheckerContex
 			return ctx
 		}
 	}
-	logger.Crash(nil, "[TypeCheck] FATAL ERROR: Cannot find closest context for %d", t)
+	logger.TypeCheckerCrash(nil, "[TypeCheck] FATAL ERROR: Cannot find closest context for %d", t)
 	return nil
 }
 
@@ -267,13 +267,13 @@ func (tc *TypeChecker) typeCheckOutputs(op *vm.Op, outputs lexer.DataTypes, expe
 	return nil
 }
 
-func (tc *TypeChecker) typeCheckIntrinsic(op *vm.Op, stack *utils.Stack, i lexer.IntrinsicType, ctx *TypeCheckerContext) error {
+func (tc *TypeChecker) typeCheckIntrinsic(op *vm.Op, i lexer.IntrinsicType, ctx *TypeCheckerContext) error {
 	contract, err_msg := GetIntrinsicContract(i)
 	if err_msg != "" {
 		return logger.TypeCheckerError(&op.OpToken.Loc, "No contract for intrinsic found: %s", err_msg)
 	}
 
-	inputs, err := tc.popTypesContract(op, stack, contract)
+	inputs, err := tc.popTypesContract(op, &ctx.Stack, contract)
 	if err != nil {
 		return err
 	}
@@ -297,7 +297,24 @@ func (tc *TypeChecker) typeCheckIntrinsic(op *vm.Op, stack *utils.Stack, i lexer
 	}
 
 	for _, item := range outputs {
-		stack.Push(item)
+		ctx.Stack.Push(item)
+	}
+	return nil
+}
+
+func (tc *TypeChecker) typeCheckSimpleOps(op *vm.Op, ctx *TypeCheckerContext) error {
+	contract, err_msg := GetSimpleOpContract(op.Typ)
+	if err_msg != "" {
+		return logger.TypeCheckerError(&op.OpToken.Loc, "No contract for simple operation found: %s", err_msg)
+	}
+
+	_, err := tc.popTypesContract(op, &ctx.Stack, contract)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range contract.Outputs.Data {
+		ctx.Stack.Push(item.(lexer.DataType))
 	}
 	return nil
 }
@@ -405,8 +422,8 @@ func (tc *TypeChecker) typeCheckIfBlock(ops *[]vm.Op, i int, contextStack *TypeC
 	do_op_operand := int(do_op.Operand.(types.IntType))
 	j := i + do_op_operand - 1
 
-	switch (*ops)[j].Data.(string) {
-	case "else": // if-do-else-end, so if-branch should do the same stack as else-branch
+	switch (*ops)[j].Data.(vm.OpJumpType) {
+	case vm.OpJumpElse: // if-do-else-end, so if-branch should do the same stack as else-branch
 		true_stack := contextStack.Clone()
 		ctx1 := top.Clone(context_type_if)
 		true_stack.Push(ctx1)
@@ -443,7 +460,7 @@ func (tc *TypeChecker) typeCheckIfBlock(ops *[]vm.Op, i int, contextStack *TypeC
 			index = false_stack.Top().Outputs.Index + 1 // go to end+1
 		}
 		return index, nil
-	case "end": // if-do-end, so if-branch should preserve the stack
+	case vm.OpJumpEnd: // if-do-end, so if-branch should preserve the stack
 		true_stack := contextStack.Clone()
 		ctx1 := top.Clone(context_type_if)
 		true_stack.Push(ctx1)
@@ -476,26 +493,22 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 		op := &(*ops)[i]
 
 		switch op.Typ {
-		case vm.OpPushInt:
-			ctx.Stack.Push(lexer.DataTypeInt)
-			i++
-		case vm.OpPushBool:
-			ctx.Stack.Push(lexer.DataTypeBool)
-			i++
-		case vm.OpPushPtr:
-			ctx.Stack.Push(lexer.DataTypePtr)
+		case vm.OpPushInt, vm.OpPushBool, vm.OpPushPtr, vm.OpPushGlobalAlloc, vm.OpPushLocalAlloc:
+			if err = tc.typeCheckSimpleOps(op, ctx); err != nil {
+				return
+			}
 			i++
 		case vm.OpIntrinsic:
-			if err = tc.typeCheckIntrinsic(op, &ctx.Stack, op.Operand.(lexer.IntrinsicType), ctx); err != nil {
+			if err = tc.typeCheckIntrinsic(op, op.Operand.(lexer.IntrinsicType), ctx); err != nil {
 				return
 			}
 			i++
 
 		case vm.OpJump:
 			// process if-else-end, while-break-continue-end and return differently
-			block_type := op.Data.(string)
+			block_type := op.Data.(vm.OpJumpType)
 			switch block_type {
-			case "return":
+			case vm.OpJumpReturn:
 				func_ctx := contextStack.GetContext(context_type_func)
 				func_ctx.Outputs.Stacks = append(func_ctx.Outputs.Stacks, *ctx.Stack.Copy())
 				func_ctx.Outputs.Index = i + int(op.Operand.(types.IntType))
@@ -506,18 +519,17 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 				}
 				return nil
 
-			case "end":
+			case vm.OpJumpEnd:
 				ctx.Outputs.Stacks = append(ctx.Outputs.Stacks, *ctx.Stack.Copy())
 				ctx.Outputs.Index = i
 				return nil
-			case "break", "continue":
+			case vm.OpJumpBreak, vm.OpJumpContinue:
 				while_ctx := contextStack.GetContext(context_type_while)
 				while_ctx.Outputs.Stacks = append(while_ctx.Outputs.Stacks, *ctx.Stack.Copy())
 
-				if block_type == "break" {
-					while_ctx.Outputs.Index = i + int(op.Operand.(types.IntType)) - 1
-				} else {
-					while_ctx.Outputs.Index = i + int(op.Operand.(types.IntType))
+				while_ctx.Outputs.Index = i + int(op.Operand.(types.IntType))
+				if block_type == vm.OpJumpBreak {
+					while_ctx.Outputs.Index -= 1
 				}
 
 				if ctx.Typ == context_type_if {
@@ -526,24 +538,23 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 				}
 				return nil
 
-			case "while":
+			case vm.OpJumpWhile:
 				i, err = tc.typeCheckWhileBlock(ops, i, contextStack)
 				if err != nil {
 					return
 				}
 
-			case "if":
+			case vm.OpJumpIf:
 				i, err = tc.typeCheckIfBlock(ops, i, contextStack)
 				if err != nil {
 					return
 				}
-			case "else":
+			case vm.OpJumpElse:
 				ctx.Outputs.Stacks = append(ctx.Outputs.Stacks, *ctx.Stack.Copy())
 				ctx.Outputs.Index = i + int(op.Operand.(types.IntType)) - 1
 				return nil
 			default:
-				return logger.TypeCheckerError(&op.OpToken.Loc, "Type checking for %s (OpJump) is not implemented yet", block_type)
-
+				return logger.TypeCheckerError(&op.OpToken.Loc, "Type checking for %s (OpJump) is not implemented yet", vm.OpJumpTypeName[block_type])
 			}
 
 		case vm.OpCondJump:
@@ -573,9 +584,6 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			}
 			i++
 
-		case vm.OpPushGlobalAlloc, vm.OpPushLocalAlloc:
-			ctx.Stack.Push(lexer.DataTypePtr)
-			i++
 		default:
 			err = logger.TypeCheckerError(&op.OpToken.Loc, "Type check for `%s` op is not implemented yet", vm.OpName[op.Typ])
 			return
@@ -584,7 +592,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 
 	top := contextStack.Top()
 	if top.Typ != context_type_global || contextStack.Size() != 1 {
-		return logger.TypeCheckerError(nil, "FATAL ERROR: outof ops but got non-empty contextStack or non-global context.Typ")
+		logger.TypeCheckerCrash(nil, "FATAL ERROR: out of ops but got non-empty contextStack or non-global context.Typ")
 	}
 	top.Outputs.Stacks = append(top.Outputs.Stacks, *ctx.Stack.Copy())
 	top.Outputs.Index = len(*ops)

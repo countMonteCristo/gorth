@@ -36,7 +36,7 @@ func (i *Importer) Find(fn string) (string, bool) {
 				return nil
 			})
 		if err != nil {
-			logger.Crash(nil, fmt.Sprintf("Import error: %s", err.Error()))
+			logger.LexerCrash(nil, fmt.Sprintf("Import error: %s", err.Error()))
 		}
 
 		if len(results) > 0 {

@@ -4,6 +4,7 @@ import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
+	"Gorth/interpreter/utils"
 	"fmt"
 )
 
@@ -62,19 +63,51 @@ func (op *Op) Str(addr int64) (s string) {
 	case OpPushInt, OpPushBool, OpCall, OpPushLocalAlloc, OpPushGlobalAlloc:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
-			logger.Crash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
+			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
 		}
 		operand = fmt.Sprint(res)
-	case OpJump, OpCondJump, OpFuncBegin, OpFuncEnd:
+	case OpCondJump, OpFuncBegin, OpFuncEnd:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
-			logger.Crash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
+			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
 		}
 		operand = fmt.Sprintf("%d (%s)", res, op.Data.(string))
+	case OpJump:
+		res, ok := op.Operand.(types.IntType)
+		if !ok {
+			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
+		}
+		operand = fmt.Sprintf("%d (%s)", res, OpJumpTypeName[op.Data.(OpJumpType)])
 	default:
-		logger.Crash(&op.OpToken.Loc, "Unhandled operation: `%s`", OpName[op.Typ])
+		logger.VmCrash(&op.OpToken.Loc, "Unhandled operation: `%s`", OpName[op.Typ])
 	}
 
 	s = fmt.Sprintf("%4d: %s %v\t\t(debug: %s)", addr, OpName[op.Typ], operand, op.DebugInfo.(string))
 	return
 }
+
+type OpJumpType int
+
+const (
+	OpJumpIf OpJumpType = iota
+	OpJumpElse
+	OpJumpEnd
+
+	OpJumpWhile
+
+	OpJumpBreak
+	OpJumpContinue
+	OpJumpReturn
+)
+
+var OpJumpTypeName = map[OpJumpType]string{
+	OpJumpIf:       lexer.KeywordName[lexer.KeywordIf],
+	OpJumpElse:     lexer.KeywordName[lexer.KeywordElse],
+	OpJumpEnd:      lexer.KeywordName[lexer.KeywordEnd],
+	OpJumpWhile:    lexer.KeywordName[lexer.KeywordWhile],
+	OpJumpBreak:    lexer.KeywordName[lexer.KeywordBreak],
+	OpJumpContinue: lexer.KeywordName[lexer.KeywordContinue],
+	OpJumpReturn:   lexer.KeywordName[lexer.KeywordReturn],
+}
+
+var NameToOpJumpType = utils.RevMap(OpJumpTypeName).(map[string]OpJumpType)

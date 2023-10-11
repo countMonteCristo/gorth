@@ -105,7 +105,7 @@ func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope_name s
 
 func (c *Compiler) compileIfBlock(token *lexer.Token, th *lexer.TokenHolder, scope_name string) error {
 	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token, lexer.KeywordIf))
-	c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpJump, Operand: types.IntType(1), Data: token.Text})
+	c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpJump, Operand: types.IntType(1), Data: vm.NameToOpJumpType[token.Text]})
 	return c.compile(th, scope_name)
 }
 
@@ -136,14 +136,14 @@ func (c *Compiler) compileElseBlock(token *lexer.Token, th *lexer.TokenHolder, s
 	}
 
 	c.Blocks.Push(NewBlock(addr, token, block.Typ))
-	c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: token.Text})
+	c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: vm.NameToOpJumpType[token.Text]})
 
 	return nil
 }
 
 func (c *Compiler) compileWhileBlock(token *lexer.Token, th *lexer.TokenHolder, scope_name string) error {
 	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token, lexer.KeywordWhile))
-	c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: token.Text, Operand: types.IntType(1)})
+	c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: vm.NameToOpJumpType[token.Text], Operand: types.IntType(1)})
 	return c.compile(th, scope_name)
 }
 
@@ -190,7 +190,7 @@ func (c *Compiler) compileJumpKeyword(token *lexer.Token, kw lexer.KeywordType, 
 		return logger.CompilerError(&token.Loc, "`%s` should be inside while-loop, but it doesn't", token.Text)
 	}
 
-	c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: token.Text})
+	c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: vm.NameToOpJumpType[token.Text]})
 	return nil
 }
 
@@ -221,7 +221,7 @@ func (c *Compiler) compileReturnKeyword(token *lexer.Token, scope *Scope) error 
 		return logger.CompilerError(&token.Loc, "`%s` should be inside function, but it doesn't", token.Text)
 	}
 
-	c.pushOps(scope.ScopeName, vm.Op{OpToken: *token, Operand: types.IntType(1), Typ: vm.OpJump, Data: token.Text})
+	c.pushOps(scope.ScopeName, vm.Op{OpToken: *token, Operand: types.IntType(1), Typ: vm.OpJump, Data: vm.NameToOpJumpType[token.Text]})
 	return nil
 }
 
@@ -240,7 +240,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope_name string) erro
 	}
 	block_start_kw := block.Tok.Value.(lexer.KeywordType)
 
-	op := vm.Op{OpToken: *token, Operand: types.IntType(1), Typ: vm.OpJump, Data: token.Text}
+	op := vm.Op{OpToken: *token, Operand: types.IntType(1), Typ: vm.OpJump, Data: vm.NameToOpJumpType[token.Text]}
 	addr := c.getCurrentAddr()
 	do_end_diff := addr - block.Addr + 1
 
