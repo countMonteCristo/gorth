@@ -84,6 +84,7 @@ Run script with debugger.
 Availavle commands:
  * `n` [`count`]       - process at most `count` instructions (by default `count`=1)
  * `c`                 - continue (process all instructions to the break point or to the end)
+ * `u`                 - go out of current function
  * `bs` `a1 a2 .. ak`  - set break points for functions or addresses
  * `bl`                - list all break points
  * `br` `a1 a2 .. ak`  - remove break points from functions or addresses

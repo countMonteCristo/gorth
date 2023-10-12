@@ -73,8 +73,8 @@ func (vm *VM) ProcessSyscall3() {
 	}
 }
 
-func (vm *VM) Step(ops []Op) (err error) {
-	op := ops[vm.Rc.Addr]
+func (vm *VM) Step(ops *[]Op) (err error) {
+	op := &(*ops)[vm.Rc.Addr]
 	switch op.Typ {
 	case OpPushInt, OpPushBool, OpPushPtr:
 		vm.Rc.Stack.Push(op.Operand)
@@ -231,13 +231,13 @@ func (vm *VM) Step(ops []Op) (err error) {
 	return
 }
 
-func (vm *VM) PrepareRuntimeContext(ops []Op, args []string) {
+func (vm *VM) PrepareRuntimeContext(args []string) {
 	vm.Rc.PrepareMemory(args, &vm.S)
 	vm.Rc.Reset()
 }
 
-func (vm *VM) Interprete(ops []Op, args []string) ExitCodeType {
-	vm.PrepareRuntimeContext(ops, args)
+func (vm *VM) Interprete(ops *[]Op, args []string) ExitCodeType {
+	vm.PrepareRuntimeContext(args)
 	var err error = nil
 	for vm.Rc.Addr < vm.Rc.OpsCount {
 		err = vm.Step(ops)
@@ -245,5 +245,5 @@ func (vm *VM) Interprete(ops []Op, args []string) ExitCodeType {
 			break
 		}
 	}
-	return vm.Rc.GetExitCode(ops, err)
+	return vm.Rc.GetExitCode(err)
 }

@@ -76,7 +76,7 @@ func (rc *RunTimeContext) PrepareMemory(args []string, s *VmSettings) {
 	rc.Memory.OperativeMemRegion.Ptr = rc.Memory.OperativeMemRegion.Start + rc.Settings.GlobalMemorySize
 }
 
-func (rc *RunTimeContext) GetExitCode(ops []Op, err error) ExitCodeType {
+func (rc *RunTimeContext) GetExitCode(err error) ExitCodeType {
 	if err == nil {
 		switch {
 		case rc.Stack.Size() > 1:

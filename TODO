@@ -37,7 +37,7 @@
     [*] Add `p` command for printing consts, allocs or functions
     [*] Add command for showing parts of memory as a slice
   [] Improve debugger
-    [] Add command to go out of current function
+    [*] Add command to go out of current function
 
 [] Low-level interaction with OS
   [] syscalls

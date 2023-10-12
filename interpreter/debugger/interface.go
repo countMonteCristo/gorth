@@ -16,6 +16,7 @@ const (
 	DebugCmdBreakpointList
 	DebugCmdBreakpointRemove
 	DebugCmdContinue
+	DebugCmdUp
 	DebugCmdStack
 	DebugCmdMemory
 	DebugCmdOperativeMemory
@@ -37,7 +38,7 @@ const (
 )
 
 var Str2DebugCommandType = map[string]DebugCommandType{
-	"n": DebugCmdStep, "c": DebugCmdContinue,
+	"n": DebugCmdStep, "c": DebugCmdContinue, "u": DebugCmdUp,
 	"bs": DebugCmdBreakpointSet, "bl": DebugCmdBreakpointList, "br": DebugCmdBreakpointRemove,
 	"t": DebugCmdToken, "o": DebugCmdOperation, "ol": DebugCmdOperationList,
 	"s": DebugCmdStack, "e": DebugCmdEnv,
@@ -107,6 +108,7 @@ func (di *DebugInterface) PrintHelp() {
 	fmt.Println("Availavle commands:")
 	fmt.Println(" * `n` [`count`]       - process at most `count` instructions (by default `count`=1)")
 	fmt.Println(" * `c`                 - continue (process all instructions to the break point or to the end)")
+	fmt.Println(" * `u`                 - go out of current function")
 	fmt.Println(" * `bs` `a1 a2 .. ak`  - set break points for functions or addresses")
 	fmt.Println(" * `bl`                - list all break points")
 	fmt.Println(" * `br` `a1 a2 .. ak`  - remove break points from functions or addresses")
@@ -140,7 +142,7 @@ func (di *DebugInterface) SendFailed(msg string) {
 	}
 }
 
-func (di *DebugInterface) IsBreakpoint(ctx *vm.RunTimeContext, ops []vm.Op) (types.IntType, bool) {
+func (di *DebugInterface) IsBreakpoint(ctx *vm.RunTimeContext) (types.IntType, bool) {
 	_, exists := di.BreakPoints[ctx.Addr]
 	if exists {
 		return ctx.Addr, true
@@ -148,7 +150,7 @@ func (di *DebugInterface) IsBreakpoint(ctx *vm.RunTimeContext, ops []vm.Op) (typ
 	return -1, false
 }
 
-func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []vm.Op, ctx *vm.RunTimeContext) {
+func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops *[]vm.Op, ctx *vm.RunTimeContext) {
 	path_column := make([]string, 0)
 	markers_column := make([]string, 0)
 	cmd_column := make([]string, 0)
@@ -166,7 +168,7 @@ func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops []vm.Op,
 		if exists {
 			bp = "b"
 		}
-		op := ops[addr]
+		op := (*ops)[addr]
 
 		path := fmt.Sprintf("%s:%d:%d", op.OpToken.Loc.Filepath, op.OpToken.Loc.Line+1, op.OpToken.Loc.Column+1)
 		if len(path) > max_column_width {

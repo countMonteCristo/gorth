@@ -57,7 +57,7 @@ func (i *Interpreter) Prepare(fn string) {
 
 func (i *Interpreter) Run(fn string) vm.ExitCodeType {
 	i.Prepare(fn)
-	return i.vm.Interprete(i.compiler.Ops, i.args)
+	return i.vm.Interprete(&i.compiler.Ops, i.args)
 }
 
 func (i *Interpreter) RunDebug(fn string) {
@@ -67,7 +67,7 @@ func (i *Interpreter) RunDebug(fn string) {
 
 	for {
 		i.vm.Rc.Reset()
-		go i.debugger.Debug(i.compiler.Ops, i.args, &i.compiler.Ctx)
+		go i.debugger.Debug(&i.compiler.Ops, i.args, &i.compiler.Ctx)
 		res := i.debugger.Run()
 		if res == debugger.DebugQuit {
 			break

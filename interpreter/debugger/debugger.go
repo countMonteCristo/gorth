@@ -51,7 +51,7 @@ func (d *Debugger) Run() DebugTransition {
 	}
 }
 
-func (d *Debugger) Debug(ops []vm.Op, args []string, ctx *compiler.CompileTimeContext) {
+func (d *Debugger) Debug(ops *[]vm.Op, args []string, ctx *compiler.CompileTimeContext) {
 loop:
 	for {
 		cmd := <-d.iface.Commands
@@ -95,66 +95,19 @@ loop:
 			if d.vm.Rc.Addr >= d.vm.Rc.OpsCount {
 				d.iface.SendFailed("Can not step: script finished")
 			} else {
-				steps_count := cmd.Args.(int)
-				var err error = nil
-				for i := 0; i < steps_count && d.vm.Rc.Addr < d.vm.Rc.OpsCount; i++ {
-					err = d.vm.Step(ops)
-					if err != nil {
-						break
-					}
-
-					addr, is_bp := d.iface.IsBreakpoint(&d.vm.Rc, ops)
-					if is_bp {
-						fmt.Printf("[INFO] Break at address %d\n", addr)
-						break
-					}
-				}
-
-				if err != nil {
-					d.iface.SendFailed(fmt.Sprintf("Script failed because of: %s", err.Error()))
-				} else {
-					if d.vm.Rc.Addr >= d.vm.Rc.OpsCount {
-						ec := d.vm.Rc.GetExitCode(ops, err)
-						fmt.Printf("[INFO] Script finished with exit code %d", ec.Code)
-						if len(ec.Msg) > 0 {
-							fmt.Printf(": %s", ec.Msg)
-						}
-						fmt.Println()
-					}
-					d.iface.SendOK()
-				}
+				d.checkErr(d.doSteps(ops, cmd.Args.(int), false), ops)
 			}
 		case DebugCmdContinue: // continue
 			if d.vm.Rc.Addr >= d.vm.Rc.OpsCount {
 				d.iface.SendFailed("Can not continue: script finished")
 			} else {
-				var err error = nil
-				for d.vm.Rc.Addr < d.vm.Rc.OpsCount {
-					err = d.vm.Step(ops)
-					if err != nil {
-						break
-					}
-
-					addr, is_bp := d.iface.IsBreakpoint(&d.vm.Rc, ops)
-					if is_bp {
-						fmt.Printf("[INFO] Break at address %d\n", addr)
-						break
-					}
-				}
-
-				if err != nil {
-					d.iface.SendFailed(fmt.Sprintf("Script failed because of: %s", err.Error()))
-				} else {
-					if d.vm.Rc.Addr >= d.vm.Rc.OpsCount {
-						ec := d.vm.Rc.GetExitCode(ops, err)
-						fmt.Printf("[INFO] Script finished with exit code %d", ec.Code)
-						if len(ec.Msg) > 0 {
-							fmt.Printf(": %s", ec.Msg)
-						}
-						fmt.Println()
-					}
-					d.iface.SendOK()
-				}
+				d.checkErr(d.doSteps(ops, -1, false), ops)
+			}
+		case DebugCmdUp:
+			if d.vm.Rc.Addr >= d.vm.Rc.OpsCount {
+				d.iface.SendFailed("Can not go up: script finished")
+			} else {
+				d.checkErr(d.doSteps(ops, -1, true), ops)
 			}
 		case DebugCmdBreakpointSet:
 			bps := cmd.Args.(BreakPointList)
@@ -201,7 +154,7 @@ loop:
 			}
 			sort.Slice(addresses, func(i, j int) bool { return addresses[i] < addresses[j] })
 			for _, addr := range addresses {
-				fmt.Printf("b%s\n", ops[addr].Str(addr))
+				fmt.Printf("b%s\n", (*ops)[addr].Str(addr))
 			}
 			if len(addresses) == 0 {
 				fmt.Println("[INFO] No breakpoints were set")
@@ -255,7 +208,7 @@ loop:
 			if d.vm.Rc.Addr >= d.vm.Rc.OpsCount {
 				d.iface.SendFailed("Can not print token: script finished")
 			} else {
-				token := ops[d.vm.Rc.Addr].OpToken
+				token := (*ops)[d.vm.Rc.Addr].OpToken
 				fmt.Printf("%s:%d:%d Token(%s)\n", token.Loc.Filepath, token.Loc.Line+1, token.Loc.Column+1, token.Text)
 				d.iface.SendOK()
 			}
@@ -302,5 +255,46 @@ loop:
 			d.iface.SendFailed(fmt.Sprintf("Unknown command: '%s'", cmd.Name))
 		}
 	}
+}
 
+func (d *Debugger) doSteps(ops *[]vm.Op, count int, go_up bool) error {
+	i := 0
+	for d.vm.Rc.Addr < d.vm.Rc.OpsCount {
+		is_func_end := (*ops)[d.vm.Rc.Addr].Typ == vm.OpFuncEnd
+
+		if err := d.vm.Step(ops); err != nil {
+			return err
+		}
+
+		if addr, is_bp := d.iface.IsBreakpoint(&d.vm.Rc); is_bp {
+			fmt.Printf("[INFO] Break at address %d\n", addr)
+			return nil
+		}
+
+		if go_up && is_func_end {
+			break
+		}
+
+		i++
+		if i == count {
+			break
+		}
+	}
+	return nil
+}
+
+func (d *Debugger) checkErr(err error, ops *[]vm.Op) {
+	if err != nil {
+		d.iface.SendFailed(fmt.Sprintf("Script failed because of: %s", err.Error()))
+	} else {
+		if d.vm.Rc.Addr >= d.vm.Rc.OpsCount {
+			ec := d.vm.Rc.GetExitCode(err)
+			fmt.Printf("[INFO] Script finished with exit code %d", ec.Code)
+			if len(ec.Msg) > 0 {
+				fmt.Printf(": %s", ec.Msg)
+			}
+			fmt.Println()
+		}
+		d.iface.SendOK()
+	}
 }
