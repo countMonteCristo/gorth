@@ -354,8 +354,8 @@ this code will not compile.
 # Type checking
 You can run your script with `-check` option to enable type checking.
 
-The process of type checking is quite similar to the process of interpretation the script. Type checker process all the script operations using types instead of actual number. Here are some type checking rules:
-* only one iteration of while-loop is processed, and after it the type stack should reamin the same as before
+The process of type checking is quite similar to the process of interpretation the script. Type checker process all the script operations using types instead of actual numbers. Here are some type checking rules:
+* only one iteration of while-loop is processed, and after it the type stack should remain the same as before
 * both branches of if-else block are processed individually, and the results should be the same
 * every function gets the type stack filled with the types corresponding to its input type list and should push to the type stack arguments corresponding to its output type list (`any` can match any type)
 * in case of no `else` in if-block the "true" branch should not change the type stack
