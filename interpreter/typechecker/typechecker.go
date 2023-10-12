@@ -178,6 +178,20 @@ func ContextStacksAreSame(f, s *TypeCheckerContextStack) bool {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+func (tc *TypeChecker) equalTypeStacks(expected, actual *utils.Stack) bool {
+	if expected.Size() != actual.Size() {
+		return false
+	}
+	for i := range(expected.Data) {
+		e := expected.Data[i].(lexer.DataType)
+		a := actual.Data[i].(lexer.DataType)
+		if e != lexer.DataTypeAny && a != e {
+			return false
+		}
+	}
+	return true
+}
+
 func (tc *TypeChecker) enoughArgsCount(stack *utils.Stack, count int, token *lexer.Token) (err error) {
 	if stack.Size() < count {
 		err = logger.TypeCheckerError(&token.Loc, "Not enough arguments for `%s`", token.Text)
@@ -195,7 +209,7 @@ func (tc *TypeChecker) popType(op *vm.Op, stack *utils.Stack, expected lexer.Dat
 		return logger.TypeCheckerError(&op.OpToken.Loc, "Cannot convert stack item to DataType")
 	}
 
-	if actual != expected {
+	if expected != lexer.DataTypeAny && actual != expected {
 		return logger.TypeCheckerError(
 			&op.OpToken.Loc, "Expected argument of type `%s` but got `%s`. Current stack: %s",
 			lexer.DataTypeName[expected], lexer.DataTypeName[actual], stack.Data,
@@ -368,7 +382,7 @@ func (tc *TypeChecker) typeCheckFunc(ops *[]vm.Op, i int, contextStack *TypeChec
 	}
 
 	final_stack := &outputs.Results[0].Stack
-	if !utils.StacksAreEqual[lexer.DataType](&f.Sig.Outputs, final_stack) {
+	if !tc.equalTypeStacks(&f.Sig.Outputs, final_stack) {
 		err = logger.TypeCheckerError(
 			loc, "Function `%s` does not fit to its signature. Expected `%s` but got `%s`",
 			func_name, f.Sig.Outputs.Data, final_stack.Data,

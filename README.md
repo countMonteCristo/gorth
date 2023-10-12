@@ -284,7 +284,7 @@ Function definition looks like this:
   // your code goes here
 end
 ```
-where all of `input_type_K` and `output_type_L` are from set {`int`, `bool`, `ptr`}. `any` type is not allowed.
+where all of `input_type_K` and `output_type_L` are from set {`int`, `bool`, `ptr`, `any`}.
 
 `inline` functions work like macros - calling such function will be fully substituted with its body. Therefore `return`s and local `alloc`s are not allowed inside `inline`d functions.
 

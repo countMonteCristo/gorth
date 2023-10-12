@@ -1,0 +1,9 @@
+func f any any any : any any any do
+  rot
+end
+
+func main : int do
+  1 "hello" drop 2 3 < f
+  drop drop drop
+  0
+end

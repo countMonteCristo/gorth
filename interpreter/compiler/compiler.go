@@ -427,10 +427,7 @@ func (c *Compiler) compileFuncSignature(token *lexer.Token, th *lexer.TokenHolde
 				err = logger.CompilerError(&next.Loc, "Unexpected word `%s` in function signature", next.Text)
 				return
 			}
-			if datatype == lexer.DataTypeAny {
-				err = logger.CompilerError(&next.Loc, "`any` type in function signature is not supported yet")
-				return
-			}
+
 			curr.Push(datatype)
 		case lexer.TokenKeyword:
 			if next.Value.(lexer.KeywordType) == lexer.KeywordColon {

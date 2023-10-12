@@ -25,10 +25,10 @@
   [*] support -I flag for providing additional include paths
   [] packages?
 
-[] Compile-time type checking
+[*] Compile-time type checking
   [*] using stack for types
   [*] use function signatures
-  [] generic functions
+  [*] generic functions
 
 [] Improve interpreter
   [*] Add debugger mode (run by step, go in, go out, continue, etc)
