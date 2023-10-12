@@ -78,39 +78,40 @@ func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool, err error
 	return
 }
 
-func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bool, err error) {
+func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bool, npos int, err error) {
+	npos = pos
 	empty = false
-	for pos < len(data) {
-		if strings.IndexByte(" \t", data[pos]) != -1 {
-			pos++
+	for npos < len(data) {
+		if strings.IndexByte(" \t", data[npos]) != -1 {
+			npos++
 			continue
 		} else {
 			break
 		}
 	}
 
-	lx.Loc = utils.Location{Filepath: lx.Fn, Line: line, Column: pos}
-	if pos == len(data) {
+	lx.Loc = utils.Location{Filepath: lx.Fn, Line: line, Column: npos}
+	if npos == len(data) {
 		empty = true
 		return
 	}
 
-	start := pos
-	switch data[pos] {
+	start := npos
+	switch data[npos] {
 	case '"':
-		pos++
+		npos++
 		chars := make([]byte, 0)
 		chars = append(chars, '"')
 		closed := false
-		for pos < len(data) {
-			b, escaped, terr := lx.ChopChar(data, pos)
+		for npos < len(data) {
+			b, escaped, terr := lx.ChopChar(data, npos)
 			if terr != nil {
 				err = terr
 				return
 			}
-			pos++
+			npos++
 			if escaped {
-				pos++
+				npos++
 			}
 			chars = append(chars, b)
 			if b == '"' && !escaped {
@@ -126,38 +127,38 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 		}
 		word = string(chars)
 	case '\'':
-		pos++
-		b, escaped, terr := lx.ChopChar(data, pos)
+		npos++
+		b, escaped, terr := lx.ChopChar(data, npos)
 		if terr != nil {
 			err = terr
 			return
 		}
-		pos++
+		npos++
 		if escaped {
-			pos++
+			npos++
 		}
-		if pos == len(data) {
+		if npos == len(data) {
 			err = logger.LexerError(&lx.Loc, "Unexpecting end of char literal")
 			return
 		}
-		if data[pos] != '\'' {
-			err = logger.LexerError(&lx.Loc, "Expecting to find closing ' for char literal, but got `%s`", string(data[pos]))
+		if data[npos] != '\'' {
+			err = logger.LexerError(&lx.Loc, "Expecting to find closing ' for char literal, but got `%s`", string(data[npos]))
 			return
 		}
 		word = "'" + string(b) + "'"
-		pos++
+		npos++
 	default:
-		for pos < len(data) && data[pos] != ' ' {
-			if data[pos] == ' ' {
+		for npos < len(data) && data[npos] != ' ' {
+			if data[npos] == ' ' {
 				break
 			}
-			if pos < len(data)-1 && data[pos:pos+2] == "//" {
+			if npos < len(data)-1 && data[npos:npos+2] == "//" {
 				empty = true
 				break
 			}
-			pos++
+			npos++
 		}
-		word = data[start:pos]
+		word = data[start:npos]
 	}
 
 	return
@@ -180,7 +181,7 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 
 	for lx.Row < len(lx.Lines) {
 		// fmt.Printf("Try to chop word from line=%d col=%d\n", lx.Row+1, lx.Col+1)
-		word, empty, terr := lx.ChopWord(lx.Lines[lx.Row], lx.Row, lx.Col)
+		word, empty, pos, terr := lx.ChopWord(lx.Lines[lx.Row], lx.Row, lx.Col)
 		if terr != nil {
 			err = terr
 			return
@@ -188,7 +189,7 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 
 		// fmt.Printf("Chopped word: `%s` empty=%t\n", word, empty)
 
-		lx.Col = lx.Loc.Column + len(word) + 1
+		lx.Col = pos + 1
 
 		if empty {
 			lx.Row++
@@ -240,6 +241,24 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 			token.Typ = TokenInt
 			token.Value = number
 			return
+		}
+
+		if len(word) > 2 && word[0] == '0' {
+			w := word[2:]
+			base := -1
+			switch word[1] {
+			case 'x':
+				base = 16
+			case 'o':
+				base = 8
+			case 'b':
+				base = 2
+			}
+			if number, terr = strconv.ParseInt(w, base, 64); terr == nil {
+				token.Typ = TokenInt
+				token.Value = number
+				return
+			}
 		}
 
 		datatype, exists := WordToDataType[word]

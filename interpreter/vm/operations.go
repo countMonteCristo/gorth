@@ -60,7 +60,7 @@ func (op *Op) Str(addr int64) (s string) {
 	switch op.Typ {
 	case OpIntrinsic:
 		operand = lexer.IntrinsicName[op.Operand.(lexer.IntrinsicType)]
-	case OpPushInt, OpPushBool, OpCall, OpPushLocalAlloc, OpPushGlobalAlloc:
+	case OpPushInt, OpPushBool, OpPushPtr, OpCall, OpPushLocalAlloc, OpPushGlobalAlloc:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
 			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)

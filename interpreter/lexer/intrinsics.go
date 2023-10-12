@@ -57,7 +57,9 @@ const (
 	IntrinsicReset
 
 	IntrinsicSyscall1
+	IntrinsicSyscall2
 	IntrinsicSyscall3
+	IntrinsicSyscall5
 
 	IntrinsicCastInt
 	IntrinsicCastPtr
@@ -117,7 +119,9 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicReset:  "reset",
 
 	IntrinsicSyscall1: "syscall1",
+	IntrinsicSyscall2: "syscall2",
 	IntrinsicSyscall3: "syscall3",
+	IntrinsicSyscall5: "syscall5",
 
 	IntrinsicCastInt:  "cast(int)",
 	IntrinsicCastPtr:  "cast(ptr)",
@@ -125,4 +129,3 @@ var IntrinsicName = map[IntrinsicType]string{
 }
 
 var WordToIntrinsic = utils.RevMap(IntrinsicName).(map[string]IntrinsicType)
-

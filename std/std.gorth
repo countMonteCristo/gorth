@@ -1,7 +1,48 @@
 include "unix.gorth"
 
-const sizeof(int) 4 end
+// Basic type sizes
+const sizeof(char)                  1 end
+const sizeof(bool)       sizeof(char) end
+const sizeof(int8)       sizeof(char) end
+const sizeof(uint8)      sizeof(int8) end
+const sizeof(int16)  sizeof(int8) 2 * end
+const sizeof(uint16)    sizeof(int16) end
+const sizeof(int32)  sizeof(int8) 4 * end
+const sizeof(uint32)    sizeof(int32) end
+const sizeof(int64)  sizeof(int8) 8 * end
+const sizeof(uint64)    sizeof(int64) end
+
+const sizeof(short)      sizeof(int16) end
+const sizeof(ushort)    sizeof(uint16) end
+const sizeof(int)        sizeof(int32) end
+const sizeof(uint)      sizeof(uint32) end
+const sizeof(long)       sizeof(int64) end
+const sizeof(ulong)     sizeof(uint64) end
+const sizeof(longlong)   sizeof(int64) end
+const sizeof(ulonglong) sizeof(uint64) end
+
 const sizeof(ptr) sizeof(int) end
+
+// Structure describing a generic socket addres <bits/socket.h>
+const sockaddr.sa_family sizeof(ushort) offset end
+const sockaddr.data                  14 offset end
+const sizeof(sockaddr)                   reset end
+
+// Internet address <netinet/in.h>
+const sizeof(sin_addr) sizeof(uint32) end
+
+// Structure describing an Internet socket address <netinet/in.h>
+const sockaddr_in.sin_family sizeof(short)    offset end // address family
+const sockaddr_in.sin_port  sizeof(uint16)    offset end // port
+const sockaddr_in.sin_addr sizeof(sin_addr)   offset end // internet address
+const sockaddr_in.sin_zero
+                           sizeof(sockaddr)
+                           sizeof(ushort) -
+                           sizeof(uint16) -
+                           sizeof(sin_addr) -
+                                              offset end // pad zeros to size of sockaddr
+const sizeof(sockaddr_in)                      reset end
+
 
 // Adds ptr diff to ptr
 inline func ptr+
@@ -224,4 +265,39 @@ func p_str
   ptr int : // pointer to string and its length
 do
   puts '\n' putc
+end
+
+// Convert sized number to a string. Does not check for buffer overflow!
+func itoa
+  ptr // string buffer
+  int // number to convert
+    :
+do
+  if dup 0 = do
+    drop '0' swap !8 return
+  end
+
+  if dup 0 < do
+    over '-' swap !8
+    swap 1 ptr+ swap
+    abs
+  end
+
+  over over
+  while dup 0 > do
+    over over dup 10 % '0' + swap drop swap !8
+    swap 1 ptr+ swap
+    10 /
+  end drop -1 ptr+
+
+  // reverse string
+  rot
+  while over over ptr- 0 > do
+    over over
+    over @8 over @8
+
+    swap rot !8 swap !8 // a..b -> b..a
+
+    1 ptr+ swap -1 ptr+ swap
+  end drop drop drop
 end

@@ -1,46 +1,112 @@
 // system call identifiers
-const SYS_READ  0 end
-const SYS_WRITE 1 end
-const SYS_OPEN  2 end
-const SYS_CLOSE 3 end
+const SYS_READ        0 end
+const SYS_WRITE       1 end
+const SYS_OPEN        2 end
+const SYS_CLOSE       3 end
+const SYS_SOCKET     41 end
+const SYS_ACCEPT     43 end
+const SYS_BIND       49 end
+const SYS_LISTEN     50 end
+const SYS_SETSOCKOPT 54 end
 
 // Standart streams
-const STDIN 0 end
+const STDIN  0 end
 const STDOUT 1 end
 const STDERR 2 end
 
 // flags for open syscall
-const O_RDONLY 0    end
-const O_WRONLY 1    end
-const O_RDWR   2    end
-const O_CREAT  64   end
-const O_TRUNC  512  end
+const O_RDONLY    0 end
+const O_WRONLY    1 end
+const O_RDWR      2 end
+const O_CREAT    64 end
+const O_TRUNC   512 end
 const O_APPEND 1024 end
 
 // flags for create new files
-const S_IXOTH  1     end
-const S_IWOTH  2     end
-const S_IROTH  4     end
-const S_IRWXO  7     end
-const S_IXGRP  8     end
-const S_IWGRP  16    end
-const S_IRGRP  32    end
-const S_IRWXG  56    end
-const S_IXUSR  64    end
-const S_IWUSR  128   end
-const S_IRUSR  256   end
-const S_IRWXU  448   end
-const S_ISVTX  512   end
-const S_ISGID  1024  end
-const S_ISUID  2048  end
-const S_IFIFO  4096  end
-const S_IFCHR  8192  end
+const S_IXOTH      1 end
+const S_IWOTH      2 end
+const S_IROTH      4 end
+const S_IRWXO      7 end
+const S_IXGRP      8 end
+const S_IWGRP     16 end
+const S_IRGRP     32 end
+const S_IRWXG     56 end
+const S_IXUSR     64 end
+const S_IWUSR    128 end
+const S_IRUSR    256 end
+const S_IRWXU    448 end
+const S_ISVTX    512 end
+const S_ISGID   1024 end
+const S_ISUID   2048 end
+const S_IFIFO   4096 end
+const S_IFCHR   8192 end
 const S_IFDIR  16384 end
 const S_IFREG  32768 end
 const S_IFBLK  24576 end
 const S_IFLNK  40960 end
 const S_IFSOCK 49152 end
 const S_IFMT   61440 end
+
+// Addresses
+const INADDR_ANY                0 end // Address to accept any incoming messages
+const INADDR_BROADCAST 4294967295 end // Address to send to all hosts
+const INADDR_NONE      4294967295 end // Address indicating an error return
+const INADDR_DUMMY     3221225480 end // Dummy address for source of ICMPv6 errors converted to IPv4 (RFC7600)
+
+// Address families
+const AF_LOCAL  1 end
+const AF_INET   2 end
+const AF_INET6 10 end
+
+// Types of sockets
+const SOCK_STREAM    1 end  // Sequenced, reliable, connection-based byte streams
+const SOCK_DGRAM     2 end  // Connectionless, unreliable datagrams of fixed maximum length
+const SOCK_RAW       3 end  // Raw protocol interface
+const SOCK_RDM       4 end  // Reliably-delivered messages
+const SOCK_SEQPACKET 5 end  // Sequenced, reliable, connection-based,datagrams of fixed maximum length
+const SOCK_DCCP      6 end  // Datagram Congestion Control Protocol
+const SOCK_PACKET   10 end  // Linux specific way of getting packets at the dev level. For writing rarp and other similar things on the user level
+
+// Maximum queue length specifiable by listen
+const SOMAXCONN    4096 end
+
+// Socket levels
+const SOL_SOCKET     1 end
+
+// Socket option names
+const SO_REUSEADDR   2 end
+const SO_TYPE        3 end
+const SO_ERROR       4 end
+const SO_DONTROUTE   5 end
+const SO_BROADCAST   6 end
+const SO_SNDBUF      7 end
+const SO_RCVBUF      8 end
+const SO_KEEPALIVE   9 end
+const SO_OOBINLINE  10 end
+const SO_LINGER     13 end
+const SO_RCVLOWAT   18 end
+const SO_SNDLOWAT   19 end
+const SO_ACCEPTCONN 30 end
+
+// Revverse byte order for 16-bit integers
+inline func htons
+  int : int // 16-bit integers
+do
+  // ab -> ba
+  dup  0xff   & 8 <<  // ab -> b0
+  swap 0xff00 & 8 >>  // ab -> 0a
+  |                   // b0 | 0a -> ba
+end
+
+// Revverse byte order for 32-bit integers
+inline func htonl
+  int : int // 32-bit integers
+do
+  // abcd -> dcba
+  dup  0xffff     & htons 16 <<       // abcd -> 00cd -> 00dc -> dc00
+  swap 0xffff0000 &       16 >> htons // abcd -> ab00 -> 00ab -> 00ba
+  |                                   // dc00 | 00ba -> dcba
+end
 
 // Execute `open` system call
 inline func open
@@ -70,9 +136,9 @@ end
 inline func write
   int   // file descriptor
   ptr   // buffer
-  int   // bytes count to be read
+  int   // bytes count to write
     :
-  int   // bytes have been read
+  int   // bytes have been write
   int   // errno
 do
   SYS_WRITE syscall3

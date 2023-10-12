@@ -185,8 +185,16 @@ var intrinsicContract = map[lexer.IntrinsicType]*Contract{
 		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeInt}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
 	},
+	lexer.IntrinsicSyscall2: {
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+	},
 	lexer.IntrinsicSyscall3: {
 		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+	},
+	lexer.IntrinsicSyscall5: {
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
 	},
 
@@ -242,7 +250,7 @@ func GetIntrinsicLogic(i lexer.IntrinsicType) (IntrinsicLogicFunc, string) {
 		lexer.IntrinsicArgc,
 		lexer.IntrinsicArgv, lexer.IntrinsicEnv,
 		lexer.IntrinsicCastInt, lexer.IntrinsicCastPtr, lexer.IntrinsicCastBool,
-		lexer.IntrinsicSyscall1, lexer.IntrinsicSyscall3:
+		lexer.IntrinsicSyscall1, lexer.IntrinsicSyscall2, lexer.IntrinsicSyscall3, lexer.IntrinsicSyscall5:
 		return defaultLogic, ""
 
 	case lexer.IntrinsicOffset, lexer.IntrinsicReset:
@@ -279,25 +287,23 @@ func GetIntrinsicLogic(i lexer.IntrinsicType) (IntrinsicLogicFunc, string) {
 // ---------------------------------------------------------------------------------------------------------------------
 
 var simpleOperationContract = map[vm.OpType]*Contract{
-	vm.OpPushInt:{
+	vm.OpPushInt: {
 		Inputs:  utils.NewStack(lexer.DataTypes{}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
-	vm.OpPushBool:{
+	vm.OpPushBool: {
 		Inputs:  utils.NewStack(lexer.DataTypes{}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
-	vm.OpPushPtr:{
+	vm.OpPushPtr: {
 		Inputs:  utils.NewStack(lexer.DataTypes{}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
 	},
-	vm.OpPushLocalAlloc:
-	{
+	vm.OpPushLocalAlloc: {
 		Inputs:  utils.NewStack(lexer.DataTypes{}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
 	},
-	vm.OpPushGlobalAlloc:
-	{
+	vm.OpPushGlobalAlloc: {
 		Inputs:  utils.NewStack(lexer.DataTypes{}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
 	},
