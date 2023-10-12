@@ -1,27 +1,31 @@
 include "unix.gorth"
 
 // Basic type sizes
-const sizeof(char)                  1 end
-const sizeof(bool)       sizeof(char) end
-const sizeof(int8)       sizeof(char) end
-const sizeof(uint8)      sizeof(int8) end
-const sizeof(int16)  sizeof(int8) 2 * end
-const sizeof(uint16)    sizeof(int16) end
-const sizeof(int32)  sizeof(int8) 4 * end
-const sizeof(uint32)    sizeof(int32) end
-const sizeof(int64)  sizeof(int8) 8 * end
-const sizeof(uint64)    sizeof(int64) end
+const sizeof(char)                1 end
+const sizeof(bool) sizeof(char)     end
+const sizeof(i8)   sizeof(char)     end
+const sizeof(u8)   sizeof(i8)       end
+const sizeof(i16)  sizeof(i8)   2 * end
+const sizeof(u16)  sizeof(i16)      end
+const sizeof(i32)  sizeof(i8)   4 * end
+const sizeof(u32)  sizeof(i32)      end
+const sizeof(i64)  sizeof(i8)   8 * end
+const sizeof(u64)  sizeof(i64)      end
 
-const sizeof(short)      sizeof(int16) end
-const sizeof(ushort)    sizeof(uint16) end
-const sizeof(int)        sizeof(int32) end
-const sizeof(uint)      sizeof(uint32) end
-const sizeof(long)       sizeof(int64) end
-const sizeof(ulong)     sizeof(uint64) end
-const sizeof(longlong)   sizeof(int64) end
-const sizeof(ulonglong) sizeof(uint64) end
+const sizeof(short)     sizeof(i16) end
+const sizeof(ushort)    sizeof(u16) end
+const sizeof(int)       sizeof(i32) end
+const sizeof(uint)      sizeof(u32) end
+const sizeof(long)      sizeof(i64) end
+const sizeof(ulong)     sizeof(u64) end
+const sizeof(longlong)  sizeof(i64) end
+const sizeof(ulonglong) sizeof(u64) end
 
 const sizeof(ptr) sizeof(int) end
+
+inline func NULL do
+  0 cast(ptr)
+end
 
 // Structure describing a generic socket addres <bits/socket.h>
 const sockaddr.sa_family sizeof(ushort) offset end
@@ -29,16 +33,16 @@ const sockaddr.data                  14 offset end
 const sizeof(sockaddr)                   reset end
 
 // Internet address <netinet/in.h>
-const sizeof(sin_addr) sizeof(uint32) end
+const sizeof(sin_addr) sizeof(u32) end
 
 // Structure describing an Internet socket address <netinet/in.h>
 const sockaddr_in.sin_family sizeof(short)    offset end // address family
-const sockaddr_in.sin_port  sizeof(uint16)    offset end // port
-const sockaddr_in.sin_addr sizeof(sin_addr)   offset end // internet address
+const sockaddr_in.sin_port   sizeof(u16)      offset end // port
+const sockaddr_in.sin_addr   sizeof(sin_addr) offset end // internet address
 const sockaddr_in.sin_zero
                            sizeof(sockaddr)
                            sizeof(ushort) -
-                           sizeof(uint16) -
+                           sizeof(u16) -
                            sizeof(sin_addr) -
                                               offset end // pad zeros to size of sockaddr
 const sizeof(sockaddr_in)                      reset end
@@ -300,4 +304,21 @@ do
 
     1 ptr+ swap -1 ptr+ swap
   end drop drop drop
+end
+
+alloc rand_state 8 end
+func srand int do
+  rand_state !64
+end
+
+// https://en.wikipedia.org/wiki/Linear_congruential_generator
+// Simple linear random number generator
+const RAND_A    1664525 end
+const RAND_C 1013904223 end
+const RAND_M    1 32 << end  // 2^32
+
+func rand : int do
+  rand_state @64
+  RAND_A * RAND_C + RAND_M %
+  dup rand_state !64
 end

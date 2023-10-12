@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "((()))",
+    ")(",
+    "()()",
+    "))(("
+  ],
+  "stdin": "",
+  "stdout": "((())):\tgood\n)(:\tbad\n()():\tgood\n))((:\tbad\n",
+  "stderr": "",
+  "exit_code": 0
+}

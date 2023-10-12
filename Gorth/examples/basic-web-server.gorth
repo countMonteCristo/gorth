@@ -5,9 +5,9 @@ func main : int do
 
   const count_acc_buf_size                 32 end
   alloc count_acc_buf      count_acc_buf_size end // bufer to store counter as a string
-  alloc count_acc              sizeof(uint32) end // counter displayed in responsed html
+  alloc count_acc                 sizeof(u32) end // counter displayed in responsed html
 
-  alloc sockaddr_in_size sizeof(uint32) end // size of sockaddr_in will be passed by a pointer to accept syscall
+  alloc sockaddr_in_size sizeof(u32) end    // size of sockaddr_in will be passed by a pointer to accept syscall
   sizeof(sockaddr_in) sockaddr_in_size !32  // save size of sockaddr_in in memory
 
   alloc host_addr sizeof(sockaddr_in) end // host address to be passed to bind syscall
@@ -16,7 +16,7 @@ func main : int do
   alloc read_buffer      read_buffer_size end // buffer for reading data from accepted socket
   alloc bytes_read                      4 end // how many bytes have been actually read from socket
 
-  const yes_len sizeof(uint32) end
+  const yes_len    sizeof(u32) end
   alloc yes            yes_len end  // value for setsockopt
   1 yes !32                         // set 1 for SO_REUSEADDR
 
