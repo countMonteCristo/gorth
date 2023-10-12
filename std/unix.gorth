@@ -15,12 +15,23 @@ const STDOUT 1 end
 const STDERR 2 end
 
 // flags for open syscall
-const O_RDONLY    0 end
-const O_WRONLY    1 end
-const O_RDWR      2 end
-const O_CREAT    64 end
-const O_TRUNC   512 end
-const O_APPEND 1024 end
+const O_RDONLY    0o00000000 end
+const O_WRONLY    0o00000001 end
+const O_RDWR      0o00000002 end
+const O_CREAT     0o00000100 end
+const O_EXCL      0o00000200 end
+const O_NOCTTY    0o00000400 end
+const O_TRUNC     0o00001000 end
+const O_APPEND    0o00002000 end
+const O_NONBLOCK  0o00004000 end
+const O_DSYNC     0o00010000 end
+const FASYNC      0o00020000 end
+const O_DIRECT    0o00040000 end
+const O_LARGEFILE 0o00100000 end
+const O_DIRECTORY 0o00200000 end
+const O_NOFOLLOW  0o00400000 end
+const O_NOATIME   0o01000000 end
+const O_CLOEXEC   0o02000000 end
 
 // flags for create new files
 const S_IXOTH      1 end
@@ -48,10 +59,10 @@ const S_IFSOCK 49152 end
 const S_IFMT   61440 end
 
 // Addresses
-const INADDR_ANY                0 end // Address to accept any incoming messages
-const INADDR_BROADCAST 4294967295 end // Address to send to all hosts
-const INADDR_NONE      4294967295 end // Address indicating an error return
-const INADDR_DUMMY     3221225480 end // Dummy address for source of ICMPv6 errors converted to IPv4 (RFC7600)
+const INADDR_ANY       0x00000000 end // Address to accept any incoming messages
+const INADDR_BROADCAST 0xffffffff end // Address to send to all hosts
+const INADDR_NONE      0xffffffff end // Address indicating an error return
+const INADDR_DUMMY     0xc0000008 end // Dummy address for source of ICMPv6 errors converted to IPv4 (RFC7600)
 
 // Address families
 const AF_LOCAL  1 end
@@ -151,6 +162,64 @@ inline func close
   int   // errno
 do
   SYS_CLOSE syscall1 swap drop // SYS_CLOSE returns {unused} {errno}, just drop {unused}
+end
+
+// Execute `socket` system call
+inline func socket
+  int // protocol
+  int // type
+  int // domain
+    :
+  int // socket fd
+  int // errno
+do
+  SYS_SOCKET syscall3
+end
+
+// Execute `setsockopt` system call
+inline func setsockopt
+  int // optlen
+  ptr // optval_ptr
+  int // optname
+  int // level
+  int // socket fd
+    :
+  int // errno
+do
+  SYS_SETSOCKOPT syscall5 swap drop
+end
+
+// Execute `bind` system call
+inline func bind
+  int // addr_len
+  ptr // addr
+  int // sock_fd
+    :
+  int // errno
+do
+  SYS_BIND syscall3 swap drop
+end
+
+// Execute `listen` system call
+inline func listen
+  int // backlog
+  int // sock_fd
+    :
+  int // errno
+do
+  SYS_LISTEN syscall2 swap drop
+end
+
+// Execute `accept` system call
+inline func accept
+  ptr // addr_len
+  ptr // addr
+  int // sock_fd
+    :
+  int // sock_fd
+  int // errno
+do
+  SYS_ACCEPT syscall3
 end
 
 // Prints string to stdout

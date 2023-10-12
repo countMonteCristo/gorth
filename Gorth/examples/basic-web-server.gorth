@@ -8,7 +8,7 @@ func main : int do
   alloc count_acc              sizeof(uint32) end // counter displayed in responsed html
 
   alloc sockaddr_in_size sizeof(uint32) end // size of sockaddr_in will be passed by a pointer to accept syscall
-  sizeof(sockaddr_in) sockaddr_in_size !32
+  sizeof(sockaddr_in) sockaddr_in_size !32  // save size of sockaddr_in in memory
 
   alloc host_addr sizeof(sockaddr_in) end // host address to be passed to bind syscall
 
@@ -16,13 +16,14 @@ func main : int do
   alloc read_buffer      read_buffer_size end // buffer for reading data from accepted socket
   alloc bytes_read                      4 end // how many bytes have been actually read from socket
 
-  alloc yes sizeof(uint32) end  // value for setsockopt SO_REUSEADDR = 1
-  1 yes !32
+  const yes_len sizeof(uint32) end
+  alloc yes            yes_len end  // value for setsockopt
+  1 yes !32                         // set 1 for SO_REUSEADDR
 
   0 count_acc !32 // init counter
 
   // Create socket
-  0 SOCK_STREAM AF_INET SYS_SOCKET syscall3
+  0 SOCK_STREAM AF_INET socket
   if dup 0 != do
     "[ERROR] Can not create socket" puts
     swap drop return
@@ -34,30 +35,30 @@ func main : int do
   INADDR_ANY htonl host_addr sockaddr_in.sin_addr   ptr+ !32
 
   // Set SO_REUSEADDR = 1 for socket
-  dup sizeof(uint32) swap yes swap SO_REUSEADDR swap SOL_SOCKET swap SYS_SETSOCKOPT syscall5
-  swap drop
+  dup yes_len swap yes swap SO_REUSEADDR swap SOL_SOCKET swap setsockopt
   if dup 0 != do
     "[ERROR] Can not set socket opt to SO_REUSEADDR" p_str
     swap drop return
   end drop
 
   // Bind socket to address
-  dup sizeof(sockaddr_in) host_addr rot SYS_BIND syscall3
+  dup sizeof(sockaddr_in) host_addr rot bind
   if dup 0 != do
     "[ERROR] Can not bind socket" p_str
-    rot rot drop drop return
-  end drop drop
+    swap drop return
+  end drop
 
   // Start listening
-  SOMAXCONN over SYS_LISTEN syscall2 swap drop
+  SOMAXCONN over listen
   if dup 0 != do
     "[ERROR] Can not listen to the socket" p_str
     swap drop return
   end drop
 
+  // Infinite loop for processing input connections
   while true do
     // Accept input connection
-    dup sockaddr_in_size host_addr rot SYS_ACCEPT syscall3
+    dup sockaddr_in_size host_addr rot accept
     if dup 0 != do
       swap drop
       "[ERROR] Can not accept connection" p_str
@@ -76,23 +77,27 @@ func main : int do
     // Save count of recieved bytes
     bytes_read !32
 
-    // Print first 32 bytes recieved to the stdout
-    read_buffer 32 p_str '\n' putc
-
-    // Clear conter string buffer
+    // Clear counter string buffer
     0 count_acc_buf count_acc_buf_size memset drop
 
     // Do not count /favicon.ico
     if read_buffer 5 ptr+ @8 'f' != do
       count_acc @32
       1 + count_acc !32
+
+      // Print count of bytes read from accepted connection
+      "Bytes read from incoming connection: " puts
+      bytes_read @32 puti '\n' putc
     end
 
     // Write html to socket
     dup "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><body><h1>Hello from Gorth!</h1>" write drop drop
-    dup "<p>Count of accessing this page: <b>" write drop drop
+    dup "<p>This page has been visited: <b>" write drop drop
     dup count_acc_buf count_acc @32 itoa count_acc_buf dup strlen write drop drop
-    dup "</b></p></body></html>" write drop drop
+    dup "</b> time(s)</p></body></html>" write drop drop
+
+    // Clear connection buffer
+    0 read_buffer read_buffer_size memset drop
 
     // Close accepted socket
     close drop
