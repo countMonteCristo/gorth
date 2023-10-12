@@ -39,18 +39,20 @@ func NewScope(funcName string) *Scope {
 }
 
 type CompileTimeContext struct {
-	StringsMap map[string]types.IntType // string literals to their memory addresses
-	Funcs      map[string]Function      // function name to function
-	Scopes     map[string]*Scope        // local function context (allocs, consts, etc)
-	Offset     types.IntType
+	StringsMap           map[string]types.IntType // string literals to their memory addresses
+	Funcs                map[string]Function      // function name to function
+	Scopes               map[string]*Scope        // local function context (allocs, consts, etc)
+	Offset               types.IntType
+	CurrentFuncIsInlined bool
 }
 
 func NewCompileTimeContext() *CompileTimeContext {
 	ctx := &CompileTimeContext{
-		StringsMap: make(map[string]types.IntType),
-		Funcs:      make(map[string]Function),
-		Scopes:     make(map[string]*Scope),
-		Offset:     0,
+		StringsMap:           make(map[string]types.IntType),
+		Funcs:                make(map[string]Function),
+		Scopes:               make(map[string]*Scope),
+		Offset:               0,
+		CurrentFuncIsInlined: false,
 	}
 	ctx.Scopes[GlobalScopeName] = NewScope(GlobalScopeName) // global context
 

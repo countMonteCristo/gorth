@@ -8,11 +8,11 @@
   [*] store `data` in byte array
   [*] add argv
 
-[] Functions:
+[*] Functions:
   [*] local allocs
   [*] local consts
   [*] return stack
-  [] inlines
+  [*] inlines
   [*] no function definitions inside function allowed
   [*] recursion limit?
   [*] entry point for executable Gorth script (`main` function)

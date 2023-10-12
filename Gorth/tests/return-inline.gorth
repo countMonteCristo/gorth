@@ -1,0 +1,12 @@
+inline func f do
+  0 while dup 10 < do
+    dup puti
+    if dup 5 = do drop return end
+    1 +
+  end drop
+end
+
+func main : int do
+  f
+  0
+end

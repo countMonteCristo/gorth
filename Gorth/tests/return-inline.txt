@@ -1,0 +1,7 @@
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "",
+  "stderr": "[ERROR] [COMPILER] `return` in `inline` function is not allowed:\n  Gorth/tests/return-inline.gorth:4:24",
+  "exit_code": 1
+}

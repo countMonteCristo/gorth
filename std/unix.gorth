@@ -43,7 +43,7 @@ const S_IFSOCK 49152 end
 const S_IFMT   61440 end
 
 // Execute `open` system call
-func open
+inline func open
   ptr   // const char* filename
   int   // flags
   int   // mode
@@ -55,7 +55,7 @@ do
 end
 
 // Execute `read` system call
-func read
+inline func read
   int   // file descriptor
   ptr   // buffer
   int   // bytes count to be read
@@ -67,7 +67,7 @@ do
 end
 
 // Execute `write` system call
-func write
+inline func write
   int   // file descriptor
   ptr   // buffer
   int   // bytes count to be read
@@ -79,7 +79,7 @@ do
 end
 
 // Execute `close` system call
-func close
+inline func close
   int   // file descriptor
     :
   int   // errno
@@ -88,7 +88,7 @@ do
 end
 
 // Prints string to stdout
-func puts
+inline func puts
   ptr   // const char* string
   int   // string length
     :

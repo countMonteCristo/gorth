@@ -276,7 +276,7 @@ Defines function with given name. You can use define and use your functions anyw
 
 Function definition looks like this:
 ```gorth
-func <function_name>
+[inline] func <function_name>
   <input_type_1> <input_type_2> ... <input_type_M>
     :
   <output_type_1> <output_type_2> ... <output_type_N> do
@@ -284,6 +284,8 @@ func <function_name>
 end
 ```
 where all of `input_type_K` and `output_type_L` are from set {`int`, `bool`, `ptr`}. `any` type is not allowed.
+
+`inline` functions work like macros - calling such function will be fully substituted with its body. Therefore `return`s and local `alloc`s are not allowed inside `inline`d functions.
 
 #### Return from function
 ```gorth

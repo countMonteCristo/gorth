@@ -1,0 +1,10 @@
+inline func f do
+  const x 42 end
+  x puti
+end
+
+func main : int do
+  const x 69 end
+  f
+  0
+end

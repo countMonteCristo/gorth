@@ -41,45 +41,4 @@ func main() {
 	} else {
 		i.RunDebug(gorth_script)
 	}
-
-	// for {
-	// 	once := true
-
-	// 	i := interpreter.NewInterpreter(flag.Args(), package_dir, settings)
-	// 	// debugger_interface := debugger.NewDebugInterface()
-	// 	i.RunDebug(gorth_script)
-
-	// 	scanner := bufio.NewScanner(os.Stdin)
-	// 	for {
-	// 		fmt.Print("> ")
-	// 		scanner.Scan()
-	// 		input := scanner.Text()
-
-	// 		cmd, ok := debugger.ParseDebuggerCommand(input)
-	// 		if !ok {
-	// 			fmt.Printf("Bad command: <%s>\n", input)
-	// 			continue
-	// 		}
-
-	// 		response := debugger_interface.Communicate(cmd)
-	// 		if response.Status == debugger.DebugCommandStatusFailed {
-	// 			fmt.Printf("[FAILED] %s\n", response.Msg)
-	// 		}
-
-	// 		if cmd.Type == debugger.DebugCmdQuit {
-	// 			break
-	// 		}
-
-	// 		if cmd.Type == debugger.DebugCmdRestart {
-	// 			fmt.Printf("[INFO] Restart script\n")
-	// 			once = false
-	// 			break
-	// 		}
-	// 	}
-
-	// 	if once {
-	// 		break
-	// 	}
-	// }
-
 }

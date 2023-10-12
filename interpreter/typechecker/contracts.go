@@ -15,192 +15,192 @@ type Contract struct {
 
 var intrinsicContract = map[lexer.IntrinsicType]*Contract{
 	lexer.IntrinsicPlus: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicMinus: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicMul: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicDiv: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicMod: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 
 	lexer.IntrinsicShl: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicShr: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 
 	lexer.IntrinsicBitAnd: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicBitOr: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicBitXor: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicBitNot: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 
 	lexer.IntrinsicLogicalAnd: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeBool, lexer.DataTypeBool}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeBool, lexer.DataTypeBool}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
 	lexer.IntrinsicLogicalOr: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeBool, lexer.DataTypeBool}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeBool, lexer.DataTypeBool}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
 	lexer.IntrinsicLogicalNot: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
 
 	lexer.IntrinsicEq: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
 	lexer.IntrinsicNe: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
 	lexer.IntrinsicLe: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
 	lexer.IntrinsicGe: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
 	lexer.IntrinsicLt: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
 	lexer.IntrinsicGt: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
 
 	lexer.IntrinsicDup: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeAny}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeAny, lexer.DataTypeAny}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny}),
 	},
 	lexer.IntrinsicSwap: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeAny, lexer.DataTypeAny}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeAny, lexer.DataTypeAny}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny}),
 	},
 	lexer.IntrinsicDrop: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeAny}),
-		Outputs: utils.NewStack([]lexer.DataType{}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
+		Outputs: utils.NewStack(lexer.DataTypes{}),
 	},
 	lexer.IntrinsicOver: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeAny, lexer.DataTypeAny}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny}),
 	},
 	lexer.IntrinsicRot: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny}),
 	},
 
 	lexer.IntrinsicPuti: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{}),
 	},
 
 	lexer.IntrinsicDebug: {
-		Inputs:  utils.NewStack([]lexer.DataType{}),
-		Outputs: utils.NewStack([]lexer.DataType{}),
+		Inputs:  utils.NewStack(lexer.DataTypes{}),
+		Outputs: utils.NewStack(lexer.DataTypes{}),
 	},
 	lexer.IntrinsicTypeDebug: {
-		Inputs:  utils.NewStack([]lexer.DataType{}),
-		Outputs: utils.NewStack([]lexer.DataType{}),
+		Inputs:  utils.NewStack(lexer.DataTypes{}),
+		Outputs: utils.NewStack(lexer.DataTypes{}),
 	},
 
 	lexer.IntrinsicLoad8: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicLoad16: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicLoad32: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicLoad64: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 
 	lexer.IntrinsicStore8: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypePtr}),
-		Outputs: utils.NewStack([]lexer.DataType{}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypePtr}),
+		Outputs: utils.NewStack(lexer.DataTypes{}),
 	},
 	lexer.IntrinsicStore16: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypePtr}),
-		Outputs: utils.NewStack([]lexer.DataType{}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypePtr}),
+		Outputs: utils.NewStack(lexer.DataTypes{}),
 	},
 	lexer.IntrinsicStore32: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypePtr}),
-		Outputs: utils.NewStack([]lexer.DataType{}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypePtr}),
+		Outputs: utils.NewStack(lexer.DataTypes{}),
 	},
 	lexer.IntrinsicStore64: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypePtr}),
-		Outputs: utils.NewStack([]lexer.DataType{}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypePtr}),
+		Outputs: utils.NewStack(lexer.DataTypes{}),
 	},
 
 	lexer.IntrinsicArgc: {
-		Inputs:  utils.NewStack([]lexer.DataType{}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicArgv: {
-		Inputs:  utils.NewStack([]lexer.DataType{}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
+		Inputs:  utils.NewStack(lexer.DataTypes{}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
 	},
 	lexer.IntrinsicEnv: {
-		Inputs:  utils.NewStack([]lexer.DataType{}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
+		Inputs:  utils.NewStack(lexer.DataTypes{}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
 	},
 
 	lexer.IntrinsicSyscall1: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeAny, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicSyscall3: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt, lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
 	},
 
 	lexer.IntrinsicCastInt: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeAny}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	lexer.IntrinsicCastPtr: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeAny}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
 	},
 	lexer.IntrinsicCastBool: {
-		Inputs:  utils.NewStack([]lexer.DataType{lexer.DataTypeAny}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
 }
 
@@ -280,26 +280,26 @@ func GetIntrinsicLogic(i lexer.IntrinsicType) (IntrinsicLogicFunc, string) {
 
 var simpleOperationContract = map[vm.OpType]*Contract{
 	vm.OpPushInt:{
-		Inputs:  utils.NewStack([]lexer.DataType{}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(lexer.DataTypes{}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
 	},
 	vm.OpPushBool:{
-		Inputs:  utils.NewStack([]lexer.DataType{}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypeBool}),
+		Inputs:  utils.NewStack(lexer.DataTypes{}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
 	vm.OpPushPtr:{
-		Inputs:  utils.NewStack([]lexer.DataType{}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
+		Inputs:  utils.NewStack(lexer.DataTypes{}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
 	},
 	vm.OpPushLocalAlloc:
 	{
-		Inputs:  utils.NewStack([]lexer.DataType{}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
+		Inputs:  utils.NewStack(lexer.DataTypes{}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
 	},
 	vm.OpPushGlobalAlloc:
 	{
-		Inputs:  utils.NewStack([]lexer.DataType{}),
-		Outputs: utils.NewStack([]lexer.DataType{lexer.DataTypePtr}),
+		Inputs:  utils.NewStack(lexer.DataTypes{}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
 	},
 }
 

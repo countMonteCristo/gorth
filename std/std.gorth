@@ -4,7 +4,7 @@ const sizeof(int) 4 end
 const sizeof(ptr) sizeof(int) end
 
 // Adds ptr diff to ptr
-func ptr+
+inline func ptr+
   ptr int
     :
   ptr
@@ -13,7 +13,7 @@ do
 end
 
 // Get distance between 2 pointers
-func ptr-
+inline func ptr-
   ptr ptr
     :
   int
@@ -130,7 +130,7 @@ do
 end
 
 // Consumes number of the input argument and returns pointer to it
-func argv_n
+inline func argv_n
   int   // index of the argument
   :
   ptr   // pointer to argument as null-terminated string
@@ -159,28 +159,28 @@ do
 end
 
 // Consumes two numbers and pushes minimum value
-func min
+inline func min
   int int : int
 do
   if over over > do swap end drop
 end
 
 // Consumes two numbers and pushes maximum value
-func max
+inline func max
   int int : int
 do
   if over over < do swap end drop
 end
 
 // Consumes one number and pushes its absolute value
-func abs
+inline func abs
   int : int
 do
   if dup 0 < do -1 * end
 end
 
 // Consumes one number and pushes its sign
-func sign
+inline func sign
   int : int
 do
   if dup 0 < do

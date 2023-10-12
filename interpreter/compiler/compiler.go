@@ -11,16 +11,26 @@ import (
 )
 
 type Compiler struct {
-	Blocks utils.Stack
-	Ops    []vm.Op
-	Ctx    CompileTimeContext
-	debug  bool
+	Blocks     utils.Stack
+	Ops        []vm.Op
+	InlinedOps []vm.Op
+	Ctx        CompileTimeContext
+	debug      bool
 }
 
 func NewCompiler(debug bool) *Compiler {
 	return &Compiler{
 		Blocks: utils.Stack{}, Ops: make([]vm.Op, 0), Ctx: *NewCompileTimeContext(),
-		debug: debug,
+		InlinedOps: make([]vm.Op, 0),
+		debug:      debug,
+	}
+}
+
+func (c *Compiler) getCurrentOps() *[]vm.Op {
+	if c.Ctx.CurrentFuncIsInlined {
+		return &c.InlinedOps
+	} else {
+		return &c.Ops
 	}
 }
 
@@ -30,7 +40,15 @@ func (c *Compiler) EntryPointAddr() types.IntType {
 }
 
 func (c *Compiler) getCurrentAddr() (addr types.IntType) {
-	return types.IntType(len(c.Ops))
+	return types.IntType(len(*c.getCurrentOps()))
+}
+
+func (c *Compiler) setOpOperand(addr, value types.IntType) {
+	(*c.getCurrentOps())[addr].Operand = value
+}
+
+func (c *Compiler) getOpOperand(addr types.IntType) types.IntType {
+	return (*c.getCurrentOps())[addr].Operand.(types.IntType)
 }
 
 func (c *Compiler) pushOps(scope_name string, ops ...vm.Op) {
@@ -39,7 +57,24 @@ func (c *Compiler) pushOps(scope_name string, ops ...vm.Op) {
 			ops[i].DebugInfo = scope_name
 		}
 	}
-	c.Ops = append(c.Ops, ops...)
+	*c.getCurrentOps() = append(*c.getCurrentOps(), ops...)
+}
+
+func (c *Compiler) prepareInlinedCache(inlined bool) {
+	c.Ctx.CurrentFuncIsInlined = inlined
+	c.InlinedOps = make([]vm.Op, 0)
+}
+
+func (c *Compiler) resetInlinedCache() []vm.Op {
+	c.Ctx.CurrentFuncIsInlined = false
+	ops := make([]vm.Op, 0)
+
+	// Do not copy OpFuncBegin and OpFuncEnd
+	for i := 1; i < len(c.InlinedOps)-1; i++ {
+		ops = append(ops, c.InlinedOps[i])
+	}
+
+	return ops
 }
 
 func (c *Compiler) compileTokenInt(token *lexer.Token, scope_name string) error {
@@ -99,7 +134,16 @@ func (c *Compiler) compileGlobalAlloc(token *lexer.Token, scope *Scope) error {
 }
 
 func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope_name string) error {
-	c.pushOps(scope_name, vm.Op{Typ: vm.OpCall, Operand: f.Addr - c.getCurrentAddr(), OpToken: *token, Data: f.Sig.Name})
+	if f.Inlined {
+		c.pushOps(scope_name, f.Ops...)
+	} else {
+		if c.Ctx.CurrentFuncIsInlined {
+			return logger.CompilerError(&token.Loc, "Calling non-inlined functions from inlined are not allowed")
+		} else {
+			c.pushOps(scope_name, vm.Op{Typ: vm.OpCall, Operand: f.Addr - c.getCurrentAddr(), OpToken: *token, Data: f.Sig.Name})
+		}
+	}
+
 	return nil
 }
 
@@ -128,7 +172,7 @@ func (c *Compiler) compileElseBlock(token *lexer.Token, th *lexer.TokenHolder, s
 
 	switch block_start_kw {
 	case lexer.KeywordDo:
-		c.Ops[block.Addr].Operand = addr - block.Addr + 1
+		c.setOpOperand(block.Addr, addr-block.Addr+1)
 	case lexer.KeywordIf, lexer.KeywordElse, lexer.KeywordEnd, lexer.KeywordWhile:
 		return logger.CompilerError(&token.Loc, "`else` may only come after `do` in `if`-block, but got `%s`", block.Tok.Text)
 	default:
@@ -207,6 +251,10 @@ func (c *Compiler) compileReturnKeyword(token *lexer.Token, scope *Scope) error 
 		return logger.CompilerError(&token.Loc, "Could not `return` from global scope, only from function")
 	}
 
+	if c.Ctx.CurrentFuncIsInlined {
+		return logger.CompilerError(&token.Loc, "`%s` in `inline` function is not allowed", token.Text)
+	}
+
 	var i int
 	for i = len(c.Blocks.Data) - 1; i >= 0; i-- {
 		cur_block := c.Blocks.Data[i].(*Block)
@@ -248,30 +296,31 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope_name string) erro
 	case lexer.KeywordDo:
 		switch block.Typ {
 		case lexer.KeywordWhile: // while-do-end
-			do_while_addr_diff := c.Ops[block.Addr].Operand.(types.IntType)
+			do_while_addr_diff := c.getOpOperand(block.Addr)
 			for _, jump := range block.Jumps {
 				switch jump.Keyword {
 				case lexer.KeywordBreak:
-					c.Ops[jump.Addr].Operand = addr - jump.Addr + 1 // break -> end + 1
+					c.setOpOperand(jump.Addr, addr-jump.Addr+1) // break -> end + 1
 				case lexer.KeywordContinue:
-					c.Ops[jump.Addr].Operand = addr - jump.Addr // continue -> end
+					c.setOpOperand(jump.Addr, addr-jump.Addr) // continue -> end
 				default:
 					return logger.CompilerError(&block.Tok.Loc, "Unhandled jump-keyword: `%s`", lexer.KeywordName[jump.Keyword])
 				}
 			}
 			op.Operand = block.Addr + do_while_addr_diff - addr // end -> while
-			c.Ops[block.Addr].Operand = do_end_diff             // do -> end + 1 if condition is false
+			c.setOpOperand(block.Addr, do_end_diff)             // do -> end + 1 if condition is false
 		case lexer.KeywordIf: // if-do-end
-			c.Ops[block.Addr].Operand = do_end_diff // do -> end + 1 if condition is false
+
+			c.setOpOperand(block.Addr, do_end_diff) // do -> end + 1 if condition is false
 		default:
 			return logger.CompilerError(&token.Loc, "Unhandled block type while compiling `end` keyword")
 		}
 	case lexer.KeywordElse: // if-do-else-end
-		c.Ops[block.Addr].Operand = do_end_diff // do -> end + 1 if condition is false
+		c.setOpOperand(block.Addr, do_end_diff) // do -> end + 1 if condition is false
 	case lexer.KeywordFunc:
 		for _, jump := range block.Jumps {
 			if jump.Keyword == lexer.KeywordReturn {
-				c.Ops[jump.Addr].Operand = addr - jump.Addr // return -> end
+				c.setOpOperand(jump.Addr, addr-jump.Addr) // return -> end
 			} else {
 				return logger.CompilerError(&block.Tok.Loc, "Unhandled jump-keyword: `%s` in function", lexer.KeywordName[jump.Keyword])
 			}
@@ -405,11 +454,6 @@ func (c *Compiler) compileFuncDef(token *lexer.Token, th *lexer.TokenHolder) (na
 		return
 	}
 
-	if token.Typ == lexer.TokenKeyword && token.Value.(lexer.KeywordType) != lexer.KeywordFunc {
-		err = logger.CompilerError(&token.Loc, "Expected `func` keyword, but found %s", token.Text)
-		return
-	}
-
 	name_token = *th.GetNextToken()
 	if name_token.Typ != lexer.TokenWord {
 		err = logger.CompilerError(&token.Loc, "Expected `%s` name to be a word, but got `%s`", token.Text, name_token.Text)
@@ -454,6 +498,18 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope_
 		return logger.CompilerError(&token.Loc, "Cannot define functions after `main`")
 	}
 
+	inlined := false
+	keyword := token.Value.(lexer.KeywordType)
+	if keyword == lexer.KeywordInline {
+		next := th.NextToken()
+		if next.Typ != lexer.TokenKeyword || next.Value.(lexer.KeywordType) != lexer.KeywordFunc {
+			return logger.CompilerError(&next.Loc, "Expected `func` after `inline`, but found `%s`", next.Text)
+		} else {
+			token = th.GetNextToken()
+			inlined = true
+		}
+	}
+
 	func_token, signature, err := c.compileFuncDef(token, th)
 	if err != nil {
 		return err
@@ -463,6 +519,8 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope_
 	new_scope.Names[signature.Name] = func_token
 	c.Ctx.Scopes[signature.Name] = new_scope
 
+	c.prepareInlinedCache(inlined)
+
 	func_addr := c.getCurrentAddr()
 	c.Blocks.Push(NewBlock(func_addr, token, lexer.KeywordFunc))
 
@@ -471,10 +529,14 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope_
 		return err
 	}
 
-	c.Ctx.Funcs[signature.Name] = Function{Addr: func_addr, Sig: signature}
+	// needed only for non-inlined functions
+	c.setOpOperand(func_addr, new_scope.MemSize)            // OpFuncBegin $MEM - allocates   $MEM bytes in RAM
+	c.setOpOperand(c.getCurrentAddr()-1, new_scope.MemSize) // OpFuncEnd $MEM   - deallocates $MEM bytes in RAM
 
-	c.Ops[func_addr].Operand = new_scope.MemSize            // OpFuncBegin $MEM - allocates   $MEM bytes in RAM
-	c.Ops[c.getCurrentAddr()-1].Operand = new_scope.MemSize // OpFuncEnd $MEM   - deallocates $MEM bytes in RAM
+	c.Ctx.Funcs[signature.Name] = Function{
+		Addr: func_addr, Sig: signature, Inlined: inlined,
+		Ops: c.resetInlinedCache(),
+	}
 
 	return nil
 }
@@ -693,6 +755,9 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope_name string) error {
 				}
 				scope.Consts[tok.Text] = const_value
 			case lexer.KeywordAlloc:
+				if c.Ctx.CurrentFuncIsInlined {
+					return logger.CompilerError(&token.Loc, "Local allocations are not allowed in `inline` function")
+				}
 				tok, alloc_size, err := c.compileNamedBlock(token, th, scope_name, token.Text)
 				if err != nil {
 					return err
@@ -705,7 +770,7 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope_name string) error {
 				}
 				scope.MemSize += alloc_size
 
-			case lexer.KeywordFunc:
+			case lexer.KeywordFunc, lexer.KeywordInline:
 				if err := c.compileFunc(token, th, scope_name); err != nil {
 					return err
 				}
@@ -713,7 +778,7 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope_name string) error {
 			case lexer.KeywordInclude:
 				return logger.CompilerError(&token.Loc, "Include keyword should not appear in here, probably there is a bug in a lexer")
 			default:
-				return logger.CompilerError(&token.Loc, "Unhandled KewordType handling: `%s`", token.Text)
+				return logger.CompilerError(&token.Loc, "Unhandled keword: `%s`", token.Text)
 			}
 		default:
 			return logger.CompilerError(&token.Loc, "Unhandled token: `%s`\n", token.Text)

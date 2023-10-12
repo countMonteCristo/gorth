@@ -4,6 +4,7 @@ import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
+	"Gorth/interpreter/vm"
 )
 
 // Jumps are: break and continue
@@ -31,6 +32,8 @@ type FuncSignature struct {
 }
 
 type Function struct {
-	Sig  FuncSignature
-	Addr types.IntType
+	Sig     FuncSignature
+	Addr    types.IntType
+	Inlined bool
+	Ops     []vm.Op
 }
