@@ -20,11 +20,22 @@ type Allocation struct {
 	Size   types.IntType
 }
 
+type Constant struct {
+	Value types.IntType
+	Typ   lexer.DataType
+}
+
+var DataTypeToOpType = map[lexer.DataType]vm.OpType{
+	lexer.DataTypeBool: vm.OpPushBool,
+	lexer.DataTypeInt:  vm.OpPushInt,
+	lexer.DataTypePtr:  vm.OpPushPtr,
+}
+
 // Allocations and constants visible only inside function
 type Scope struct {
 	ScopeName string
 	Allocs    map[string]Allocation
-	Consts    map[string]types.IntType
+	Consts    map[string]Constant
 	Names     map[string]lexer.Token
 	MemSize   types.IntType
 }
@@ -33,7 +44,7 @@ const GlobalScopeName = ""
 
 func NewScope(funcName string) *Scope {
 	return &Scope{
-		ScopeName: funcName, Consts: make(map[string]types.IntType), Allocs: make(map[string]Allocation),
+		ScopeName: funcName, Consts: make(map[string]Constant), Allocs: make(map[string]Allocation),
 		Names: make(map[string]lexer.Token), MemSize: 0,
 	}
 }
@@ -81,18 +92,18 @@ func (c *CompileTimeContext) GlobalScope() *Scope {
 	return c.Scopes[GlobalScopeName]
 }
 
-func (c *CompileTimeContext) GetLocalConst(name, scope_name string) (types.IntType, bool) {
+func (c *CompileTimeContext) GetLocalConst(name, scope_name string) (*Constant, bool) {
 	if scope_name != GlobalScopeName {
 		val, exists := c.Scopes[scope_name].Consts[name]
-		return val, exists
+		return &val, exists
 	}
-	return 0, false
+	return nil, false
 }
-func (c *CompileTimeContext) GetGlobalConst(name string) (types.IntType, bool) {
+func (c *CompileTimeContext) GetGlobalConst(name string) (*Constant, bool) {
 	val, exists := c.GlobalScope().Consts[name]
-	return val, exists
+	return &val, exists
 }
-func (c *CompileTimeContext) GetConst(name, scope_name string) (types.IntType, ScopeType) {
+func (c *CompileTimeContext) GetConst(name, scope_name string) (*Constant, ScopeType) {
 	val, exists := c.GetLocalConst(name, scope_name)
 	if exists {
 		return val, ScopeLocal
@@ -102,7 +113,7 @@ func (c *CompileTimeContext) GetConst(name, scope_name string) (types.IntType, S
 	if exists {
 		return val, ScopeGlobal
 	}
-	return 0, ScopeUnknown
+	return nil, ScopeUnknown
 }
 
 func (c *CompileTimeContext) GetLocalAlloc(name, scope_name string) (Allocation, bool) {
@@ -142,8 +153,8 @@ func (c *CompileTimeContext) GetAllocInfo(name, scope_name string, mem *vm.ByteM
 }
 
 func (c *CompileTimeContext) DebugConsts(scope_name string) {
-	for const_name, const_value := range c.Scopes[scope_name].Consts {
-		fmt.Printf("%s=%d ", const_name, const_value)
+	for const_name, constant := range c.Scopes[scope_name].Consts {
+		fmt.Printf("%s=%d ", const_name, constant.Value)
 	}
 }
 func (c *CompileTimeContext) DebugAllocs(scope_name string, mem *vm.ByteMemory) {
@@ -156,14 +167,14 @@ func (c *CompileTimeContext) DebugAllocs(scope_name string, mem *vm.ByteMemory) 
 func (c *CompileTimeContext) DebugConstNames(names []string, scope_name string) int {
 	n_found := 0
 	for _, name := range names {
-		const_value, exists := c.GetLocalConst(name, scope_name)
+		constant, exists := c.GetLocalConst(name, scope_name)
 		if exists {
-			fmt.Printf("(%s) %s = %d\n", scope_name, name, const_value)
+			fmt.Printf("(%s) %s = %d type = %s\n", scope_name, name, constant.Value, lexer.DataTypeName[constant.Typ])
 			n_found++
 		}
-		const_value, exists = c.GetGlobalConst(name)
+		constant, exists = c.GetGlobalConst(name)
 		if exists {
-			fmt.Printf("(%s) %s = %d\n", GlobalScopeName, name, const_value)
+			fmt.Printf("(%s) %s = %d type = %s\n", GlobalScopeName, name, constant.Value, lexer.DataTypeName[constant.Typ])
 			n_found++
 		}
 	}

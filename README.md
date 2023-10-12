@@ -310,7 +310,7 @@ const N 10 end
 const M 10 end
 const CHAR_WIDTH M 4 * 3 + end
 ```
-Defines constant with given name and given value. Simple arithmetic operations can be used to calculate const value.
+Defines constant with given name and given value. Simple arithmetic and logical operations can be used to calculate const value.
 Constants may be delcared inside functions. Local constants CAN NOT HIDE global ones with the same name.
 
 For example:
@@ -327,12 +327,14 @@ end
 ```
 this code will not compile.
 
+Constants should be one of the existing types: `int`, `bool` or `ptr`. Constants of type `any` are not allowed.
+
 ### Memory Allocations
 ```gorth
 const N 100 end
 alloc array N 1 + end
 ```
-Allocates the region of memory of the given size. Simple arithmetic operations can be used to calculate allocated region size. Allocations can be declared inside functions.
+Allocates the region of memory of the given size. Simple arithmetic and logical operations can be used to calculate allocated region size. Allocations can be declared inside functions.
 
 Local alloctaions CAN NOT HIDE global ones.
 
@@ -351,6 +353,8 @@ func main : int do
 end
 ```
 this code will not compile.
+
+Allocations should be one of type `int`. Other types (`bool`, `ptr` or `any`) are not allowed.
 
 # Type checking
 You can run your script with `-check` option to enable type checking.

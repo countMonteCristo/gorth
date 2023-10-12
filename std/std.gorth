@@ -23,9 +23,7 @@ const sizeof(ulonglong) sizeof(u64) end
 
 const sizeof(ptr) sizeof(int) end
 
-inline func NULL do
-  0 cast(ptr)
-end
+const NULL 0 cast(ptr) end
 
 // Structure describing a generic socket addres <bits/socket.h>
 const sockaddr.sa_family sizeof(ushort) offset end

@@ -6,6 +6,7 @@ import (
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
+	"fmt"
 
 	"golang.org/x/exp/slices"
 )
@@ -113,13 +114,21 @@ func (c *Compiler) compileTokenIntrinsic(token *lexer.Token, scope_name string, 
 	return nil
 }
 
-func (c *Compiler) compileLocalConst(token *lexer.Token, val types.IntType, scope_name string) error {
-	c.pushOps(scope_name, vm.Op{Typ: vm.OpPushInt, Operand: val, OpToken: *token})
+func (c *Compiler) compileLocalConst(token *lexer.Token, val *Constant, scope_name string) error {
+	typ, exists := DataTypeToOpType[val.Typ]
+	if !exists {
+		return logger.CompilerError(&token.Loc, "Can not compile local constant of type `%s`", lexer.DataTypeName[val.Typ])
+	}
+	c.pushOps(scope_name, vm.Op{Typ: typ, Operand: val.Value, OpToken: *token})
 	return nil
 }
 
-func (c *Compiler) compileGlobalConst(token *lexer.Token, val types.IntType, scope_name string) error {
-	c.pushOps(scope_name, vm.Op{Typ: vm.OpPushInt, Operand: val, OpToken: *token})
+func (c *Compiler) compileGlobalConst(token *lexer.Token, val *Constant, scope_name string) error {
+	typ, exists := DataTypeToOpType[val.Typ]
+	if !exists {
+		return logger.CompilerError(&token.Loc, "Can not compile global constant of type `%s`", lexer.DataTypeName[val.Typ])
+	}
+	c.pushOps(scope_name, vm.Op{Typ: typ, Operand: val.Value, OpToken: *token})
 	return nil
 }
 
@@ -341,7 +350,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope_name string) erro
 	return nil
 }
 
-func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, scope_name string, typ string) (name_token lexer.Token, value types.IntType, err error) {
+func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, scope_name string, typ string) (name_token lexer.Token, value Constant, err error) {
 
 	if th.Empty() {
 		err = logger.CompilerError(&token.Loc, "Expected `%s` name, but got nothing", typ)
@@ -379,22 +388,7 @@ func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, 
 
 	scope.Names[name_token.Text] = name_token
 
-	const_th := lexer.NewTokenHolder()
-	for {
-		if th.Empty() {
-			err = logger.CompilerError(&token.Loc, "Unexpected end while processing `%s` block", typ)
-			return
-		}
-
-		btok := *th.GetNextToken()
-		if btok.Typ == lexer.TokenKeyword && btok.Value.(lexer.KeywordType) == lexer.KeywordEnd {
-			break
-		}
-
-		const_th.AppendToken(btok)
-	}
-
-	value, err = c.constEval(&name_token, const_th, scope)
+	value, err = c.constEval(&name_token, th, scope)
 	return
 }
 
@@ -538,66 +532,202 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope_
 	return nil
 }
 
-func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, scope *Scope) (value types.IntType, err error) {
+func (c *Compiler) checkConstTypes(token *lexer.Token, expected, actual lexer.DataTypes) error {
+	if len(expected) != len(actual) {
+		logger.CompilerCrash(&token.Loc, "Sizes of expected and actual datatypes does not match")
+	}
+
+	for i := range expected {
+		if actual[i] != expected[i] {
+			return logger.CompilerError(&token.Loc,
+				"Unsupported types for `%s` in named block: expected %s, got %s",
+				token.Text, expected, actual,
+			)
+		}
+	}
+	return nil
+}
+
+func (c *Compiler) checkConstStackSize(token *lexer.Token, stack *utils.Stack, count int) error {
+	if stack.Size() < count {
+		return logger.CompilerError(
+			&token.Loc, "Const stack size has %d elements but `%s` needs to have at least %d",
+			stack.Size(), token.Text, count,
+		)
+	}
+	return nil
+}
+
+func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, scope *Scope) (value Constant, err error) {
 	const_stack := &utils.Stack{}
+
+loop:
 	for !th.Empty() {
 		token := th.GetNextToken()
 
 		switch token.Typ {
 		case lexer.TokenInt:
-			const_stack.Push(token.Value.(types.IntType))
+			const_stack.Push(Constant{Value: token.Value.(types.IntType), Typ: lexer.DataTypeInt})
+		case lexer.TokenBool:
+			const_stack.Push(Constant{Value: token.Value.(types.IntType), Typ: lexer.DataTypeBool})
 		case lexer.TokenWord:
 			intrinsic, exists := lexer.WordToIntrinsic[token.Text]
 			if exists {
 				switch intrinsic {
-				case lexer.IntrinsicPlus, lexer.IntrinsicMinus, lexer.IntrinsicMul:
-					b := const_stack.Pop().(types.IntType)
-					a := const_stack.Pop().(types.IntType)
-					const_stack.Push(vm.SafeArithmeticFunctions[intrinsic](a, b))
+				case lexer.IntrinsicPlus, lexer.IntrinsicMinus, lexer.IntrinsicMul, lexer.IntrinsicBitAnd, lexer.IntrinsicBitXor, lexer.IntrinsicBitOr:
+					if err = c.checkConstStackSize(token, const_stack, 2); err != nil {
+						return
+					}
+					b := const_stack.Pop().(Constant)
+					a := const_stack.Pop().(Constant)
+					if err = c.checkConstTypes(token, lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
+						return
+					}
+					const_stack.Push(Constant{Value: vm.SafeArithmeticFunctions[intrinsic](a.Value, b.Value), Typ: lexer.DataTypeInt})
+				case lexer.IntrinsicBitNot:
+					if err = c.checkConstStackSize(token, const_stack, 1); err != nil {
+						return
+					}
+					a := const_stack.Pop().(Constant)
+					if err = c.checkConstTypes(token, lexer.DataTypes{lexer.DataTypeInt}, lexer.DataTypes{a.Typ}); err != nil {
+						return
+					}
+					const_stack.Push(Constant{Value: ^a.Value, Typ: lexer.DataTypeInt})
 				case lexer.IntrinsicDiv:
-					b := const_stack.Pop().(types.IntType)
-					if b == 0 {
+					if err = c.checkConstStackSize(token, const_stack, 2); err != nil {
+						return
+					}
+					b := const_stack.Pop().(Constant)
+					if b.Value == 0 {
 						err = logger.CompilerError(&token.Loc, "Division by zero")
 						return
 					}
-					a := const_stack.Pop().(types.IntType)
-					const_stack.Push(a / b)
+					a := const_stack.Pop().(Constant)
+					if err = c.checkConstTypes(token, lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
+						return
+					}
+					const_stack.Push(Constant{Value: a.Value / b.Value, Typ: lexer.DataTypeInt})
 				case lexer.IntrinsicMod:
-					b := const_stack.Pop().(types.IntType)
-					if b == 0 {
-						err = logger.CompilerError(&token.Loc, "Division by zero")
+					if err = c.checkConstStackSize(token, const_stack, 2); err != nil {
 						return
 					}
-					a := const_stack.Pop().(types.IntType)
-					const_stack.Push(a % b)
+					b := const_stack.Pop().(Constant)
+					if b.Value == 0 {
+						err = logger.CompilerError(&token.Loc, "Modulo by zero")
+						return
+					}
+					a := const_stack.Pop().(Constant)
+					if err = c.checkConstTypes(token, lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
+						return
+					}
+					const_stack.Push(Constant{Value: a.Value % b.Value, Typ: lexer.DataTypeInt})
 				case lexer.IntrinsicShl:
-					b := const_stack.Pop().(types.IntType)
-					if b < 0 {
+					if err = c.checkConstStackSize(token, const_stack, 2); err != nil {
+						return
+					}
+					b := const_stack.Pop().(Constant)
+					if b.Value < 0 {
 						err = logger.CompilerError(&token.Loc, "Negative shift amount in `<<`: %d", b)
 						return
 					}
-					a := const_stack.Pop().(types.IntType)
-					const_stack.Push(a << b)
+					a := const_stack.Pop().(Constant)
+					if err = c.checkConstTypes(token, lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
+						return
+					}
+					const_stack.Push(Constant{Value: a.Value << b.Value, Typ: lexer.DataTypeInt})
 				case lexer.IntrinsicShr:
-					b := const_stack.Pop().(types.IntType)
-					if b < 0 {
+					if err = c.checkConstStackSize(token, const_stack, 2); err != nil {
+						return
+					}
+					b := const_stack.Pop().(Constant)
+					if b.Value < 0 {
 						err = logger.CompilerError(&token.Loc, "Negative shift amount in `>>`: %d", b)
 						return
 					}
-					a := const_stack.Pop().(types.IntType)
-					const_stack.Push(a >> b)
+					a := const_stack.Pop().(Constant)
+					if err = c.checkConstTypes(token, lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
+						return
+					}
+					const_stack.Push(Constant{Value: a.Value >> b.Value, Typ: lexer.DataTypeInt})
 				case lexer.IntrinsicOffset:
-					off := const_stack.Pop().(types.IntType)
-					const_stack.Push(c.Ctx.Offset)
-					c.Ctx.Offset += off
+					if err = c.checkConstStackSize(token, const_stack, 1); err != nil {
+						return
+					}
+					off := const_stack.Pop().(Constant)
+					if err = c.checkConstTypes(token, lexer.DataTypes{lexer.DataTypeInt}, lexer.DataTypes{off.Typ}); err != nil {
+						return
+					}
+					const_stack.Push(Constant{Value: c.Ctx.Offset, Typ: lexer.DataTypeInt})
+					c.Ctx.Offset += off.Value
+				case lexer.IntrinsicGe, lexer.IntrinsicGt, lexer.IntrinsicLe, lexer.IntrinsicLt, lexer.IntrinsicEq, lexer.IntrinsicNe:
+					if err = c.checkConstStackSize(token, const_stack, 2); err != nil {
+						return
+					}
+					b := const_stack.Pop().(Constant)
+					a := const_stack.Pop().(Constant)
+					if err = c.checkConstTypes(token, lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
+						return
+					}
+					const_stack.Push(Constant{Value: vm.ComparableFunctions[intrinsic](a.Value, b.Value), Typ: lexer.DataTypeBool})
+				case lexer.IntrinsicLogicalAnd, lexer.IntrinsicLogicalOr:
+					if err = c.checkConstStackSize(token, const_stack, 2); err != nil {
+						return
+					}
+					b := const_stack.Pop().(Constant)
+					a := const_stack.Pop().(Constant)
+					if err = c.checkConstTypes(token, lexer.DataTypes{lexer.DataTypeBool, lexer.DataTypeBool}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
+						return
+					}
+					const_stack.Push(Constant{Value: vm.LogicalFunctions[intrinsic](a.Value, b.Value), Typ: lexer.DataTypeBool})
+				case lexer.IntrinsicLogicalNot:
+					if err = c.checkConstStackSize(token, const_stack, 1); err != nil {
+						return
+					}
+					a := const_stack.Pop().(Constant)
+					if err = c.checkConstTypes(token, lexer.DataTypes{lexer.DataTypeBool}, lexer.DataTypes{a.Typ}); err != nil {
+						return
+					}
+					const_stack.Push(Constant{Value: vm.B2I(!vm.I2B(a.Value)), Typ: lexer.DataTypeBool})
 				case lexer.IntrinsicReset:
-					const_stack.Push(c.Ctx.Offset)
+					const_stack.Push(Constant{Value: c.Ctx.Offset, Typ: lexer.DataTypeInt})
 					c.Ctx.Offset = 0
+				case lexer.IntrinsicCastInt:
+					if err = c.checkConstStackSize(token, const_stack, 1); err != nil {
+						return
+					}
+					a := const_stack.Pop().(Constant)
+					const_stack.Push(Constant{Value: a.Value, Typ: lexer.DataTypeInt})
+				case lexer.IntrinsicCastBool:
+					if err = c.checkConstStackSize(token, const_stack, 1); err != nil {
+						return
+					}
+					a := const_stack.Pop().(Constant)
+					const_stack.Push(Constant{Value: a.Value, Typ: lexer.DataTypeBool})
+				case lexer.IntrinsicCastPtr:
+					if err = c.checkConstStackSize(token, const_stack, 1); err != nil {
+						return
+					}
+					a := const_stack.Pop().(Constant)
+					const_stack.Push(Constant{Value: a.Value, Typ: lexer.DataTypePtr})
+				case lexer.IntrinsicDebug:
+					values := make([]types.IntType, const_stack.Size())
+					for i := range const_stack.Data {
+						values[i] = const_stack.Data[i].(Constant).Value
+					}
+					fmt.Println(logger.FormatNoneMsg(&token.Loc, "Const stack values: %v", values))
+				case lexer.IntrinsicTypeDebug:
+					values := make(lexer.DataTypes, const_stack.Size())
+					for i := range const_stack.Data {
+						values[i] = const_stack.Data[i].(Constant).Typ
+					}
+					fmt.Println(logger.FormatNoneMsg(&token.Loc, "Const stack types: %s", values))
 				default:
 					err = logger.CompilerError(
 						&token.Loc,
-						"Unexpected intrinsic in const-block compile-time "+
-							"evaluation: `%s`. Supported: [+, -, *, /, %%, >>, <<, offset, reset]", token.Text,
+						"Unexpected intrinsic in named-block compile-time evaluation: `%s`. Supported: "+
+							"[+, -, *, /, %%, &, ^, |, ~, >>, <<, offset, reset, "+
+							"&&, ||, !, cast(int), cast(bool), cast(ptr)]",
+						token.Text,
 					)
 					return
 				}
@@ -606,12 +736,20 @@ func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, scope *S
 
 			val, scope := c.Ctx.GetConst(token.Text, scope.ScopeName)
 			if scope != ScopeUnknown {
-				const_stack.Push(val)
+				const_stack.Push(*val)
 				continue
 			}
 
 			err = logger.CompilerError(&token.Loc, "Unsupported word in compile-time const-block evaluation: `%s`", token.Text)
 			return
+		case lexer.TokenKeyword:
+			switch token.Value.(lexer.KeywordType) {
+			case lexer.KeywordEnd:
+				break loop
+			default:
+				err = logger.CompilerError(&token.Loc, "Unsupported keyword in compile-time const-block evaluation: `%s`", token.Text)
+				return
+			}
 		default:
 			err = logger.CompilerError(&token.Loc, "Unsupported token in compile-time const-block evaluation: `%s`", token.Text)
 			return
@@ -623,7 +761,7 @@ func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, scope *S
 		return
 	}
 
-	value, _ = const_stack.Pop().(types.IntType)
+	value, _ = const_stack.Pop().(Constant)
 	return
 }
 
@@ -759,13 +897,16 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope_name string) error {
 				if err != nil {
 					return err
 				}
-				if alloc_size < 0 {
+				if alloc_size.Value < 0 {
 					return logger.CompilerError(&tok.Loc, "Negative size for `alloc` block: %d", alloc_size)
 				}
-				scope.Allocs[tok.Text] = Allocation{
-					Offset: scope.MemSize, Size: alloc_size,
+				if alloc_size.Typ != lexer.DataTypeInt {
+					return logger.CompilerError(&tok.Loc, "Only `int` type is supported for `alloc` value, got %s", lexer.DataTypeName[alloc_size.Typ])
 				}
-				scope.MemSize += alloc_size
+				scope.Allocs[tok.Text] = Allocation{
+					Offset: scope.MemSize, Size: alloc_size.Value,
+				}
+				scope.MemSize += alloc_size.Value
 
 			case lexer.KeywordFunc, lexer.KeywordInline:
 				if err := c.compileFunc(token, th, scope_name); err != nil {
