@@ -398,18 +398,24 @@ func (tc *TypeChecker) typeCheckWhileBlock(ops *[]vm.Op, i int, contextStack *Ty
 	index := -1
 	contextStackSize := contextStack.Size()
 
+	loc := &(*ops)[i].OpToken.Loc
+
+	while_start := i+1
+
+	// process while case
+	if err := tc.typeCheck(ops, while_start, contextStack); err != nil {
+		return i, err
+	}
+	do_start := contextStack.Top().Outputs.Index
+
 	ctx := contextStack.Top().Clone(context_type_while)
 	contextStack.Push(ctx)
 
-	loc := &(*ops)[i].OpToken.Loc
-
-	// process while case
-	if err := tc.typeCheck(ops, i+1, contextStack); err != nil {
+	if err := tc.typeCheck(ops, do_start+1, contextStack); err != nil {
 		return i, err
 	}
-	i = contextStack.Top().Outputs.Index
-
-	if err := tc.typeCheck(ops, i+1, contextStack); err != nil {
+	end_index := contextStack.Top().Outputs.Index + 1
+	if err := tc.typeCheck(ops, while_start, contextStack); err != nil {
 		return i, err
 	}
 
@@ -441,7 +447,7 @@ func (tc *TypeChecker) typeCheckWhileBlock(ops *[]vm.Op, i int, contextStack *Ty
 				contextStack.Top().Stack.Data, top.Stack.Data,
 			)
 		}
-		index = top.Outputs.Index + 1
+		index = end_index
 	}
 	return index, nil
 }
