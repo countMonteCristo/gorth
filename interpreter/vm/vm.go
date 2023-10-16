@@ -232,12 +232,17 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 			// do nothing
 		case lexer.IntrinsicLoad8, lexer.IntrinsicLoad16, lexer.IntrinsicLoad32, lexer.IntrinsicLoad64:
 			ptr := vm.Rc.Stack.Pop().(types.IntType)
-			val := vm.Rc.Memory.LoadFromMem(ptr, LoadSizes[intrinsic])
+			val, err := vm.Rc.Memory.LoadFromMem(ptr, LoadSizes[intrinsic], &op.OpToken.Loc, false)
+			if err != nil {
+				return err
+			}
 			vm.Rc.Stack.Push(val)
 		case lexer.IntrinsicStore8, lexer.IntrinsicStore16, lexer.IntrinsicStore32, lexer.IntrinsicStore64:
 			ptr := vm.Rc.Stack.Pop().(types.IntType)
 			x := vm.Rc.Stack.Pop().(types.IntType)
-			vm.Rc.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic])
+			if err = vm.Rc.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic], &op.OpToken.Loc, false); err != nil {
+				return err
+			}
 
 		case lexer.IntrinsicArgc:
 			vm.Rc.Stack.Push(vm.Rc.Argc)

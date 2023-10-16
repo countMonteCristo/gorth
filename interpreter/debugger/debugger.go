@@ -66,13 +66,13 @@ loop:
 		case DebugCmdOperativeMemory:
 			chunk := cmd.Args.([]int)
 			start, size := chunk[0], chunk[1]
-			if start >= int(d.vm.Rc.Memory.MemorySize) {
+			if start >= d.vm.Rc.Memory.Size() {
 				d.iface.SendFailed(fmt.Sprintf("Start address %d is out of bounds", start))
 				continue
 			}
 			end := start + size
-			if end >= int(d.vm.Rc.Memory.MemorySize) {
-				end = int(d.vm.Rc.Memory.MemorySize) - 1
+			if end >= d.vm.Rc.Memory.Size() {
+				end = d.vm.Rc.Memory.Size() - 1
 			}
 			memory_chunk := d.vm.Rc.Memory.Data[start:end]
 			fmt.Printf("addr=%d size=%d: %v\n", start, size, memory_chunk)
@@ -291,7 +291,7 @@ func (d *Debugger) checkErr(err error, ops *[]vm.Op) {
 			ec := d.vm.Rc.GetExitCode(err)
 			fmt.Printf("[INFO] Script finished with exit code %d", ec.Code)
 			if len(ec.Msg) > 0 {
-				fmt.Printf(": %s", ec.Msg)
+				fmt.Printf(":\n%s", ec.Msg)
 			}
 			fmt.Println()
 		}

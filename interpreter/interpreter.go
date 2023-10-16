@@ -79,7 +79,7 @@ func (i *Interpreter) ProcessExit(exit_code vm.ExitCodeType) {
 	if exit_code.Code != 0 {
 		fmt.Fprintf(os.Stderr, "Script finished with exit code %d", exit_code.Code)
 		if len(exit_code.Msg) > 0 {
-			fmt.Fprintf(os.Stderr, ": %s", exit_code.Msg)
+			fmt.Fprintf(os.Stderr, ":\n%s", exit_code.Msg)
 		}
 		fmt.Fprintln(os.Stderr)
 	}
