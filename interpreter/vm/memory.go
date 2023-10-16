@@ -179,7 +179,7 @@ func (m *ByteMemory) LoadFromMem(ptr types.IntType, size int, loc *utils.Locatio
 
 func (m *ByteMemory) StoreToMem(ptr types.IntType, value types.IntType, size int, loc *utils.Location, ignore bool) error {
 	if ptr == 0 {
-		return logger.VmRuntimeError(loc, "ERROR: write operation into NULL pointer")
+		return logger.VmRuntimeError(loc, "Write operation into NULL pointer")
 	}
 
 	if !ignore {
