@@ -3,6 +3,7 @@ package compiler
 import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/types"
+	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
 	"fmt"
 )
@@ -31,6 +32,24 @@ var DataTypeToOpType = map[lexer.DataType]vm.OpType{
 	lexer.DataTypePtr:  vm.OpPushPtr,
 }
 
+type CapturedVal struct {
+	Name  string
+	Typ   lexer.DataType
+	Token *lexer.Token
+}
+
+type CaptureList struct {
+	Vals []CapturedVal
+}
+
+func NewCaptureList() *CaptureList {
+	return &CaptureList{Vals: make([]CapturedVal, 0)}
+}
+
+func (cl *CaptureList) Append(val CapturedVal) {
+	cl.Vals = append(cl.Vals, val)
+}
+
 // Allocations and constants visible only inside function
 type Scope struct {
 	ScopeName string
@@ -38,6 +57,7 @@ type Scope struct {
 	Consts    map[string]Constant
 	Names     map[string]lexer.Token
 	MemSize   types.IntType
+	Captures  utils.Stack
 }
 
 const GlobalScopeName = ""
@@ -45,8 +65,17 @@ const GlobalScopeName = ""
 func NewScope(funcName string) *Scope {
 	return &Scope{
 		ScopeName: funcName, Consts: make(map[string]Constant), Allocs: make(map[string]Allocation),
-		Names: make(map[string]lexer.Token), MemSize: 0,
+		Names: make(map[string]lexer.Token), MemSize: 0, Captures: utils.Stack{},
 	}
+}
+
+func (s *Scope) GetCapturedValue(name string) (types.IntType, bool) {
+	for i, v := range s.Captures.Data {
+		if v.(CapturedVal).Name == name {
+			return types.IntType(s.Captures.Size() - 1 - i), true
+		}
+	}
+	return -1, false
 }
 
 type CompileTimeContext struct {

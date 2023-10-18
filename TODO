@@ -18,6 +18,10 @@
   [*] entry point for executable Gorth script (`main` function)
   [*] `return` keyword
 
+[] Captures
+  [*] supply captures syntax (capture x int y ptr z bool do ... end)
+  [] add support for break's and continue's from capture statement
+
 [] Includes
   [*] `include` keyword
   [*] check for circular includes

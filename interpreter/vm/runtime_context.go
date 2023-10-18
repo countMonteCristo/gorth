@@ -27,22 +27,23 @@ func NewRuntimeSettings(start types.IntType) *RuntimeSettings {
 }
 
 type RunTimeContext struct {
-	Memory       ByteMemory
-	Stack        utils.Stack
-	ReturnStack  utils.Stack
-	ScopeStack   utils.Stack
-	Addr         types.IntType
-	Argc         types.IntType
-	OpsCount     types.IntType
-	ExitCode     ExitCodeType
-	Settings     RuntimeSettings
-	global_scope string
+	Memory        ByteMemory
+	Stack         utils.Stack
+	ReturnStack   utils.Stack
+	CapturesCount types.IntType
+	ScopeStack    utils.Stack
+	Addr          types.IntType
+	Argc          types.IntType
+	OpsCount      types.IntType
+	ExitCode      ExitCodeType
+	Settings      RuntimeSettings
+	global_scope  string
 }
 
 func NewRuntimeContext(s *VmSettings, global_scope_name string) *RunTimeContext {
 	rc := &RunTimeContext{
 		Memory: NewMemory(s.MemorySize),
-		Stack:  utils.Stack{}, ReturnStack: utils.Stack{},
+		Stack:  utils.Stack{}, ReturnStack: utils.Stack{}, CapturesCount: 0,
 		Addr: 0, ScopeStack: utils.Stack{},
 		ExitCode:     ExitCodeType{Code: 0},
 		global_scope: global_scope_name,

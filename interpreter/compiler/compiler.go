@@ -157,7 +157,7 @@ func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope_name s
 }
 
 func (c *Compiler) compileIfBlock(token *lexer.Token, th *lexer.TokenHolder, scope_name string) error {
-	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token, lexer.KeywordIf))
+	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token, lexer.KeywordIf, nil))
 	c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpJump, Operand: types.IntType(1), Data: vm.NameToOpJumpType[token.Text]})
 	return c.compile(th, scope_name)
 }
@@ -188,14 +188,14 @@ func (c *Compiler) compileElseBlock(token *lexer.Token, th *lexer.TokenHolder, s
 		return logger.CompilerError(&token.Loc, "Unhandled block start processing")
 	}
 
-	c.Blocks.Push(NewBlock(addr, token, block.Typ))
+	c.Blocks.Push(NewBlock(addr, token, block.Typ, nil))
 	c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: vm.NameToOpJumpType[token.Text]})
 
 	return nil
 }
 
 func (c *Compiler) compileWhileBlock(token *lexer.Token, th *lexer.TokenHolder, scope_name string) error {
-	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token, lexer.KeywordWhile))
+	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token, lexer.KeywordWhile, nil))
 	c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: vm.NameToOpJumpType[token.Text], Operand: types.IntType(1)})
 	return c.compile(th, scope_name)
 }
@@ -210,12 +210,12 @@ func (c *Compiler) compileDoBlock(token *lexer.Token, th *lexer.TokenHolder, sco
 	}
 
 	kw := block.Tok.Value.(lexer.KeywordType)
-	if kw != lexer.KeywordWhile && kw != lexer.KeywordIf {
-		return logger.CompilerError(&token.Loc, "`do` may come only in `while`, `if` or `func` block, but not `%s`", block.Tok.Text)
+	if kw != lexer.KeywordWhile && kw != lexer.KeywordIf && kw != lexer.KeywordCapture {
+		return logger.CompilerError(&token.Loc, "`do` may come only in `while`, `if`, `func` or `capture` block, but not `%s`", block.Tok.Text)
 	}
 
 	do_addr := c.getCurrentAddr()
-	c.Blocks.Push(NewBlock(do_addr, token, block.Typ))
+	c.Blocks.Push(NewBlock(do_addr, token, block.Typ, nil))
 	c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpCondJump, Operand: block.Addr - do_addr, Data: token.Text})
 	return nil
 }
@@ -288,8 +288,8 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope_name string) erro
 	}
 	block := c.Blocks.Pop().(*Block)
 
-	if !slices.Contains([]lexer.KeywordType{lexer.KeywordIf, lexer.KeywordWhile, lexer.KeywordFunc}, block.Typ) {
-		return logger.CompilerError(&token.Loc, "`end` should close only `if`, `while` or `func` blocks, but not %s", block.Tok.Text)
+	if !slices.Contains([]lexer.KeywordType{lexer.KeywordIf, lexer.KeywordWhile, lexer.KeywordFunc, lexer.KeywordCapture}, block.Typ) {
+		return logger.CompilerError(&token.Loc, "`end` should close only `if`, `while`, `func` or `capture` blocks, but not %s", block.Tok.Text)
 	}
 
 	if block.Tok.Typ != lexer.TokenKeyword {
@@ -342,6 +342,11 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope_name string) erro
 		return logger.CompilerError(&token.Loc, "`end` may only close `if-else` or `while-do` blocks, but got `%s`", block.Tok.Text)
 	case lexer.KeywordBreak, lexer.KeywordContinue:
 		return logger.CompilerError(&block.Tok.Loc, "`%s` keyword shouldn't be in blocks stack", lexer.KeywordName[block_start_kw])
+
+	case lexer.KeywordCapture:
+		c.pushOps(scope_name, vm.Op{Typ: vm.OpDropCaptures, OpToken: *token, Operand: block.Data.(types.IntType)})
+		return nil
+		// return logger.CompilerError(&block.Tok.Loc, "`end` for captures is not implemented yet")
 
 	default:
 		return logger.CompilerError(&token.Loc, "Unhandled block start processing (processEndKeyword)")
@@ -513,7 +518,7 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope_
 	c.prepareInlinedCache(inlined)
 
 	func_addr := c.getCurrentAddr()
-	c.Blocks.Push(NewBlock(func_addr, token, lexer.KeywordFunc))
+	c.Blocks.Push(NewBlock(func_addr, token, lexer.KeywordFunc, nil))
 
 	c.pushOps(signature.Name, vm.Op{OpToken: *token, Typ: vm.OpFuncBegin, Data: signature.Name})
 	if err = c.compile(th, signature.Name); err != nil {
@@ -527,6 +532,88 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope_
 	c.Ctx.Funcs[signature.Name] = Function{
 		Addr: func_addr, Sig: signature, Inlined: inlined,
 		Ops: c.resetInlinedCache(),
+	}
+
+	return nil
+}
+
+func (c *Compiler) parseCapturedVal(th *lexer.TokenHolder) (*CapturedVal, error) {
+	if th.Empty() {
+		return nil, logger.CompilerError(nil, "Expected captured value name but got nothing")
+	}
+
+	name_tok := th.GetNextToken()
+	if name_tok.Typ != lexer.TokenWord {
+		return nil, logger.CompilerError(&name_tok.Loc, "Expected captured value name but got `%s`", name_tok.Text)
+	}
+	// TODO: check collisions with allocs, consts and other captures
+	name := name_tok.Text
+
+	if th.Empty() {
+		return nil, logger.CompilerError(nil, "Expected captured value type but got nothing")
+	}
+
+	typ_tok := th.GetNextToken()
+	if typ_tok.Typ != lexer.TokenWord {
+		return nil, logger.CompilerError(&typ_tok.Loc, "Expected captured value type but got `%s`", typ_tok.Text)
+	}
+	typ, ok := lexer.WordToDataType[typ_tok.Text]
+	if !ok {
+		return nil, logger.CompilerError(&typ_tok.Loc, "Unknown type `%s`", typ_tok.Text)
+	}
+	if typ == lexer.DataTypeAny {
+		return nil, logger.CompilerError(&typ_tok.Loc, "`any` type is not allowed in capture list")
+	}
+
+	return &CapturedVal{Name: name, Typ: typ, Token: name_tok}, nil
+}
+
+func (c *Compiler) compileCaptureList(token *lexer.Token, th *lexer.TokenHolder, scope_name string) (*CaptureList, error) {
+	captures := NewCaptureList()
+
+	for !th.Empty() {
+		t := th.NextToken()
+
+		if t.Typ == lexer.TokenKeyword && t.Value.(lexer.KeywordType) == lexer.KeywordDo {
+			th.GetNextToken()
+			break
+		}
+		val, err := c.parseCapturedVal(th)
+		if err != nil {
+			return nil, err
+		}
+		captures.Append(*val)
+	}
+
+	return captures, nil
+}
+
+func (c *Compiler) compileCaptureKeyword(token *lexer.Token, th *lexer.TokenHolder, scope_name string) error {
+	if scope_name == GlobalScopeName {
+		return logger.CompilerError(&token.Loc, "Cannot capture variables inside global scope")
+	}
+
+	captures, err := c.compileCaptureList(token, th, scope_name)
+	if err != nil {
+		return err
+	}
+
+	val_types := lexer.DataTypes{}
+	for _, v := range captures.Vals {
+		// TODO: check if capture name is not a const, alloc or func name
+
+		c.Ctx.Scopes[scope_name].Captures.Push(v)
+		c.Ctx.Scopes[scope_name].Names[v.Name] = *v.Token
+
+		val_types = append(val_types, v.Typ)
+	}
+
+	cap_count := types.IntType(len(captures.Vals))
+	c.pushOps(scope_name, vm.Op{Typ: vm.OpCapture, Operand: cap_count, OpToken: *token, Data: val_types})
+
+	c.Blocks.Push(NewBlock(-1, token, lexer.KeywordCapture, cap_count))
+	if err := c.compile(th, scope_name); err != nil {
+		return err
 	}
 
 	return nil
@@ -845,6 +932,12 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope_name string) error {
 				continue
 			}
 
+			index, exists := scope.GetCapturedValue(name)
+			if exists {
+				c.pushOps(scope_name, vm.Op{OpToken: *token, Typ: vm.OpPushCaptured, Operand: index, Data: scope.Captures.Data[scope.Captures.Size()-1-int(index)].(CapturedVal).Typ})
+				continue
+			}
+
 			return logger.CompilerError(&token.Loc, "Unknown word: `%s`", token.Text)
 
 		case lexer.TokenKeyword:
@@ -915,6 +1008,10 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope_name string) error {
 
 			case lexer.KeywordInclude:
 				return logger.CompilerError(&token.Loc, "Include keyword should not appear in here, probably there is a bug in a lexer")
+			case lexer.KeywordCapture:
+				if err := c.compileCaptureKeyword(token, th, scope_name); err != nil {
+					return err
+				}
 			default:
 				return logger.CompilerError(&token.Loc, "Unhandled keword: `%s`", token.Text)
 			}

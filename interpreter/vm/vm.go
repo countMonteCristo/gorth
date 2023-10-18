@@ -283,6 +283,10 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		if vm.Rc.ReturnStack.Empty() {
 			return logger.VmRuntimeError(&op.OpToken.Loc, "Return stack is empty")
 		}
+		for i := types.IntType(0); i < vm.Rc.CapturesCount; i++ {
+			vm.Rc.ReturnStack.Pop()
+		}
+		vm.Rc.CapturesCount = 0
 		vm.Rc.Addr = vm.Rc.ReturnStack.Pop().(types.IntType) + 1
 		vm.Rc.Memory.OperativeMemRegion.Ptr -= op.Operand.(types.IntType)
 		if vm.S.Debug {
@@ -295,6 +299,26 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 	case OpPushGlobalAlloc:
 		addr := vm.Rc.Memory.OperativeMemRegion.Start + op.Operand.(types.IntType)
 		vm.Rc.Stack.Push(addr)
+		vm.Rc.Addr++
+	case OpCapture:
+		cap_count := op.Operand.(types.IntType)
+		for i := types.IntType(0); i < cap_count; i++ {
+			x := vm.Rc.Stack.Data[types.IntType(vm.Rc.Stack.Size())-cap_count+i].(types.IntType)
+			vm.Rc.ReturnStack.Push(x)
+		}
+		vm.Rc.CapturesCount += cap_count
+		vm.Rc.Addr++
+	case OpDropCaptures:
+		cap_count := op.Operand.(types.IntType)
+		for i := types.IntType(0); i < cap_count; i++ {
+			vm.Rc.ReturnStack.Pop()
+		}
+		vm.Rc.CapturesCount -= cap_count
+		vm.Rc.Addr++
+	case OpPushCaptured:
+		idx := op.Operand.(types.IntType)
+		x := vm.Rc.ReturnStack.Data[types.IntType(vm.Rc.ReturnStack.Size())-1-idx].(types.IntType)
+		vm.Rc.Stack.Push(x)
 		vm.Rc.Addr++
 	default:
 		return logger.VmRuntimeError(&op.OpToken.Loc, "Unhandled operation: `%s`", OpName[op.Typ])

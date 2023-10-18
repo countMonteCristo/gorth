@@ -19,10 +19,11 @@ type Block struct {
 	Tok   lexer.Token
 	Jumps []Jump
 	Typ   lexer.KeywordType
+	Data  interface{}
 }
 
-func NewBlock(addr types.IntType, token *lexer.Token, typ lexer.KeywordType) *Block {
-	return &Block{Addr: addr, Tok: *token, Jumps: make([]Jump, 0), Typ: typ}
+func NewBlock(addr types.IntType, token *lexer.Token, typ lexer.KeywordType, data interface{}) *Block {
+	return &Block{Addr: addr, Tok: *token, Jumps: make([]Jump, 0), Typ: typ, Data: data}
 }
 
 type FuncSignature struct {

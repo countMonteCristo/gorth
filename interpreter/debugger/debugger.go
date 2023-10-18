@@ -285,7 +285,7 @@ func (d *Debugger) doSteps(ops *[]vm.Op, count int, go_up bool) error {
 
 func (d *Debugger) checkErr(err error, ops *[]vm.Op) {
 	if err != nil {
-		d.iface.SendFailed(fmt.Sprintf("Script failed because of: %s", err.Error()))
+		d.iface.SendFailed(fmt.Sprintf("Script failed because of:\n%s", err.Error()))
 	} else {
 		if d.vm.Rc.Addr >= d.vm.Rc.OpsCount {
 			ec := d.vm.Rc.GetExitCode(err)

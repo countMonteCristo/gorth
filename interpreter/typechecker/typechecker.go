@@ -86,17 +86,22 @@ func OutputsAreSame(f, s *TypeCheckerOutputs) bool {
 type TypeCheckerContext struct {
 	Typ        context_type
 	Stack      utils.Stack
+	Captures   utils.Stack
 	Terminated bool
 	Outputs    TypeCheckerOutputs
 }
 
 func NewTypeCheckerContext(t context_type) *TypeCheckerContext {
-	return &TypeCheckerContext{Typ: t, Stack: utils.Stack{}, Outputs: *NewTypeCheckerOutputs(), Terminated: false}
+	return &TypeCheckerContext{
+		Typ: t, Stack: utils.Stack{}, Captures: utils.Stack{},
+		Outputs: *NewTypeCheckerOutputs(), Terminated: false,
+	}
 }
 
 func (tcc *TypeCheckerContext) Clone(t context_type) *TypeCheckerContext {
 	clone := NewTypeCheckerContext(t)
 	clone.Stack = *tcc.Stack.Copy()
+	clone.Captures = *tcc.Captures.Copy()
 	return clone
 }
 
@@ -182,7 +187,7 @@ func (tc *TypeChecker) equalTypeStacks(expected, actual *utils.Stack) bool {
 	if expected.Size() != actual.Size() {
 		return false
 	}
-	for i := range(expected.Data) {
+	for i := range expected.Data {
 		e := expected.Data[i].(lexer.DataType)
 		a := actual.Data[i].(lexer.DataType)
 		if e != lexer.DataTypeAny && a != e {
@@ -400,7 +405,7 @@ func (tc *TypeChecker) typeCheckWhileBlock(ops *[]vm.Op, i int, contextStack *Ty
 
 	loc := &(*ops)[i].OpToken.Loc
 
-	while_start := i+1
+	while_start := i + 1
 
 	// process while case
 	if err := tc.typeCheck(ops, while_start, contextStack); err != nil {
@@ -657,6 +662,44 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			for _, t := range f.Sig.Outputs.Data {
 				ctx.Stack.Push(t.(lexer.DataType))
 			}
+			i++
+
+		case vm.OpCapture:
+			typs := op.Data.(lexer.DataTypes)
+			if ctx.Stack.Size() < len(typs) {
+				err = logger.TypeCheckerError(&op.OpToken.Loc, "Not enought variables to capture: expected %s but got %s", typs, ctx.Stack.Data)
+				return
+			}
+
+			for j := 0; j < len(typs); j++ {
+				e := ctx.Stack.Data[ctx.Stack.Size()-1-j].(lexer.DataType)
+				a := typs[len(typs)-1-j]
+				if e != lexer.DataTypeAny && e != a {
+					err = logger.TypeCheckerError(&op.OpToken.Loc, "Capture types mismatch: expected %s but got %s", typs, ctx.Stack.Data)
+					return
+				}
+				ctx.Captures.Push(a)
+			}
+			i++
+		case vm.OpDropCaptures:
+			drop_count := op.Operand.(types.IntType)
+			if ctx.Captures.Size() < int(drop_count) {
+				err = logger.TypeCheckerError(&op.OpToken.Loc, "Not enought variables in capture stack to drop: expected %d but got %d", ctx.Captures.Size(), drop_count)
+				return
+			}
+			for j := 0; j < int(drop_count); j++ {
+				ctx.Captures.Pop()
+			}
+			i++
+		case vm.OpPushCaptured:
+			idx := op.Operand.(types.IntType)
+
+			if idx >= types.IntType(ctx.Captures.Size()) {
+				err = logger.TypeCheckerError(&op.OpToken.Loc, "Not enough variables in capture stack to push: expected to push %d but got %d", idx, ctx.Captures.Size())
+				return err
+			}
+			t := ctx.Captures.Data[types.IntType(ctx.Captures.Size())-1-idx].(lexer.DataType)
+			ctx.Stack.Push(t)
 			i++
 
 		default:

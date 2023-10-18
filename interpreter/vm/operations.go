@@ -6,6 +6,7 @@ import (
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 	"fmt"
+	"strings"
 )
 
 type OpType int
@@ -26,6 +27,10 @@ const (
 
 	OpPushLocalAlloc
 	OpPushGlobalAlloc
+
+	OpCapture
+	OpPushCaptured
+	OpDropCaptures
 )
 
 var OpName = map[OpType]string{
@@ -44,6 +49,10 @@ var OpName = map[OpType]string{
 
 	OpPushLocalAlloc:  "PUSH_ALLOC_L",
 	OpPushGlobalAlloc: "PUSH_ALLOC_G",
+
+	OpCapture:      "CAPTURE",
+	OpPushCaptured: "PUSH_CAP",
+	OpDropCaptures: "DROP_CAPS",
 }
 
 type Op struct {
@@ -78,6 +87,28 @@ func (op *Op) Str(addr int64) (s string) {
 			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
 		}
 		operand = fmt.Sprintf("%d (%s)", res, OpJumpTypeName[op.Data.(OpJumpType)])
+	case OpCapture:
+		res, ok := op.Operand.(types.IntType)
+		if !ok {
+			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
+		}
+		type_names := make([]string, 0)
+		for _, typ := range op.Data.(lexer.DataTypes) {
+			type_names = append(type_names, lexer.DataTypeName[typ])
+		}
+		operand = fmt.Sprintf("%d (%s)", res, strings.Join(type_names, ","))
+	case OpPushCaptured:
+		res, ok := op.Operand.(types.IntType)
+		if !ok {
+			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
+		}
+		operand = fmt.Sprintf("%d (%s)", res, lexer.DataTypeName[op.Data.(lexer.DataType)])
+	case OpDropCaptures:
+		res, ok := op.Operand.(types.IntType)
+		if !ok {
+			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int for DropCaps: `%v`", op.Operand)
+		}
+		operand = fmt.Sprint(res)
 	default:
 		logger.VmCrash(&op.OpToken.Loc, "Unhandled operation: `%s`", OpName[op.Typ])
 	}
