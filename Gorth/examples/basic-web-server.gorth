@@ -34,75 +34,94 @@ func main : int do
   PORT       htons host_addr sockaddr_in.sin_port   ptr+ !16
   INADDR_ANY htonl host_addr sockaddr_in.sin_addr   ptr+ !32
 
-  // Set SO_REUSEADDR = 1 for socket
-  dup yes_len swap yes swap SO_REUSEADDR swap SOL_SOCKET swap setsockopt
-  if dup 0 != do
-    "[ERROR] Can not set socket opt to SO_REUSEADDR" p_str
-    swap drop return
-  end drop
+  capture sock_fd int do drop
 
-  // Bind socket to address
-  dup sizeof(sockaddr_in) host_addr rot bind
-  if dup 0 != do
-    "[ERROR] Can not bind socket" p_str
-    swap drop return
-  end drop
+    // Set SO_REUSEADDR = 1 for socket
+    yes_len yes SO_REUSEADDR SOL_SOCKET sock_fd setsockopt
+    capture err int do drop
+      if err 0 != do
+        "[ERROR] Can not set socket opt to SO_REUSEADDR" p_str
+        err return
+      end
+    end // capture err
 
-  // Start listening
-  SOMAXCONN over listen
-  if dup 0 != do
-    "[ERROR] Can not listen to the socket" p_str
-    swap drop return
-  end drop
+    // Bind socket to address
+    sizeof(sockaddr_in) host_addr sock_fd bind
+    capture err int do drop
+      if err 0 != do
+        "[ERROR] Can not bind socket" p_str
+        err return
+      end
+    end // capture err
 
-  // Infinite loop for processing input connections
-  while true do
-    // Accept input connection
-    dup sockaddr_in_size host_addr rot accept
-    if dup 0 != do
-      swap drop
-      "[ERROR] Can not accept connection" p_str
-      swap close drop return
-    end drop
+    // Start listening
+    SOMAXCONN sock_fd listen
+    capture err int do drop
+      if err 0 != do
+        "[ERROR] Can not listen to the socket" p_str
+        err return
+      end
+    end // capture err
 
-    // Read from acceptred socket
-    dup read_buffer read_buffer_size read
-    if dup 0 != do
-      swap drop
-      "[ERROR] Can not read from socket" p_str
-      swap close drop
-      swap close drop return
-    end drop
+    // Infinite loop for processing input connections
+    while true do
 
-    // Save count of recieved bytes
-    bytes_read !32
+      // Accept input connection
+      sockaddr_in_size host_addr sock_fd accept
+      capture err int do drop
+        if err 0 != do drop
+          "[ERROR] Can not accept connection" p_str
+          sock_fd close drop
+          err return
+        end
+      end // capture err
 
-    // Clear counter string buffer
-    0 count_acc_buf count_acc_buf_size memset drop
+      capture conn_fd int do drop
 
-    // Do not count /favicon.ico
-    if read_buffer 5 ptr+ @8 'f' != do
-      count_acc @32
-      1 + count_acc !32
+        // Read from acceptred socket
+        conn_fd read_buffer read_buffer_size read
+        capture err int do drop
+          if err 0 != do drop
+            "[ERROR] Can not read from socket" p_str
+            conn_fd close drop
+            sock_fd close drop
+            err return
+          end
+        end // capture err
 
-      // Print count of bytes read from accepted connection
-      "Bytes read from incoming connection: " puts
-      bytes_read @32 puti '\n' putc
+        // Save count of recieved bytes
+        bytes_read !32
+
+        // Clear counter string buffer
+        0 count_acc_buf count_acc_buf_size memset drop
+
+        // Do not count /favicon.ico
+        if read_buffer 5 ptr+ @8 'f' != do
+          count_acc @32
+          1 + count_acc !32
+
+          // Print count of bytes read from accepted connection
+          "Bytes read from incoming connection: " puts
+          bytes_read @32 puti '\n' putc
+        end
+
+        // Write html to socket
+        conn_fd "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"      write drop drop
+        conn_fd "<html><body><h1>Hello from Gorth!</h1>"                  write drop drop
+        conn_fd "<p>This page has been visited: <b>"                      write drop drop
+        conn_fd count_acc_buf count_acc @32 itoa count_acc_buf dup strlen write drop drop
+        conn_fd "</b> time(s)</p></body></html>"                          write drop drop
+
+        // Clear connection buffer
+        0 read_buffer read_buffer_size memset drop
+
+        // Close accepted socket
+        conn_fd close drop
+
+      end // capture conn_fd
     end
 
-    // Write html to socket
-    dup "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><body><h1>Hello from Gorth!</h1>" write drop drop
-    dup "<p>This page has been visited: <b>" write drop drop
-    dup count_acc_buf count_acc @32 itoa count_acc_buf dup strlen write drop drop
-    dup "</b> time(s)</p></body></html>" write drop drop
-
-    // Clear connection buffer
-    0 read_buffer read_buffer_size memset drop
-
-    // Close accepted socket
-    close drop
-  end
-
-  // Close socket
-  close
+    // Close socket
+    sock_fd close
+  end // capture sock_fd
 end

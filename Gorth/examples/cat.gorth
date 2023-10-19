@@ -7,21 +7,27 @@ func main
   : int
 do
   if argc 2 < do
-    "No file provided to cat" p_str 0
-  else
-    1 argv_n 0 0 open                 // open file
-    if 0 != do
-      "Can not open file: " puts
-      1 argv_n dup strlen p_str
-    else
-      true while dup do
-        over buf N read drop          // read chunk
-        if dup 0 = do drop break end  // break if read 0 bytes
-        buf swap puts                 // print readed bytes
-      end drop
-      close                      // close file
-    end
+    "No file provided to cat" p_str
+    1 return
   end
+
+  1 argv_n O_RDONLY S_NONE open   // open file
+  if 0 != do
+    "Can not open file: " puts
+    1 argv_n dup strlen p_str
+    drop
+    1 return
+  end
+
+  capture fd int do
+    while true do
+      fd buf N read drop            // read chunk
+      if dup 0 = do drop break end  // break if read 0 bytes
+      buf swap puts                 // print readed bytes
+    end
+    close                      // close file
+  end
+
   drop
   0
 end

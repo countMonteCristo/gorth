@@ -6,39 +6,41 @@ include "std/std.gorth"
 //
 // Answer: 906609
 
-const N 1000 end
-const x 100 end
+
+const nMax 999 end
+const nMin 100 end
 alloc ans 4 end
 
 func main
   : int
 do
-  x while dup N < do
-    dup while dup N < do
-      over over *
+  nMax while dup nMin >= do
+    capture p1 int do
 
-      dup 0
-      while over 0 > do
-        10 *
-        over 10 %
-        +
-        swap 10 / swap
-      end
-      swap drop over
+      dup while dup nMin >= do
+        dup p1 *
+        if dup ans @32 < do drop 1 - continue end   // if current 6-digit number is less than current answer - skip
 
-      if = do
-        if dup ans @32 > do
-          ans !32
-        else
-          drop
-        end
-      else
-        drop
-      end
+        capture p2 int x int do drop
+          0 x
+          while dup 0 > do
+            capture x2 int x1 int do drop drop
+              x2 10 * x1 10 % +
+              x1 10 /
+            end // capture x1 x2
+          end drop
 
-      1 +
-    end drop
-    1 +
+          capture reversed int do drop
+            if x reversed = do
+              x ans !32
+            end
+          end // capture reversed
+        end // capture p2 x
+
+        1 -
+      end drop
+    end // capture p1
+    1 -
   end drop
 
   ans @32 p_int

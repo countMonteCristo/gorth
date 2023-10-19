@@ -7,41 +7,49 @@ const M 10 end
 
 const CHAR_WIDTH M 4 * 3 + end
 
+func align
+  int :
+do
+  capture x int do
+    drop
+    if x 10  < do ' ' putc end
+    if x 100 < do ' ' putc end
+  end
+end
+
 func main
   : int
 do
+  // print table header
   "   |" puts
   1 while dup M <= do
-    if dup 10 < do ' ' putc end
-    if dup 100 < do ' ' putc end
-    dup puti
-    ' ' putc
+    capture column int do
+      column align
+      column puti
+      ' ' putc
+    end
     1 +
-  end
-  '\n' putc
+  end drop '\n' putc
 
+  // print separator
   0 while dup CHAR_WIDTH < do
     '-' putc
     1 +
-  end drop
-  '\n' putc
+  end drop '\n' putc
 
+  //print left column and table itself
   1 while dup N <= do
     1 while dup M <= do
-      // i j
-      if dup 1 = do over if dup 10 < do ' ' putc end puti " |" puts end
 
-      over over *
-      if dup 10 < do ' ' putc end
-      if dup 100 < do ' ' putc end
-      puti
-      " " puts
+      capture row int col int do
+        if col 1 = do row if row 10 < do ' ' putc end puti " |" puts end
+        row col * dup align puti ' ' putc
+      end
 
       1 +
-    end drop
-    '\n' putc
+    end drop '\n' putc
     1 +
   end drop
-  drop
+
   0
 end

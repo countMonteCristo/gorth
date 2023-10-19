@@ -272,9 +272,11 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 			return logger.VmRuntimeError(&op.OpToken.Loc, "Call stack overflow")
 		}
 		vm.Rc.ReturnStack.Push(vm.Rc.Addr)
+		vm.Rc.ReturnStack.Push(vm.Rc.CapturesCount)
 		vm.Rc.Addr += op.Operand.(types.IntType)
 	case OpFuncBegin:
 		vm.Rc.Memory.OperativeMemRegion.Ptr += op.Operand.(types.IntType)
+		vm.Rc.CapturesCount = 0
 		vm.Rc.Addr++
 		if vm.S.Debug {
 			vm.Rc.ScopeStack.Push(op.DebugInfo.(string))
@@ -286,7 +288,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		for i := types.IntType(0); i < vm.Rc.CapturesCount; i++ {
 			vm.Rc.ReturnStack.Pop()
 		}
-		vm.Rc.CapturesCount = 0
+		vm.Rc.CapturesCount = vm.Rc.ReturnStack.Pop().(types.IntType)
 		vm.Rc.Addr = vm.Rc.ReturnStack.Pop().(types.IntType) + 1
 		vm.Rc.Memory.OperativeMemRegion.Ptr -= op.Operand.(types.IntType)
 		if vm.S.Debug {

@@ -15,10 +15,14 @@ func main
 do
   0
   1 1 while over 4000000 < do
-    // a+s a b
-    if over 2 % 0 = do rot rot dup rot + rot rot swap end
-    // b a+b
-    swap over +
+    capture s int a int b int do
+      drop drop
+      if a 2 % 0 = do
+        a +             // s <- s + a
+      end
+      b                 // a <- b
+      a b +             // b <- a + b
+    end // capture s a b
   end drop drop
 
   p_int

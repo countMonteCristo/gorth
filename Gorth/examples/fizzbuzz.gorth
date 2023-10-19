@@ -10,30 +10,29 @@ include "std/std.gorth"
 
 const N 100 end
 
+func divisible
+  int int : bool
+do
+  % 0 =
+end
+
 func main
   : int
 do
   1 while dup N <= do
-    dup puti ' ' putc
-    dup 3 % 0 = over 5 % 0 =
-    if over over && do
-      "FizzBuzz" p_str
-      drop drop
-    else
-      if do
-        "Buzz" p_str
-        drop
-      else
-        if do
-          "Fizz" p_str
-        else
-          '\n' putc
-        end
+    capture x int do
+      x puti ' ' putc
+
+      if x 3 divisible do
+        "Fizz" puts
       end
+      if x 5 divisible do
+        "Buzz" puts
+      end
+      '\n' putc
 
     end
     1 +
-  end
-  drop
+  end drop
   0
 end

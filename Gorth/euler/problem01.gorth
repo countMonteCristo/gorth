@@ -6,20 +6,20 @@ include "std/std.gorth"
 //
 // Answer: 233168
 
+func divisible int int : bool do
+  % 0 =
+end
+
 func main
   : int
 do
   0
   1 while dup 1000 < do
-
-    if dup 3 % 0 = do
-      swap over + swap
-    else
-      if dup 5 % 0 = do
-        swap over + swap
+    capture x int do
+      if x 3 divisible x 5 divisible || do
+        swap x + swap
       end
-    end
-
+    end // capture x
     1 +
   end drop
   p_int

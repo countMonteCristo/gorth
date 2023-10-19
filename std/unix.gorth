@@ -34,6 +34,7 @@ const O_NOATIME   0o01000000 end
 const O_CLOEXEC   0o02000000 end
 
 // flags for create new files
+const S_NONE       0 end
 const S_IXOTH      1 end
 const S_IWOTH      2 end
 const S_IROTH      4 end
@@ -238,6 +239,8 @@ func putc
     :
 do
   alloc buf 1 end
+  // "test\n" puts
+
   buf !8
   buf 1 puts
 end

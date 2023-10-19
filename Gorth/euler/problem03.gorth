@@ -8,20 +8,18 @@ include "std/std.gorth"
 func main
   : int
 do
-  1
   600851475143
   3 while over 1 > do
-    // d n/d
-    if over over % 0 = do
-      over over / rot drop swap
+    capture x int d int do
+      if x d % 0 = do
+        /         // x <- x/d
+        d         // d <- d
+      else
+        2 +       // d <- d+2
+      end
+    end // capture x d
+  end swap drop
 
-      rot over max rot rot  // save max prime factor
-
-    else
-      2 +
-    end
-  end
-  drop drop
   p_int
   0
 end

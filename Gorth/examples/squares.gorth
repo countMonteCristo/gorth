@@ -8,7 +8,9 @@ func main
   : int
 do
   1 while dup N <= do
-    dup dup * p_int
+    capture x int do
+      x x * p_int
+    end // capture x
     1 +
   end
   drop
