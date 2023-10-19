@@ -356,6 +356,27 @@ this code will not compile.
 
 Allocations should be one of type `int`. Other types (`bool`, `ptr` or `any`) are not allowed.
 
+# Captures
+There is an ability to capture current values from stack:
+```gorth
+func main : int do
+  1 2
+  capture x int y int do
+    3 4
+    capture z int t int do
+      z puti t puti x puti y puti
+    end drop drop
+    x puti y puti
+  end drop drop
+  0
+end
+```
+In this example `x` and `y` capture `1` and `2` from stack. After that `3` and `4` are being pushed onto the stack. Next, `z` and `t` capture `3` and `4`. Note that capturing does not pop items from stack.
+
+It is not allowed for the captured value name and constant, allocation of function to have the same name.
+
+Capture blocks can be nested and can be placed inside while-loops and if(-else)-end blocks. `break`s and `continue`s inside a capture block are not allowed (though you can do `return` from capture block).
+
 # Type checking
 You can run your script with `-check` option to enable type checking.
 

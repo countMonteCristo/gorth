@@ -1,0 +1,7 @@
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "21",
+  "stderr": "",
+  "exit_code": 0
+}

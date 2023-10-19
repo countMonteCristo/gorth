@@ -1,0 +1,7 @@
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "",
+  "stderr": "[ERROR] [COMPILER] `continue` inside a capture block is not allowed:\n  Gorth/tests/test-continue-capture.gorth:5:7",
+  "exit_code": 1
+}

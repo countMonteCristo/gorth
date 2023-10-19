@@ -234,6 +234,10 @@ func (c *Compiler) compileJumpKeyword(token *lexer.Token, kw lexer.KeywordType, 
 		cur_block := c.Blocks.Data[i].(*Block)
 		t := &cur_block.Tok
 
+		if cur_block.Typ == lexer.KeywordCapture {
+			return logger.CompilerError(&t.Loc, "`%s` inside a capture block is not allowed", token.Text)
+		}
+
 		if t.Typ == lexer.TokenKeyword && t.Value.(lexer.KeywordType) == lexer.KeywordDo && cur_block.Typ == lexer.KeywordWhile {
 			cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: kw, Addr: c.getCurrentAddr()})
 			break
@@ -344,7 +348,14 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope_name string) erro
 		return logger.CompilerError(&block.Tok.Loc, "`%s` keyword shouldn't be in blocks stack", lexer.KeywordName[block_start_kw])
 
 	case lexer.KeywordCapture:
+		count_drops := block.Data.(types.IntType)
+		for i := 0; i < int(count_drops); i++ {
+			v := c.Ctx.Scopes[scope_name].Captures.Pop().(CapturedVal)
+			delete(c.Ctx.Scopes[scope_name].Names, v.Name)
+		}
 		c.pushOps(scope_name, vm.Op{Typ: vm.OpDropCaptures, OpToken: *token, Operand: block.Data.(types.IntType)})
+
+
 		return nil
 		// return logger.CompilerError(&block.Tok.Loc, "`end` for captures is not implemented yet")
 
@@ -514,6 +525,7 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope_
 	new_scope := NewScope(signature.Name)
 	new_scope.Names[signature.Name] = func_token
 	c.Ctx.Scopes[signature.Name] = new_scope
+	c.Ctx.GlobalScope().Names[signature.Name] = func_token
 
 	c.prepareInlinedCache(inlined)
 
@@ -537,7 +549,7 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope_
 	return nil
 }
 
-func (c *Compiler) parseCapturedVal(th *lexer.TokenHolder) (*CapturedVal, error) {
+func (c *Compiler) parseCapturedVal(th *lexer.TokenHolder, scope_name string) (*CapturedVal, error) {
 	if th.Empty() {
 		return nil, logger.CompilerError(nil, "Expected captured value name but got nothing")
 	}
@@ -546,8 +558,15 @@ func (c *Compiler) parseCapturedVal(th *lexer.TokenHolder) (*CapturedVal, error)
 	if name_tok.Typ != lexer.TokenWord {
 		return nil, logger.CompilerError(&name_tok.Loc, "Expected captured value name but got `%s`", name_tok.Text)
 	}
-	// TODO: check collisions with allocs, consts and other captures
 	name := name_tok.Text
+	if defined, exists := c.Ctx.Scopes[scope_name].Names[name]; exists {
+		msg := logger.FormatNoneMsg(&defined.Loc, "previously defined here")
+		return nil, logger.CompilerError(&name_tok.Loc, "Can not capture name `%s` (%s)", name, msg)
+	}
+	if defined, exists := c.Ctx.GlobalScope().Names[name]; exists {
+		msg := logger.FormatNoneMsg(&defined.Loc, "previously defined in global scope here")
+		return nil, logger.CompilerError(&name_tok.Loc, "Can not capture name `%s` (%s)", name, msg)
+	}
 
 	if th.Empty() {
 		return nil, logger.CompilerError(nil, "Expected captured value type but got nothing")
@@ -578,7 +597,7 @@ func (c *Compiler) compileCaptureList(token *lexer.Token, th *lexer.TokenHolder,
 			th.GetNextToken()
 			break
 		}
-		val, err := c.parseCapturedVal(th)
+		val, err := c.parseCapturedVal(th, scope_name)
 		if err != nil {
 			return nil, err
 		}
@@ -600,8 +619,6 @@ func (c *Compiler) compileCaptureKeyword(token *lexer.Token, th *lexer.TokenHold
 
 	val_types := lexer.DataTypes{}
 	for _, v := range captures.Vals {
-		// TODO: check if capture name is not a const, alloc or func name
-
 		c.Ctx.Scopes[scope_name].Captures.Push(v)
 		c.Ctx.Scopes[scope_name].Names[v.Name] = *v.Token
 

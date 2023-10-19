@@ -1,0 +1,13 @@
+func f : do
+  alloc x 69 end
+  42
+  capture x int do
+    x x * puti
+  end drop
+end
+
+func main : int do
+  f
+  0
+end
+

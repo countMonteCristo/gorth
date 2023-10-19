@@ -21,6 +21,7 @@
 [] Captures
   [*] supply captures syntax (capture x int y ptr z bool do ... end)
   [] add support for break's and continue's from capture statement
+  [] capture function inputs
 
 [] Includes
   [*] `include` keyword

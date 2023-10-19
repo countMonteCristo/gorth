@@ -1,0 +1,7 @@
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "",
+  "stderr": "[ERROR] [COMPILER] Can not capture name `x` (previously defined here: Gorth/tests/test-capture-hide-capture.gorth:3:11):\n  Gorth/tests/test-capture-hide-capture.gorth:6:13",
+  "exit_code": 1
+}

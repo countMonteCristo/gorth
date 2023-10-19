@@ -1,0 +1,16 @@
+func main : int do
+  5
+  capture x int do
+    0 while dup 10 < do
+      capture cnt int do
+        if cnt x 3 + = do
+          break
+        end
+      end
+      1 +
+    end drop
+
+    x puti
+  end drop
+  0
+end

@@ -1,0 +1,17 @@
+func g : do
+  123 puti
+end
+
+func f : do
+  42
+  g
+  capture g int do
+    g g * puti
+  end drop
+end
+
+func main : int do
+  f
+  0
+end
+

@@ -1,0 +1,12 @@
+func main : int do
+  1 2
+  capture x int y int do
+    3 4
+    capture z int t int do
+      z puti t puti x puti y puti
+    end drop drop
+
+    x puti y puti
+  end drop drop
+  0
+end

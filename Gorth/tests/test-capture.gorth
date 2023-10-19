@@ -1,0 +1,18 @@
+func main
+  : int
+do
+  1 150
+  capture start int finish int do
+    drop drop
+
+    0 start while dup finish < do
+      if dup 7 % 0 = do
+        swap 1 + swap
+      end
+
+      1 +
+    end drop
+  end
+  puti
+  0
+end

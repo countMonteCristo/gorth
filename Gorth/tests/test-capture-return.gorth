@@ -1,0 +1,22 @@
+func f int : int do
+  dup dup *
+  capture x int x2 int do
+    drop drop
+    0 x while dup x2 < do
+      swap over + swap
+      if dup x2 4 - = do
+        drop
+        return
+      end
+      1 +
+    end drop
+  end
+end
+
+
+func main
+  : int
+do
+  3 f puti
+  0
+end
