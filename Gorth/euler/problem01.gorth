@@ -22,6 +22,6 @@ do
     end // capture x
     1 +
   end drop
-  p_int
+  println_num
   0
 end

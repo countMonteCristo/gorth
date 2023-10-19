@@ -4,21 +4,21 @@ func main
   : int
 do
   if 1 2 <= 3 4 = && do
-    10 p_int
+    10 println_num
   else
-    20 p_int
+    20 println_num
   end
 
   if 1 2 <= 3 4 = || do
-    30 p_int
+    30 println_num
   else
-    40 p_int
+    40 println_num
   end
 
   if 2 3 < ! do
-    50 p_int
+    50 println_num
   else
-    60 p_int
+    60 println_num
   end
 
   0

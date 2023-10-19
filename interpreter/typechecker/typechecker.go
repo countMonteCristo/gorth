@@ -672,8 +672,8 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			}
 
 			for j := 0; j < len(typs); j++ {
-				e := ctx.Stack.Data[ctx.Stack.Size()-1-j].(lexer.DataType)
-				a := typs[len(typs)-1-j]
+				e := ctx.Stack.Data[ctx.Stack.Size()-len(typs)+j].(lexer.DataType)
+				a := typs[j]
 				if e != lexer.DataTypeAny && e != a {
 					err = logger.TypeCheckerError(&op.OpToken.Loc, "Capture types mismatch: expected %s but got %s", typs, ctx.Stack.Data)
 					return

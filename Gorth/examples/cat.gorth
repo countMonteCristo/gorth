@@ -7,14 +7,14 @@ func main
   : int
 do
   if argc 2 < do
-    "No file provided to cat" p_str
+    "No file provided to cat" println
     1 return
   end
 
   1 argv_n O_RDONLY S_NONE open   // open file
   if 0 != do
     "Can not open file: " puts
-    1 argv_n dup strlen p_str
+    1 argv_n dup strlen println
     drop
     1 return
   end

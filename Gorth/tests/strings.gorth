@@ -3,15 +3,15 @@ include "std/std.gorth"
 func main
   : int
 do
-  "hello" drop "hello" drop strcmp p_int
-  "hello" drop "hell" drop strcmp p_int
-  "hello" drop "helloworld" drop strcmp p_int
-  "hello" drop "help" drop strcmp p_int
-  "her" drop "hell" drop strcmp p_int
+  "hello" drop "hello"      drop strcmp println_num
+  "hello" drop "hell"       drop strcmp println_num
+  "hello" drop "helloworld" drop strcmp println_num
+  "hello" drop "help"       drop strcmp println_num
+  "her"   drop "hell"       drop strcmp println_num
 
-  "Hello, wolrd" p_str
+  "Hello, wolrd" println
 
-  "Hello, world" drop strlen p_int
+  "Hello, world" drop strlen println_num
 
   0
 end

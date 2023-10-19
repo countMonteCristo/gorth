@@ -9,7 +9,7 @@ func main
 do
   1 while dup N <= do
     capture x int do
-      x x * p_int
+      x x * println_num
     end // capture x
     1 +
   end

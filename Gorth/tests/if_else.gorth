@@ -4,44 +4,44 @@ func main
   : int
 do
   if 10 20 < do
-    30 p_int
+    30 println_num
   else
-    40 p_int
+    40 println_num
   end
 
   if 10 20 > do
-    50 p_int
+    50 println_num
   end
 
   if 10 20 < do
-    60 p_int
+    60 println_num
   end
 
   if 10 20 > do
-    70 p_int
+    70 println_num
   else
-    80 p_int
+    80 println_num
   end
 
   if 10 20 < do
     if 30 40 <= do
-      90 p_int
+      90 println_num
     else
-      100 p_int
+      100 println_num
     end
   end
 
   if 10 20 > do
     if 30 40 <= do
-      90 p_int
+      90 println_num
     else
-      100 p_int
+      100 println_num
     end
   else
     if 50 60 > do
-      110 p_int
+      110 println_num
     else
-      120 p_int
+      120 println_num
     end
   end
 

@@ -20,6 +20,6 @@ do
     end // capture x d
   end swap drop
 
-  p_int
+  println_num
   0
 end

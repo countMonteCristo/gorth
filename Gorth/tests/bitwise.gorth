@@ -4,22 +4,22 @@ func main
   : int
 do
   // b1001 >> 3 == b1 == 1
-  9 3 >> p_int
+  9 3 >> println_num
 
   // b101 << 3 == b101000 == 40
-  5 3 << p_int
+  5 3 << println_num
 
   // b101 & b110 == b100 == 4
-  5 6 & p_int
+  5 6 & println_num
 
   // b11 | b101 == b111 == 7
-  3 5 | p_int
+  3 5 | println_num
 
   // b101 ^ b111 == b10 == 2
-  5 7 ^ p_int
+  5 7 ^ println_num
 
   // ^0b00000101 = 0b11111010 => ^5 = -6
-  5 ~ p_int
+  5 ~ println_num
 
   0
 end

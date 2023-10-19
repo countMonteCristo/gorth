@@ -1,3 +1,3 @@
 include "std/std.gorth"
 
-"hello" p_str
+"hello" println

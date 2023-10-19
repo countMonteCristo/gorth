@@ -20,7 +20,7 @@ end
 
 func main : int do
   if argc 2 < do
-    "No argument was provided" p_str
+    "No argument was provided" println
     1 return
   end
 
@@ -29,7 +29,7 @@ func main : int do
 
     over argv_n dup strlen puts ":\t" puts
 
-    if 0 = do "good" else "bad" end p_str
+    if 0 = do "good" else "bad" end println
 
     1 +
   end drop

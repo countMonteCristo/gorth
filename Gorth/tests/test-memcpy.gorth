@@ -4,7 +4,7 @@ func main
   : int
 do
   alloc buf 64 end
-  "Hello, world!" buf memcpy
-  buf dup strlen p_str
+  buf "Hello, world!" memcpy
+  buf dup strlen println
   0
 end

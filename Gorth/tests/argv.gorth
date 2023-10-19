@@ -5,7 +5,7 @@ func main
 do
   0 while dup argc < do
     dup argv_n
-    dup strlen p_str
+    dup strlen println
     1 +
   end drop
   0

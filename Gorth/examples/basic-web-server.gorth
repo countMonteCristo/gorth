@@ -23,9 +23,9 @@ func main : int do
   0 count_acc !32 // init counter
 
   // Create socket
-  0 SOCK_STREAM AF_INET socket
+  AF_INET SOCK_STREAM 0 socket
   if dup 0 != do
-    "[ERROR] Can not create socket" puts
+    "[ERROR] Can not create socket\n" eputs
     swap drop return
   end drop
 
@@ -37,28 +37,28 @@ func main : int do
   capture sock_fd int do drop
 
     // Set SO_REUSEADDR = 1 for socket
-    yes_len yes SO_REUSEADDR SOL_SOCKET sock_fd setsockopt
+    sock_fd SOL_SOCKET SO_REUSEADDR yes yes_len setsockopt
     capture err int do drop
       if err 0 != do
-        "[ERROR] Can not set socket opt to SO_REUSEADDR" p_str
+        "[ERROR] Can not set socket opt to SO_REUSEADDR\n" eputs
         err return
       end
     end // capture err
 
     // Bind socket to address
-    sizeof(sockaddr_in) host_addr sock_fd bind
+    sock_fd host_addr sizeof(sockaddr_in) bind
     capture err int do drop
       if err 0 != do
-        "[ERROR] Can not bind socket" p_str
+        "[ERROR] Can not bind socket\n" eputs
         err return
       end
     end // capture err
 
     // Start listening
-    SOMAXCONN sock_fd listen
+    sock_fd SOMAXCONN listen
     capture err int do drop
       if err 0 != do
-        "[ERROR] Can not listen to the socket" p_str
+        "[ERROR] Can not listen to the socket\n" eputs
         err return
       end
     end // capture err
@@ -67,10 +67,10 @@ func main : int do
     while true do
 
       // Accept input connection
-      sockaddr_in_size host_addr sock_fd accept
+      sock_fd host_addr sockaddr_in_size accept
       capture err int do drop
         if err 0 != do drop
-          "[ERROR] Can not accept connection" p_str
+          "[ERROR] Can not accept connection\n" eputs
           sock_fd close drop
           err return
         end
@@ -82,7 +82,7 @@ func main : int do
         conn_fd read_buffer read_buffer_size read
         capture err int do drop
           if err 0 != do drop
-            "[ERROR] Can not read from socket" p_str
+            "[ERROR] Can not read from socket\n" eputs
             conn_fd close drop
             sock_fd close drop
             err return
@@ -93,7 +93,7 @@ func main : int do
         bytes_read !32
 
         // Clear counter string buffer
-        0 count_acc_buf count_acc_buf_size memset drop
+        count_acc_buf 0 count_acc_buf_size memset drop
 
         // Do not count /favicon.ico
         if read_buffer 5 ptr+ @8 'f' != do
@@ -106,14 +106,14 @@ func main : int do
         end
 
         // Write html to socket
-        conn_fd "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"      write drop drop
-        conn_fd "<html><body><h1>Hello from Gorth!</h1>"                  write drop drop
-        conn_fd "<p>This page has been visited: <b>"                      write drop drop
-        conn_fd count_acc_buf count_acc @32 itoa count_acc_buf dup strlen write drop drop
-        conn_fd "</b> time(s)</p></body></html>"                          write drop drop
+        conn_fd "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"      fputs
+        conn_fd "<html><body><h1>Hello from Gorth!</h1>"                  fputs
+        conn_fd "<p>This page has been visited: <b>"                      fputs
+        conn_fd count_acc_buf count_acc @32 itoa count_acc_buf dup strlen fputs
+        conn_fd "</b> time(s)</p></body></html>"                          fputs
 
         // Clear connection buffer
-        0 read_buffer read_buffer_size memset drop
+        read_buffer 0 read_buffer_size memset drop
 
         // Close accepted socket
         conn_fd close drop

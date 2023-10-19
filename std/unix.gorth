@@ -120,6 +120,8 @@ do
   |                                   // dc00 | 00ba -> dcba
 end
 
+// ------------------------------------------------------ SYSCALLS -----------------------------------------------------
+
 // Execute `open` system call
 inline func open
   ptr   // const char* filename
@@ -167,9 +169,9 @@ end
 
 // Execute `socket` system call
 inline func socket
-  int // protocol
-  int // type
   int // domain
+  int // type
+  int // protocol
     :
   int // socket fd
   int // errno
@@ -179,11 +181,11 @@ end
 
 // Execute `setsockopt` system call
 inline func setsockopt
-  int // optlen
-  ptr // optval_ptr
-  int // optname
-  int // level
   int // socket fd
+  int // level
+  int // optname
+  ptr // optval_ptr
+  int // optlen
     :
   int // errno
 do
@@ -192,9 +194,9 @@ end
 
 // Execute `bind` system call
 inline func bind
-  int // addr_len
-  ptr // addr
   int // sock_fd
+  ptr // addr
+  int // addr_len
     :
   int // errno
 do
@@ -203,8 +205,8 @@ end
 
 // Execute `listen` system call
 inline func listen
-  int // backlog
   int // sock_fd
+  int // backlog
     :
   int // errno
 do
@@ -213,14 +215,28 @@ end
 
 // Execute `accept` system call
 inline func accept
-  ptr // addr_len
-  ptr // addr
   int // sock_fd
+  ptr // addr
+  ptr // addr_len
     :
   int // sock_fd
   int // errno
 do
   SYS_ACCEPT syscall3
+end
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+// --------------------------------------------------- Write Functions -------------------------------------------------
+
+// Prints string to fd
+inline func fputs
+  int   // fd
+  ptr   // const char* string
+  int   // string length
+    :
+do
+  write drop drop
 end
 
 // Prints string to stdout
@@ -229,8 +245,31 @@ inline func puts
   int   // string length
     :
 do
-  STDOUT rot rot write
-  drop drop
+  capture data ptr len int do drop drop
+    STDOUT data len fputs
+  end
+end
+
+// Prints string to stderr
+inline func eputs
+  ptr   // const char* string
+  int   // string length
+    :
+do
+  capture data ptr len int do drop drop
+    STDERR data len fputs
+  end
+end
+
+// Prints char to fd
+func fputc
+  int     // fd
+  int     // char
+    :
+do
+  alloc buf 1 end
+  buf !8
+  buf 1 fputs
 end
 
 // Prints char to stdout
@@ -238,11 +277,21 @@ func putc
   int     // char
     :
 do
-  alloc buf 1 end
-  // "test\n" puts
-
-  buf !8
-  buf 1 puts
+  capture char int do drop
+    STDOUT char fputc
+  end
 end
+
+// Prints char to stderr
+func eputc
+  int     // char
+    :
+do
+  capture char int do drop
+    STDERR char fputc
+  end
+end
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 // TODO: add errno messages

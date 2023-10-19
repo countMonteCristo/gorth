@@ -5,6 +5,6 @@ include "std/std.gorth"
 func main
   : int
 do
-  "Hello, world!" p_str
+  "Hello, world!" println
   0
 end

@@ -43,6 +43,6 @@ do
     1 -
   end drop
 
-  ans @32 p_int
+  ans @32 println_num
   0
 end

@@ -4,34 +4,34 @@ func main
   : int
 do
   // Sum
-  10 20 + p_int
-  -5 7 + p_int
-  5 -7 + p_int
-  -5 -7 + p_int
+  10 20 + println_num
+  -5  7 + println_num
+   5 -7 + println_num
+  -5 -7 + println_num
 
   // Diff
-  40 30 - p_int
-  40 -30 - p_int
-  -40 30 - p_int
-  -40 -30 - p_int
+   40  30 - println_num
+   40 -30 - println_num
+  -40  30 - println_num
+  -40 -30 - println_num
 
   // Mul
-  5 7 * p_int
-  5 -7 * p_int
-  -5 7 * p_int
-  -5 -7 * p_int
+   5  7 * println_num
+   5 -7 * println_num
+  -5  7 * println_num
+  -5 -7 * println_num
 
   // Div
-  27 6 / p_int
-  27 -6 / p_int
-  -27 6 / p_int
-  -27 -6 / p_int
+   27  6 / println_num
+   27 -6 / println_num
+  -27  6 / println_num
+  -27 -6 / println_num
 
   // Mod
-  31 7 % p_int
-  31 -7 % p_int
-  -31 7 % p_int
-  -31 -7 % p_int
+   31  7 % println_num
+   31 -7 % println_num
+  -31  7 % println_num
+  -31 -7 % println_num
 
   0
 end

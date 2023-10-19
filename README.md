@@ -25,7 +25,7 @@ include "std.gorth"
 
 func main : int do
   argv while dup @32 dup 0 != do
-    dup strlen p_str
+    dup strlen println
     sizeof(ptr) +
   end drop drop
   0
@@ -121,7 +121,7 @@ Example:
 include "std.gorth"
 
 func main : int do
-  "Hello, world!" p_str
+  "Hello, world!" println
   0
 end
 ```
@@ -262,7 +262,7 @@ include "std.gorth"
 
 // prints asterisk and given string
 func print_item do
-  " * " puts p_str
+  " * " puts println
 end
 
 func main : int do

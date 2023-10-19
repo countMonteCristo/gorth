@@ -3,21 +3,21 @@ include "std/std.gorth"
 func main
   : int
 do
-  3 5 max p_int
-  2 2 max p_int
-  6 1 max p_int
+  3 5 max println_num
+  2 2 max println_num
+  6 1 max println_num
 
-  3 5 min p_int
-  2 2 min p_int
-  6 1 min p_int
+  3 5 min println_num
+  2 2 min println_num
+  6 1 min println_num
 
-  3  abs p_int
-  -3 abs p_int
-  0  abs p_int
+  3  abs println_num
+  -3 abs println_num
+  0  abs println_num
 
-  3  sign p_int
-  -3 sign p_int
-  0  sign p_int
+  3  sign println_num
+  -3 sign println_num
+  0  sign println_num
 
   0
 end

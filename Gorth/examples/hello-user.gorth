@@ -8,7 +8,7 @@ func main
 do
   const BUF_SIZE 256 end
   alloc buf BUF_SIZE end
-  "What is your name?" p_str
+  "What is your name?" println
   0 buf BUF_SIZE read
   drop 1 - buf swap
   "Hello, " puts puts '!' putc

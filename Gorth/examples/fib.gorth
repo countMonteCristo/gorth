@@ -8,7 +8,7 @@ func main
   : int
 do
   1 1 while over N <= do
-    over p_int
+    over println_num
     swap over +
   end
   drop drop

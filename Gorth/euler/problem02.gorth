@@ -25,6 +25,6 @@ do
     end // capture s a b
   end drop drop
 
-  p_int
+  println_num
   0
 end

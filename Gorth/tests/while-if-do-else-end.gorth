@@ -12,7 +12,7 @@ do
       end
       dup 10 *
     end
-    p_int
+    println_num
     1 +
   end drop
 

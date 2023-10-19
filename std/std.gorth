@@ -46,13 +46,15 @@ const sockaddr_in.sin_zero
 const sizeof(sockaddr_in)                      reset end
 
 
+// ----------------------------------------------- Pointer Arithmetics -------------------------------------------------
+
 // Adds ptr diff to ptr
 inline func ptr+
   ptr int
     :
   ptr
 do
-  swap cast(int) swap + cast(ptr)
+  swap cast(int) + cast(ptr)
 end
 
 // Get distance between 2 pointers
@@ -64,142 +66,10 @@ do
   cast(int) swap cast(int) swap -
 end
 
-// Returns length of null-terminated string (exclude terminated \0)
-func strlen
-  ptr   // const char* string
-    :
-  int   // string length
-do
-  // p p+len
-  dup
-  while dup @8 0 != do
-    1 ptr+
-  end
-  swap ptr-
-end
+// ---------------------------------------------------------------------------------------------------------------------
 
-// Copy memory chunk of count `count` bytes from `source` to `destination`, returns nothing
-// WARNING: situations when src and dst are overlapped ARE NOT HANDLED!
-func memcpy
-  ptr   // source
-  int   // count of copied bytes
-  ptr   // destination
-    :
-do
-  rot rot over swap ptr+
-  while over cast(int) over cast(int) < do
-    rot rot
-    dup @8
-    rot dup rot swap !8
-    1 ptr+ swap 1 ptr+ rot
-  end
-  drop drop drop
-end
 
-// Converts string to unsigned number
-// Returns -1 if convertion failed
-// TODO: return (number, errno) maybe?
-func atou
-  ptr int // pointer to string and its length
-    :
-  int     // converted number
-do
-  alloc result 8 end          // allocate memory for result
-  0 result !64                // clear memory
-
-  over swap ptr+ swap         // ptr len -> ptr_end ptr_begin
-  while over cast(int) over cast(int) > do
-    dup @8 '0' -              // load digit
-    if dup 10 > over 0 < || do   // if char is not a digit - break and return -1
-      drop -1 result !64 break
-    end
-    result @64 10 * +         // update result number
-    result !64                // store result number in memory
-    1 ptr+
-  end
-  drop drop
-  result @64
-end
-
-// Converts string to signed number
-// Returns err=1 if conversion failed
-// TODO: signle '+' and '-' both converted to 0
-func atoi
-  ptr int // pointer to string and its length
-    :
-  int     // converted number
-  int     // errno
-do
-  alloc result 8 end          // allocate memory for result
-  alloc sign_m 1 end
-  alloc err 1 end
-
-  0 result !64                // clear memory
-  1 sign_m !8                 // set sign
-  0 err !8                    // set error to 0
-
-  if over @8 '-' = do
-    -1 sign_m !8
-    1 - swap 1 ptr+ swap
-  else
-    if over @8 '+' = do
-      1 - swap 1 ptr+ swap
-    end
-  end
-
-  over swap ptr+ swap         // ptr len -> ptr_end ptr_begin
-  while over cast(int) over cast(int) > do
-    dup @8 '0' -              // load digit
-
-    if dup 10 > over 0 < ||  do   // if char is not a digit - break
-      drop -1 result !64
-      1 err !8
-      break
-    end
-
-    result @64 10 * +         // update result number
-    result !64                // store result number in memory
-    1 ptr+
-  end
-  drop drop
-
-  err @8
-  if dup 0 > do
-    0
-  else
-    result @64 sign_m @8 *
-  end
-  swap
-end
-
-// Consumes number of the input argument and returns pointer to it
-inline func argv_n
-  int   // index of the argument
-  :
-  ptr   // pointer to argument as null-terminated string
-do
-  sizeof(ptr) * argv swap ptr+ @32 cast(ptr)
-end
-
-// Sets `size` count of bytes starting from `pointer` to `value`
-func memset
-  int   // value
-  ptr   // pointer
-  int   // size
-    :
-  ptr   // pointer
-do
-  alloc tmp 4 end
-  over cast(int) tmp !32
-  over swap ptr+ // value tmp end
-  while over cast(int) over cast(int) < do
-    rot rot // end value tmp
-    over over !8 // end value tmp
-    1 ptr+ rot // value tmp+1 end
-  end
-  drop drop drop
-  tmp @32 cast(ptr)
-end
+// -------------------------------------------------- Math functions ---------------------------------------------------
 
 // Consumes two numbers and pushes minimum value
 inline func min
@@ -233,6 +103,25 @@ do
   end
 end
 
+// ---------------------------------------------------------------------------------------------------------------------
+
+
+// ------------------------------------------------- String functions --------------------------------------------------
+
+// Returns length of null-terminated string (exclude terminated \0)
+func strlen
+  ptr   // const char* string
+    :
+  int   // string length
+do
+  // p p+len
+  dup
+  while dup @8 0 != do
+    1 ptr+
+  end
+  swap ptr-
+end
+
 // Consumes two pointers to null-terminated strings, pushes 1 if the first string is
 // lexicografically bigger than the second, -1 if it is smaller and 0 if they are equal
 func strcmp
@@ -241,32 +130,96 @@ func strcmp
   int     // result
 do
   while over @8 over @8 over over = rot rot drop 0 != && do
-    1 ptr+ swap 1 ptr+ swap
+    capture s1 ptr s2 ptr do drop drop
+      s1 1 ptr+
+      s2 1 ptr+
+    end // capture s1 s2
   end
 
-  if over @8 over @8 over over > do
-    drop drop drop drop 1
-  else
-    if < do
-      drop drop -1
-    else
+  capture s1 ptr s2 ptr do drop drop
+    s1 @8 s2 @8
+    if over over = do
       drop drop 0
+    else
+      if < do -1 else +1 end
+    end
+  end // capture s1 s2
+end
+
+// Converts string to unsigned number
+// Returns -1 if convertion failed
+// TODO: return (number, errno) maybe?
+func atou
+  ptr int // pointer to string and its length
+    :
+  int     // converted number
+do
+  alloc result 8 end          // allocate memory for result
+  0 result !64                // clear memory
+
+  over swap ptr+ swap         // ptr len -> ptr_end ptr_begin
+  while over over ptr- 0 > do
+    dup @8 '0' -              // load digit
+    if dup 10 > over 0 < || do   // if char is not a digit - break and return -1
+      drop -1 result !64 break
+    end
+    result @64 10 * +         // update result number
+    result !64                // store result number in memory
+    1 ptr+
+  end
+  drop drop
+  result @64
+end
+
+// Converts string to signed number
+// Returns err=1 if conversion failed
+// TODO: signle '+' and '-' both converted to 0
+func atoi
+  ptr int // pointer to string and its length
+    :
+  int     // converted number
+  int     // errno
+do
+  alloc result 8 end          // allocate memory for result
+  alloc sign_m 1 end
+  alloc err    1 end
+
+  0 result !64                // clear memory
+  1 sign_m !8                 // set sign
+  0 err    !8                 // set error to 0
+
+  if over @8 '-' = do
+    -1 sign_m !8
+    1 - swap 1 ptr+ swap
+  else
+    if over @8 '+' = do
+      1 - swap 1 ptr+ swap
     end
   end
-end
 
-// Prints number and one new line
-func p_int
-  int : // number
-do
-  puti '\n' putc
-end
+  over swap ptr+ swap         // ptr len -> ptr_end ptr_begin
+  while over over ptr- 0 > do
+    dup @8 '0' -              // load digit
 
-// Prints string and one new line
-func p_str
-  ptr int : // pointer to string and its length
-do
-  puts '\n' putc
+    if dup 10 > over 0 < ||  do   // if char is not a digit - break
+      drop -1 result !64
+      1 err !8
+      break
+    end
+
+    result @64 10 * +         // update result number
+    result !64                // store result number in memory
+    1 ptr+
+  end
+  drop drop
+
+  err @8
+  if dup 0 > do
+    0
+  else
+    result @64 sign_m @8 *
+  end
+  swap
 end
 
 // Convert sized number to a string. Does not check for buffer overflow!
@@ -287,25 +240,111 @@ do
 
   over over
   while dup 0 > do
-    over over dup 10 % '0' + swap drop swap !8
-    swap 1 ptr+ swap
-    10 /
-  end drop -1 ptr+
+    capture buf ptr n int do drop drop
+      n 10 % '0' + buf !8
+      buf 1 ptr+
+      n 10 /
+    end // capture buf n
+  end drop -1 ptr+ swap drop swap
 
   // reverse string
-  rot
   while over over ptr- 0 > do
-    over over
-    over @8 over @8
+    capture finish ptr start ptr do drop drop
+      finish @8
+        start @8 finish !8
+      start !8
 
-    swap rot !8 swap !8 // a..b -> b..a
-
-    1 ptr+ swap -1 ptr+ swap
-  end drop drop drop
+      finish -1 ptr+
+      start   1 ptr+
+    end // capture finish start
+  end drop drop
 end
 
+// ---------------------------------------------------------------------------------------------------------------------
+
+
+// ------------------------------------------------- Memory functions --------------------------------------------------
+
+// Copy memory chunk of count `count` bytes from `source` to `destination`, returns nothing
+// WARNING: situations when src and dst are overlapped ARE NOT HANDLED!
+func memcpy
+  ptr   // destination
+  ptr   // source
+  int   // count of copied bytes
+    :
+do
+  over swap ptr+
+  capture src_end ptr do drop
+    while src_end over ptr- 0 > do
+      capture dst ptr src_begin ptr do drop drop
+        src_begin @8 dst !8
+        dst       1 ptr+
+        src_begin 1 ptr+
+      end // capture dst src_begin
+    end
+  end //capture src_end
+  drop drop
+end
+
+// Sets `size` count of bytes starting from `pointer` to `value`
+func memset
+  ptr   // pointer
+  int   // value
+  int   // size
+    :
+  ptr   // pointer
+do
+  capture data ptr value int size int do drop drop drop
+    value data data size ptr+
+    capture ptr_end ptr do drop
+      while ptr_end over ptr- 0 > do
+        over over !8
+        1 ptr+
+      end drop drop
+    end // capture ptr_end
+    data
+  end // capture data value count
+end
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+
+// ------------------------------------------------- Custom functions --------------------------------------------------
+
+// Consumes number of the input argument and returns pointer to it
+inline func argv_n
+  int   // index of the argument
+  :
+  ptr   // pointer to argument as null-terminated string
+do
+  sizeof(ptr) * argv swap ptr+ @32 cast(ptr)
+end
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+
+// --------------------------------------------------- Println ---------------------------------------------------------
+
+// Prints number and one new line
+func println_num
+  int : // number
+do
+  puti '\n' putc
+end
+
+// Prints string and one new line
+func println
+  ptr int : // pointer to string and its length
+do
+  puts '\n' putc
+end
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+// -------------------------------------------- Random numbers generator -----------------------------------------------
+
 alloc rand_state 8 end
-func srand int do
+func srand int : do
   rand_state !64
 end
 
@@ -320,3 +359,5 @@ func rand : int do
   RAND_A * RAND_C + RAND_M %
   dup rand_state !64
 end
+
+// ---------------------------------------------------------------------------------------------------------------------
