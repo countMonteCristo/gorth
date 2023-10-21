@@ -13,13 +13,6 @@ import (
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func show_err_and_exit(err error) {
-	fmt.Fprint(os.Stderr, err.Error())
-	utils.Exit(1)
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-
 type Interpreter struct {
 	lexer       lexer.Lexer
 	vm          vm.VM
@@ -49,15 +42,15 @@ func NewInterpreter(arguments []string, pkg_dir string, s *vm.VmSettings) *Inter
 func (i *Interpreter) Prepare(fn string) {
 	tokens, err := i.lexer.ProcessFile(fn, []string{}, &i.importer)
 	if err != nil {
-		show_err_and_exit(err)
+		utils.ExitWithError(err)
 	}
 
 	if err = i.compiler.CompileTokens(tokens, &i.vm.Rc.Settings); err != nil {
-		show_err_and_exit(err)
+		utils.ExitWithError(err)
 	}
 
 	if err = i.typechecker.TypeCheckProgram(&i.compiler.Ops, &i.compiler.Ctx); err != nil {
-		show_err_and_exit(err)
+		utils.ExitWithError(err)
 	}
 }
 

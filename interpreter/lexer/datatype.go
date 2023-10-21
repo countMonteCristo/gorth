@@ -18,8 +18,8 @@ const (
 	DataTypeBool
 )
 
-var DataTypeName = map[DataType]string{
-	DataTypeAny: "any",
+var DataType2Str = map[DataType]string{
+	DataTypeAny:  "any",
 	DataTypeInt:  "int",
 	DataTypePtr:  "ptr",
 	DataTypeBool: "bool",
@@ -28,16 +28,16 @@ var DataTypeName = map[DataType]string{
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (t DataType) String() string {
-	return DataTypeName[t]
+	return DataType2Str[t]
 }
 
 func (types DataTypes) String() string {
-	res := utils.MapF(types, func(t DataType) string { return DataTypeName[t] })
+	res := utils.MapF(types, func(t DataType) string { return DataType2Str[t] })
 	return fmt.Sprintf("[%s]", strings.Join(res, ", "))
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-var WordToDataType = utils.RevMap(DataTypeName).(map[string]DataType)
+var Str2DataType = utils.RevMap(DataType2Str).(map[string]DataType)
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -15,7 +15,7 @@ type Contract struct {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-var intrinsicContract = map[lexer.IntrinsicType]*Contract{
+var intrinsicType2Contract = map[lexer.IntrinsicType]*Contract{
 	lexer.IntrinsicPlus: {
 		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
@@ -221,7 +221,7 @@ func GetIntrinsicContract(i lexer.IntrinsicType) (*Contract, string) {
 		return nil, "compile-time intrinsics do not need contracts"
 	}
 
-	contract, ok := intrinsicContract[i]
+	contract, ok := intrinsicType2Contract[i]
 	if !ok {
 		return nil, "unknown intrinsic"
 	}
@@ -294,7 +294,7 @@ func GetIntrinsicLogic(i lexer.IntrinsicType) (IntrinsicLogicFunc, string) {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-var simpleOperationContract = map[vm.OpType]*Contract{
+var simpleOp2Contract = map[vm.OpType]*Contract{
 	vm.OpPushInt: {
 		Inputs:  utils.NewStack(lexer.DataTypes{}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
@@ -318,7 +318,7 @@ var simpleOperationContract = map[vm.OpType]*Contract{
 }
 
 func GetSimpleOpContract(o vm.OpType) (*Contract, string) {
-	contract, ok := simpleOperationContract[o]
+	contract, ok := simpleOp2Contract[o]
 	if !ok {
 		return nil, "unknown simple operation"
 	}

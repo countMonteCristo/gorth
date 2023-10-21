@@ -63,7 +63,7 @@ func (cl *CaptureList) Append(val CapturedVal) {
 }
 
 // Map for OpPushCapture operations
-var DataTypeToOpType = map[lexer.DataType]vm.OpType{
+var DataType2OpType = map[lexer.DataType]vm.OpType{
 	lexer.DataTypeBool: vm.OpPushBool,
 	lexer.DataTypeInt:  vm.OpPushInt,
 	lexer.DataTypePtr:  vm.OpPushPtr,

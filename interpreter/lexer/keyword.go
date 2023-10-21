@@ -30,7 +30,7 @@ const (
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-var KeywordName = map[KeywordType]string{
+var Keyword2Str = map[KeywordType]string{
 	KeywordIf:   "if",
 	KeywordElse: "else",
 	KeywordEnd:  "end",
@@ -41,8 +41,8 @@ var KeywordName = map[KeywordType]string{
 	KeywordContinue: "continue",
 	KeywordReturn:   "return",
 
-	KeywordConst: "const",
-	KeywordAlloc: "alloc",
+	KeywordConst:   "const",
+	KeywordAlloc:   "alloc",
 	KeywordCapture: "capture",
 
 	KeywordInline: "inline",
@@ -52,6 +52,6 @@ var KeywordName = map[KeywordType]string{
 	KeywordInclude: "include",
 }
 
-var WordToKeyword = utils.RevMap(KeywordName).(map[string]KeywordType)
+var Str2Keyword = utils.RevMap(Keyword2Str).(map[string]KeywordType)
 
 // ---------------------------------------------------------------------------------------------------------------------

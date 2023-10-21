@@ -54,7 +54,7 @@ func (r *MemoryRegion) HasRight(a AccessRights) bool {
 //
 // Strings are stored as null-terminated byte arrays. When you push string into stack, you actually push
 // the address and the size of the string to stack.
-type ByteMemory struct {
+type Memory struct {
 	Data []byte
 
 	Argv types.IntType // pointer to the null-terminated array of pointers to input arguments
@@ -65,8 +65,8 @@ type ByteMemory struct {
 	OperativeMemRegion MemoryRegion // RAM
 }
 
-func NewMemory(mem_size types.IntType) ByteMemory {
-	mem := ByteMemory{
+func NewMemory(mem_size types.IntType) Memory {
+	mem := Memory{
 		Data:          make([]byte, mem_size),
 		StringsRegion: NewMemoryRegion(1, 0, AccessRead),
 	}
@@ -76,7 +76,7 @@ func NewMemory(mem_size types.IntType) ByteMemory {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (m *ByteMemory) getMemoryRegion(ptr types.IntType, size int) []*MemoryRegion {
+func (m *Memory) getMemoryRegion(ptr types.IntType, size int) []*MemoryRegion {
 	result := make([]*MemoryRegion, 0)
 	eptr := ptr + types.IntType(size)
 	regions := []*MemoryRegion{&m.StringsRegion, &m.PtrsRegion, &m.OperativeMemRegion}
@@ -94,19 +94,19 @@ func (m *ByteMemory) getMemoryRegion(ptr types.IntType, size int) []*MemoryRegio
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (m *ByteMemory) Size() int {
+func (m *Memory) Size() int {
 	return len(m.Data)
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (m *ByteMemory) saveString(start types.IntType, s *string) types.IntType {
+func (m *Memory) saveString(start types.IntType, s *string) types.IntType {
 	bytes := []byte(*s)
 	copy(m.Data[start:], bytes)
 	return types.IntType(len(bytes) + 1)
 }
 
-func (m *ByteMemory) savePtrs(start types.IntType, ptrs *[]types.IntType) types.IntType {
+func (m *Memory) savePtrs(start types.IntType, ptrs *[]types.IntType) types.IntType {
 	for _, ptr := range *ptrs {
 		m.StoreToMem(start, ptr, sizeof_ptr, nil, true)
 		start += types.IntType(sizeof_ptr)
@@ -114,7 +114,7 @@ func (m *ByteMemory) savePtrs(start types.IntType, ptrs *[]types.IntType) types.
 	return start
 }
 
-func (m *ByteMemory) Prepare(args, env []string, strings *map[string]types.IntType) {
+func (m *Memory) Prepare(args, env []string, strings *map[string]types.IntType) {
 	ptr := m.StringsRegion.Start
 
 	// store string literals
@@ -157,7 +157,7 @@ func (m *ByteMemory) Prepare(args, env []string, strings *map[string]types.IntTy
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (m *ByteMemory) LoadFromMem(ptr types.IntType, size int, loc *utils.Location, ignore bool) (value types.IntType, err error) {
+func (m *Memory) LoadFromMem(ptr types.IntType, size int, loc *utils.Location, ignore bool) (value types.IntType, err error) {
 	if ptr == 0 {
 		return 0, logger.VmRuntimeError(loc, "Write operation into NULL pointer")
 	}
@@ -195,7 +195,7 @@ func (m *ByteMemory) LoadFromMem(ptr types.IntType, size int, loc *utils.Locatio
 	return
 }
 
-func (m *ByteMemory) StoreToMem(ptr types.IntType, value types.IntType, size int, loc *utils.Location, ignore bool) error {
+func (m *Memory) StoreToMem(ptr types.IntType, value types.IntType, size int, loc *utils.Location, ignore bool) error {
 	if ptr == 0 {
 		return logger.VmRuntimeError(loc, "Write operation into NULL pointer")
 	}
@@ -233,17 +233,17 @@ func (m *ByteMemory) StoreToMem(ptr types.IntType, value types.IntType, size int
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-var EscapedCharToString = map[byte]string{
+var EscapedChar2Str = map[byte]string{
 	'\n': "'\\n'", '\r': "'\\r'", '\t': "'\\t'", 0: "'\\0'",
 }
 
-func (m *ByteMemory) PrintDebug() {
+func (m *Memory) PrintDebug() {
 	fmt.Printf("Allocated: %d byte(s) total\n", m.OperativeMemRegion.Ptr-m.OperativeMemRegion.Start)
 
 	fmt.Printf("String Literals (size=%d):\n", m.StringsRegion.Size)
 	data := make([]string, 0, m.StringsRegion.Ptr-m.StringsRegion.Start)
 	for _, b := range m.Data[m.StringsRegion.Start:m.StringsRegion.Ptr] {
-		char, exists := EscapedCharToString[b]
+		char, exists := EscapedChar2Str[b]
 		if !exists {
 			char = "'" + string(b) + "'"
 		}

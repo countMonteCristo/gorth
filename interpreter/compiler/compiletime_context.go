@@ -111,7 +111,7 @@ func (c *CompileTimeContext) GetAlloc(name, scope_name string) (Allocation, Scop
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (c *CompileTimeContext) GetAllocInfo(name, scope_name string, mem *vm.ByteMemory) (types.IntType, []byte) {
+func (c *CompileTimeContext) getAllocInfo(name, scope_name string, mem *vm.Memory) (types.IntType, []byte) {
 	alloc := c.Scopes[scope_name].Allocs[name]
 	var alloc_ptr types.IntType
 	if scope_name != GlobalScopeName {
@@ -130,9 +130,9 @@ func (c *CompileTimeContext) DebugConsts(scope_name string) {
 		fmt.Printf("%s=%d ", const_name, constant.Value)
 	}
 }
-func (c *CompileTimeContext) DebugAllocs(scope_name string, mem *vm.ByteMemory) {
+func (c *CompileTimeContext) DebugAllocs(scope_name string, mem *vm.Memory) {
 	for alloc_name, alloc := range c.Scopes[scope_name].Allocs {
-		alloc_ptr, alloc_mem := c.GetAllocInfo(alloc_name, scope_name, mem)
+		alloc_ptr, alloc_mem := c.getAllocInfo(alloc_name, scope_name, mem)
 		fmt.Printf("%s(%d,%d)=%d ", alloc_name, alloc_ptr, alloc.Size, alloc_mem)
 	}
 }
@@ -140,27 +140,27 @@ func (c *CompileTimeContext) DebugConstNames(names []string, scope_name string) 
 	n_found := 0
 	for _, name := range names {
 		if constant, exists := c.GetLocalConst(name, scope_name); exists {
-			fmt.Printf("(%s) %s = %d type = %s\n", scope_name, name, constant.Value, lexer.DataTypeName[constant.Typ])
+			fmt.Printf("(%s) %s = %d type = %s\n", scope_name, name, constant.Value, lexer.DataType2Str[constant.Typ])
 			n_found++
 		}
 		if constant, exists := c.GetGlobalConst(name); exists {
-			fmt.Printf("(%s) %s = %d type = %s\n", GlobalScopeName, name, constant.Value, lexer.DataTypeName[constant.Typ])
+			fmt.Printf("(%s) %s = %d type = %s\n", GlobalScopeName, name, constant.Value, lexer.DataType2Str[constant.Typ])
 			n_found++
 		}
 	}
 	return n_found
 }
-func (c *CompileTimeContext) DebugAllocNames(names []string, scope_name string, mem *vm.ByteMemory) int {
+func (c *CompileTimeContext) DebugAllocNames(names []string, scope_name string, mem *vm.Memory) int {
 	n_found := 0
 	for _, name := range names {
 		if alloc, exists := c.GetLocalAlloc(name, scope_name); exists {
-			alloc_ptr, alloc_mem := c.GetAllocInfo(name, scope_name, mem)
+			alloc_ptr, alloc_mem := c.getAllocInfo(name, scope_name, mem)
 			fmt.Printf("(%s) %s(%d,%d)=%v\n", scope_name, name, alloc_ptr, alloc.Size, alloc_mem)
 			n_found++
 		}
 
 		if alloc, exists := c.GetGlobalAlloc(name); exists {
-			alloc_ptr, alloc_mem := c.GetAllocInfo(name, GlobalScopeName, mem)
+			alloc_ptr, alloc_mem := c.getAllocInfo(name, GlobalScopeName, mem)
 			fmt.Printf("(%s) %s(%d,%d)=%v\n", GlobalScopeName, name, alloc_ptr, alloc.Size, alloc_mem)
 			n_found++
 		}

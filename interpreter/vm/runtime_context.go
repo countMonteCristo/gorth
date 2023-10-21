@@ -33,7 +33,7 @@ func NewRuntimeSettings(start types.IntType) *RuntimeSettings {
 // ---------------------------------------------------------------------------------------------------------------------
 
 type RunTimeContext struct {
-	Memory        ByteMemory
+	Memory        Memory
 	Stack         utils.Stack
 	ReturnStack   utils.Stack
 	CapturesCount types.IntType

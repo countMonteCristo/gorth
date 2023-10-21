@@ -131,8 +131,8 @@ func (c *Compiler) compileTokenIntrinsic(token *lexer.Token, scope *Scope, intri
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (c *Compiler) compileConst(token *lexer.Token, val *Constant, scope *Scope) error {
-	if typ, exists := DataTypeToOpType[val.Typ]; !exists {
-		return logger.CompilerError(&token.Loc, "Can not compile constant of type `%s`", lexer.DataTypeName[val.Typ])
+	if typ, exists := DataType2OpType[val.Typ]; !exists {
+		return logger.CompilerError(&token.Loc, "Can not compile constant of type `%s`", lexer.DataType2Str[val.Typ])
 	} else {
 		c.pushOps(scope.Name, vm.Op{Typ: typ, Operand: val.Value, OpToken: *token})
 		return nil
@@ -168,7 +168,7 @@ func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope *Scope
 
 func (c *Compiler) compileIfBlock(token *lexer.Token, th *lexer.TokenHolder, scope *Scope) error {
 	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token, lexer.KeywordIf, nil))
-	c.pushOps(scope.Name, vm.Op{OpToken: *token, Typ: vm.OpJump, Operand: types.IntType(1), Data: vm.NameToOpJumpType[token.Text]})
+	c.pushOps(scope.Name, vm.Op{OpToken: *token, Typ: vm.OpJump, Operand: types.IntType(1), Data: vm.Str2OpJumpType[token.Text]})
 	return c.compile(th, scope)
 }
 
@@ -199,14 +199,14 @@ func (c *Compiler) compileElseBlock(token *lexer.Token, th *lexer.TokenHolder, s
 	}
 
 	c.Blocks.Push(NewBlock(addr, token, block.Typ, nil))
-	c.pushOps(scope.Name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: vm.NameToOpJumpType[token.Text]})
+	c.pushOps(scope.Name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]})
 
 	return nil
 }
 
 func (c *Compiler) compileWhileBlock(token *lexer.Token, th *lexer.TokenHolder, scope *Scope) error {
 	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token, lexer.KeywordWhile, nil))
-	c.pushOps(scope.Name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: vm.NameToOpJumpType[token.Text], Operand: types.IntType(1)})
+	c.pushOps(scope.Name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text], Operand: types.IntType(1)})
 	return c.compile(th, scope)
 }
 
@@ -234,7 +234,7 @@ func (c *Compiler) compileDoBlock(token *lexer.Token, th *lexer.TokenHolder, sco
 
 func (c *Compiler) compileJumpKeyword(token *lexer.Token, kw lexer.KeywordType, scope *Scope) error {
 	if kw != lexer.KeywordContinue && kw != lexer.KeywordBreak {
-		return logger.CompilerError(&token.Loc, "Only `break` and `continue` are supported as jumps, but got `%s`", lexer.KeywordName[kw])
+		return logger.CompilerError(&token.Loc, "Only `break` and `continue` are supported as jumps, but got `%s`", lexer.Keyword2Str[kw])
 	}
 
 	if c.Blocks.Empty() {
@@ -259,7 +259,7 @@ func (c *Compiler) compileJumpKeyword(token *lexer.Token, kw lexer.KeywordType, 
 		return logger.CompilerError(&token.Loc, "`%s` should be inside while-loop, but it doesn't", token.Text)
 	}
 
-	c.pushOps(scope.Name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: vm.NameToOpJumpType[token.Text]})
+	c.pushOps(scope.Name, vm.Op{OpToken: *token, Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]})
 	return nil
 }
 
@@ -296,7 +296,7 @@ func (c *Compiler) compileReturnKeyword(token *lexer.Token, scope *Scope) error 
 		return logger.CompilerError(&token.Loc, "`%s` should be inside function, but it doesn't", token.Text)
 	}
 
-	c.pushOps(scope.Name, vm.Op{OpToken: *token, Operand: types.IntType(1), Typ: vm.OpJump, Data: vm.NameToOpJumpType[token.Text]})
+	c.pushOps(scope.Name, vm.Op{OpToken: *token, Operand: types.IntType(1), Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]})
 	return nil
 }
 
@@ -317,7 +317,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope *Scope) error {
 	}
 	block_start_kw := block.Tok.Value.(lexer.KeywordType)
 
-	op := vm.Op{OpToken: *token, Operand: types.IntType(1), Typ: vm.OpJump, Data: vm.NameToOpJumpType[token.Text]}
+	op := vm.Op{OpToken: *token, Operand: types.IntType(1), Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]}
 	addr := c.getCurrentAddr()
 	do_end_diff := addr - block.Addr + 1
 
@@ -333,7 +333,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope *Scope) error {
 				case lexer.KeywordContinue:
 					c.setOpOperand(jump.Addr, addr-jump.Addr) // continue -> end
 				default:
-					return logger.CompilerError(&block.Tok.Loc, "Unhandled jump-keyword: `%s`", lexer.KeywordName[jump.Keyword])
+					return logger.CompilerError(&block.Tok.Loc, "Unhandled jump-keyword: `%s`", lexer.Keyword2Str[jump.Keyword])
 				}
 			}
 			op.Operand = block.Addr + do_while_addr_diff - addr // end -> while
@@ -351,17 +351,17 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope *Scope) error {
 			if jump.Keyword == lexer.KeywordReturn {
 				c.setOpOperand(jump.Addr, addr-jump.Addr) // return -> end
 			} else {
-				return logger.CompilerError(&block.Tok.Loc, "Unhandled jump-keyword: `%s` in function", lexer.KeywordName[jump.Keyword])
+				return logger.CompilerError(&block.Tok.Loc, "Unhandled jump-keyword: `%s` in function", lexer.Keyword2Str[jump.Keyword])
 			}
 		}
 		op.Typ, op.Data = vm.OpFuncEnd, scope.Name
 
 	case lexer.KeywordIf, lexer.KeywordWhile:
-		return logger.CompilerError(&block.Tok.Loc, "`%s` block must contain `do` before `end`", lexer.KeywordName[block_start_kw])
+		return logger.CompilerError(&block.Tok.Loc, "`%s` block must contain `do` before `end`", lexer.Keyword2Str[block_start_kw])
 	case lexer.KeywordEnd:
 		return logger.CompilerError(&token.Loc, "`end` may only close `if-else` or `while-do` blocks, but got `%s`", block.Tok.Text)
 	case lexer.KeywordBreak, lexer.KeywordContinue:
-		return logger.CompilerError(&block.Tok.Loc, "`%s` keyword shouldn't be in blocks stack", lexer.KeywordName[block_start_kw])
+		return logger.CompilerError(&block.Tok.Loc, "`%s` keyword shouldn't be in blocks stack", lexer.Keyword2Str[block_start_kw])
 
 	case lexer.KeywordCapture:
 		count_drops := block.Data.(types.IntType)
@@ -459,7 +459,7 @@ loop:
 		case lexer.TokenBool:
 			const_stack.Push(Constant{Value: tok.Value.(types.IntType), Typ: lexer.DataTypeBool})
 		case lexer.TokenWord:
-			if intrinsic, exists := lexer.WordToIntrinsic[tok.Text]; exists {
+			if intrinsic, exists := lexer.Str2Intrinsic[tok.Text]; exists {
 				switch intrinsic {
 				case lexer.IntrinsicPlus, lexer.IntrinsicMinus, lexer.IntrinsicMul, lexer.IntrinsicBitAnd, lexer.IntrinsicBitXor, lexer.IntrinsicBitOr:
 					if err = c.checkConstStackSize(tok, const_stack, 2); err != nil {
@@ -823,7 +823,7 @@ func (c *Compiler) parseCapturedVal(th *lexer.TokenHolder, scope *Scope) (*Captu
 	if typ_tok.Typ != lexer.TokenWord {
 		return nil, logger.CompilerError(&typ_tok.Loc, "Expected captured value type but got `%s`", typ_tok.Text)
 	}
-	typ, ok := lexer.WordToDataType[typ_tok.Text]
+	typ, ok := lexer.Str2DataType[typ_tok.Text]
 	if !ok {
 		return nil, logger.CompilerError(&typ_tok.Loc, "Unknown type `%s`", typ_tok.Text)
 	}
@@ -907,7 +907,7 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope *Scope) error {
 		case lexer.TokenWord:
 			name := token.Text
 
-			if intrinsic, exists := lexer.WordToIntrinsic[name]; exists {
+			if intrinsic, exists := lexer.Str2Intrinsic[name]; exists {
 				if err := c.compileTokenIntrinsic(token, scope, intrinsic); err != nil {
 					return err
 				}
@@ -1007,7 +1007,7 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope *Scope) error {
 					return logger.CompilerError(&tok.Loc, "Negative size for `alloc` block: %d", alloc_size)
 				}
 				if alloc_size.Typ != lexer.DataTypeInt {
-					return logger.CompilerError(&tok.Loc, "Only `int` type is supported for `alloc` value, got %s", lexer.DataTypeName[alloc_size.Typ])
+					return logger.CompilerError(&tok.Loc, "Only `int` type is supported for `alloc` value, got %s", lexer.DataType2Str[alloc_size.Typ])
 				}
 				scope.Allocs[tok.Text] = Allocation{
 					Offset: scope.MemSize, Size: alloc_size.Value,

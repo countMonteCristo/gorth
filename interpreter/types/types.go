@@ -16,11 +16,11 @@ const (
 	BoolFalse BoolType = 0
 )
 
-var BoolName = map[BoolType]string{
+var BoolType2Str = map[BoolType]string{
 	BoolTrue:  "true",
 	BoolFalse: "false",
 }
 
-var WordToBool = utils.RevMap(BoolName).(map[string]BoolType)
+var Str2Bool = utils.RevMap(BoolType2Str).(map[string]BoolType)
 
 // ---------------------------------------------------------------------------------------------------------------------

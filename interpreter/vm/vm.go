@@ -329,7 +329,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		vm.Rc.Stack.Push(x)
 		vm.Rc.Addr++
 	default:
-		return logger.VmRuntimeError(&op.OpToken.Loc, "Unhandled operation: `%s`", OpName[op.Typ])
+		return logger.VmRuntimeError(&op.OpToken.Loc, "Unhandled operation: `%s`", OpType2Str[op.Typ])
 	}
 	return
 }

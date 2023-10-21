@@ -204,6 +204,8 @@ func (tc *TypeChecker) enoughArgsCount(stack *utils.Stack, count int, token *lex
 	return
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (tc *TypeChecker) popType(op *vm.Op, stack *utils.Stack, expected lexer.DataType) error {
 	if err := tc.enoughArgsCount(stack, 1, &op.OpToken); err != nil {
 		return err
@@ -217,7 +219,7 @@ func (tc *TypeChecker) popType(op *vm.Op, stack *utils.Stack, expected lexer.Dat
 	if expected != lexer.DataTypeAny && actual != expected {
 		return logger.TypeCheckerError(
 			&op.OpToken.Loc, "Expected argument of type `%s` but got `%s`. Current stack: %s",
-			lexer.DataTypeName[expected], lexer.DataTypeName[actual], stack.Data,
+			lexer.DataType2Str[expected], lexer.DataType2Str[actual], stack.Data,
 		)
 	}
 	stack.Pop()
@@ -239,6 +241,8 @@ func (tc *TypeChecker) popTypes(op *vm.Op, stack, expected *utils.Stack) error {
 	return nil
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (tc *TypeChecker) popTypeContract(op *vm.Op, stack *utils.Stack, expected lexer.DataType) (actual lexer.DataType, err error) {
 	actual, ok := stack.Pop().(lexer.DataType)
 	if !ok {
@@ -249,7 +253,7 @@ func (tc *TypeChecker) popTypeContract(op *vm.Op, stack *utils.Stack, expected l
 	if expected != lexer.DataTypeAny && actual != expected {
 		err = logger.TypeCheckerError(
 			&op.OpToken.Loc, "Expected argument of type `%s` but got `%s`. Current stack: %s",
-			lexer.DataTypeName[expected], lexer.DataTypeName[actual], stack.Data,
+			lexer.DataType2Str[expected], lexer.DataType2Str[actual], stack.Data,
 		)
 	}
 	return
@@ -271,6 +275,8 @@ func (tc *TypeChecker) popTypesContract(op *vm.Op, stack *utils.Stack, contract 
 	return
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (tc *TypeChecker) typeCheckOutputs(op *vm.Op, outputs lexer.DataTypes, expected *utils.Stack) error {
 	if len(outputs) != expected.Size() {
 		return logger.TypeCheckerError(
@@ -284,12 +290,14 @@ func (tc *TypeChecker) typeCheckOutputs(op *vm.Op, outputs lexer.DataTypes, expe
 		if e != lexer.DataTypeAny && e != a {
 			return logger.TypeCheckerError(
 				&op.OpToken.Loc, "Output arg #%d for `%s` don't fit to its contract(expected: %s actual: %s)",
-				i, op.OpToken.Text, lexer.DataTypeName[e], lexer.DataTypeName[a],
+				i, op.OpToken.Text, lexer.DataType2Str[e], lexer.DataType2Str[a],
 			)
 		}
 	}
 	return nil
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (tc *TypeChecker) typeCheckIntrinsic(op *vm.Op, i lexer.IntrinsicType, ctx *TypeCheckerContext) error {
 	contract, err_msg := GetIntrinsicContract(i)
@@ -556,7 +564,9 @@ func (tc *TypeChecker) typeCheckIfBlock(ops *[]vm.Op, i int, contextStack *TypeC
 	}
 }
 
-func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeCheckerContextStack) ( /*o *TypeCheckerOutputs, */ err error) {
+// ---------------------------------------------------------------------------------------------------------------------
+
+func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeCheckerContextStack) (err error) {
 	ctx := contextStack.Top()
 
 	for i := start; i < len(*ops); {
@@ -632,7 +642,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 				ctx.Outputs.Index = i + int(op.Operand.(types.IntType)) - 1
 				return nil
 			default:
-				return logger.TypeCheckerError(&op.OpToken.Loc, "Type checking for %s (OpJump) is not implemented yet", vm.OpJumpTypeName[block_type])
+				return logger.TypeCheckerError(&op.OpToken.Loc, "Type checking for %s (OpJump) is not implemented yet", vm.OpJumpType2Str[block_type])
 			}
 
 		case vm.OpCondJump:
@@ -703,7 +713,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			i++
 
 		default:
-			err = logger.TypeCheckerError(&op.OpToken.Loc, "Type check for `%s` op is not implemented yet", vm.OpName[op.Typ])
+			err = logger.TypeCheckerError(&op.OpToken.Loc, "Type check for `%s` op is not implemented yet", vm.OpType2Str[op.Typ])
 			return
 		}
 	}
@@ -719,6 +729,8 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 
 	return nil
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (tc *TypeChecker) TypeCheckProgram(ops *[]vm.Op, ctx *compiler.CompileTimeContext) error {
 	if !tc.enabled {

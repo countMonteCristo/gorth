@@ -188,7 +188,7 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 		}
 
 		// check if word is boolean literal
-		boolean, exists := types.WordToBool[word]
+		boolean, exists := types.Str2Bool[word]
 		if exists {
 			// fmt.Printf("`%s` - is a boolean\n", word)
 			token.Typ = TokenBool
@@ -198,7 +198,7 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 
 		// check if word is keyword
 		// fmt.Printf("try to create token as keyword\n")
-		keyword, exists := WordToKeyword[word]
+		keyword, exists := Str2Keyword[word]
 		if exists {
 			// fmt.Printf("`%s` - is a keyword\n", word)
 			token.Typ = TokenKeyword
@@ -233,7 +233,7 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 			}
 		}
 
-		datatype, exists := WordToDataType[word]
+		datatype, exists := Str2DataType[word]
 		if exists {
 			// fmt.Printf("`%s` - is a type\n", word)
 			token.Typ = TokenWord
@@ -290,7 +290,7 @@ func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (th
 				if next.Typ != TokenString {
 					err = logger.LexerError(
 						&token.Loc, "Expected import file path to be a %s, but got %s",
-						TokenTypeName[TokenString], TokenTypeName[next.Typ],
+						TokenType2Str[TokenString], TokenType2Str[next.Typ],
 					)
 					return
 				}

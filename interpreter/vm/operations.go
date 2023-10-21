@@ -37,7 +37,7 @@ const (
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-var OpName = map[OpType]string{
+var OpType2Str = map[OpType]string{
 	OpPushInt:  "PUSH_INT",
 	OpPushBool: "PUSH_BOOL",
 	OpPushPtr:  "PUSH_PTR",
@@ -76,7 +76,7 @@ func (op *Op) Str(addr types.IntType) (s string) {
 
 	switch op.Typ {
 	case OpIntrinsic:
-		operand = lexer.IntrinsicName[op.Operand.(lexer.IntrinsicType)]
+		operand = lexer.Intrinsic2Str[op.Operand.(lexer.IntrinsicType)]
 	case OpPushInt, OpPushBool, OpPushPtr, OpCall, OpPushLocalAlloc, OpPushGlobalAlloc:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
@@ -94,7 +94,7 @@ func (op *Op) Str(addr types.IntType) (s string) {
 		if !ok {
 			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
 		}
-		operand = fmt.Sprintf("%d (%s)", res, OpJumpTypeName[op.Data.(OpJumpType)])
+		operand = fmt.Sprintf("%d (%s)", res, OpJumpType2Str[op.Data.(OpJumpType)])
 	case OpCapture:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
@@ -102,7 +102,7 @@ func (op *Op) Str(addr types.IntType) (s string) {
 		}
 		type_names := make([]string, 0)
 		for _, typ := range op.Data.(lexer.DataTypes) {
-			type_names = append(type_names, lexer.DataTypeName[typ])
+			type_names = append(type_names, lexer.DataType2Str[typ])
 		}
 		operand = fmt.Sprintf("%d (%s)", res, strings.Join(type_names, ","))
 	case OpPushCaptured:
@@ -110,7 +110,7 @@ func (op *Op) Str(addr types.IntType) (s string) {
 		if !ok {
 			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
 		}
-		operand = fmt.Sprintf("%d (%s)", res, lexer.DataTypeName[op.Data.(lexer.DataType)])
+		operand = fmt.Sprintf("%d (%s)", res, lexer.DataType2Str[op.Data.(lexer.DataType)])
 	case OpDropCaptures:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
@@ -118,10 +118,10 @@ func (op *Op) Str(addr types.IntType) (s string) {
 		}
 		operand = fmt.Sprint(res)
 	default:
-		logger.VmCrash(&op.OpToken.Loc, "Unhandled operation: `%s`", OpName[op.Typ])
+		logger.VmCrash(&op.OpToken.Loc, "Unhandled operation: `%s`", OpType2Str[op.Typ])
 	}
 
-	s = fmt.Sprintf("%4d: %s %v\t\t(debug: %s)", addr, OpName[op.Typ], operand, op.DebugInfo.(string))
+	s = fmt.Sprintf("%4d: %s %v\t\t(debug: %s)", addr, OpType2Str[op.Typ], operand, op.DebugInfo.(string))
 	return
 }
 
@@ -143,16 +143,16 @@ const (
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-var OpJumpTypeName = map[OpJumpType]string{
-	OpJumpIf:       lexer.KeywordName[lexer.KeywordIf],
-	OpJumpElse:     lexer.KeywordName[lexer.KeywordElse],
-	OpJumpEnd:      lexer.KeywordName[lexer.KeywordEnd],
-	OpJumpWhile:    lexer.KeywordName[lexer.KeywordWhile],
-	OpJumpBreak:    lexer.KeywordName[lexer.KeywordBreak],
-	OpJumpContinue: lexer.KeywordName[lexer.KeywordContinue],
-	OpJumpReturn:   lexer.KeywordName[lexer.KeywordReturn],
+var OpJumpType2Str = map[OpJumpType]string{
+	OpJumpIf:       lexer.Keyword2Str[lexer.KeywordIf],
+	OpJumpElse:     lexer.Keyword2Str[lexer.KeywordElse],
+	OpJumpEnd:      lexer.Keyword2Str[lexer.KeywordEnd],
+	OpJumpWhile:    lexer.Keyword2Str[lexer.KeywordWhile],
+	OpJumpBreak:    lexer.Keyword2Str[lexer.KeywordBreak],
+	OpJumpContinue: lexer.Keyword2Str[lexer.KeywordContinue],
+	OpJumpReturn:   lexer.Keyword2Str[lexer.KeywordReturn],
 }
 
-var NameToOpJumpType = utils.RevMap(OpJumpTypeName).(map[string]OpJumpType)
+var Str2OpJumpType = utils.RevMap(OpJumpType2Str).(map[string]OpJumpType)
 
 // ---------------------------------------------------------------------------------------------------------------------

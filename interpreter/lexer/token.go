@@ -28,7 +28,7 @@ type Token struct {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-var TokenTypeName = map[TokenType]string{
+var TokenType2Str = map[TokenType]string{
 	TokenInt:     "TokenInt",
 	TokenBool:    "TokenBool",
 	TokenWord:    "TokenWord",

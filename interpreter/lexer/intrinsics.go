@@ -70,7 +70,7 @@ const (
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-var IntrinsicName = map[IntrinsicType]string{
+var Intrinsic2Str = map[IntrinsicType]string{
 	IntrinsicPlus:  "+",
 	IntrinsicMinus: "-",
 	IntrinsicMul:   "*",
@@ -132,6 +132,6 @@ var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicCastBool: "cast(bool)",
 }
 
-var WordToIntrinsic = utils.RevMap(IntrinsicName).(map[string]IntrinsicType)
+var Str2Intrinsic = utils.RevMap(Intrinsic2Str).(map[string]IntrinsicType)
 
 // ---------------------------------------------------------------------------------------------------------------------

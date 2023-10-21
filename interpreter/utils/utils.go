@@ -16,6 +16,11 @@ func Exit(exitcode int) {
 	os.Exit(exitcode)
 }
 
+func ExitWithError(err error) {
+	fmt.Fprint(os.Stderr, err.Error())
+	Exit(1)
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 func RevMap(i interface{}) interface{} {
@@ -85,11 +90,11 @@ func (a *ArrayArgs) Set(value string) error {
 }
 
 func MapF[T, V any](ts []T, fn func(T) V) []V {
-    result := make([]V, len(ts))
-    for i, t := range ts {
-        result[i] = fn(t)
-    }
-    return result
+	result := make([]V, len(ts))
+	for i, t := range ts {
+		result[i] = fn(t)
+	}
+	return result
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
