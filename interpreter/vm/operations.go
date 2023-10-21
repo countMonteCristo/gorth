@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type OpType int
 
 const (
@@ -33,6 +35,8 @@ const (
 	OpDropCaptures
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 var OpName = map[OpType]string{
 	OpPushInt:  "PUSH_INT",
 	OpPushBool: "PUSH_BOOL",
@@ -55,6 +59,8 @@ var OpName = map[OpType]string{
 	OpDropCaptures: "DROP_CAPS",
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type Op struct {
 	Typ       OpType
 	Operand   interface{}
@@ -63,7 +69,9 @@ type Op struct {
 	DebugInfo interface{}
 }
 
-func (op *Op) Str(addr int64) (s string) {
+// ---------------------------------------------------------------------------------------------------------------------
+
+func (op *Op) Str(addr types.IntType) (s string) {
 	var operand string
 
 	switch op.Typ {
@@ -117,6 +125,8 @@ func (op *Op) Str(addr int64) (s string) {
 	return
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type OpJumpType int
 
 const (
@@ -131,6 +141,8 @@ const (
 	OpJumpReturn
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 var OpJumpTypeName = map[OpJumpType]string{
 	OpJumpIf:       lexer.KeywordName[lexer.KeywordIf],
 	OpJumpElse:     lexer.KeywordName[lexer.KeywordElse],
@@ -142,3 +154,5 @@ var OpJumpTypeName = map[OpJumpType]string{
 }
 
 var NameToOpJumpType = utils.RevMap(OpJumpTypeName).(map[string]OpJumpType)
+
+// ---------------------------------------------------------------------------------------------------------------------

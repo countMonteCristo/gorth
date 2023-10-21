@@ -2,6 +2,8 @@ package lexer
 
 import "Gorth/interpreter/utils"
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type KeywordType int
 
 const (
@@ -26,6 +28,8 @@ const (
 	KeywordInclude
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 var KeywordName = map[KeywordType]string{
 	KeywordIf:   "if",
 	KeywordElse: "else",
@@ -49,3 +53,5 @@ var KeywordName = map[KeywordType]string{
 }
 
 var WordToKeyword = utils.RevMap(KeywordName).(map[string]KeywordType)
+
+// ---------------------------------------------------------------------------------------------------------------------

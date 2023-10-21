@@ -6,6 +6,8 @@ import (
 	"Gorth/interpreter/vm"
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type Contract struct {
 	Inputs  *utils.Stack
 	Outputs *utils.Stack
@@ -212,6 +214,8 @@ var intrinsicContract = map[lexer.IntrinsicType]*Contract{
 	},
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func GetIntrinsicContract(i lexer.IntrinsicType) (*Contract, string) {
 	if i == lexer.IntrinsicOffset || i == lexer.IntrinsicReset {
 		return nil, "compile-time intrinsics do not need contracts"
@@ -224,9 +228,13 @@ func GetIntrinsicContract(i lexer.IntrinsicType) (*Contract, string) {
 	return contract, ""
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type CustomFunc func() lexer.DataTypes
 
 var DefaultCustomFunc = func() lexer.DataTypes { return lexer.DataTypes{} }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 type IntrinsicLogicFunc func(i lexer.IntrinsicType, c *Contract, inputs lexer.DataTypes, f CustomFunc) lexer.DataTypes
 

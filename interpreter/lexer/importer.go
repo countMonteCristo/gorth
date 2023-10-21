@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type Importer struct {
 	Paths    []string        // where to find imported files
 	Included map[string]bool // already included files
@@ -20,6 +22,8 @@ func NewImporter(pkg_dir string, include_paths utils.ArrayArgs) *Importer {
 	i.Paths = append(i.Paths, include_paths...)
 	return i
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (i *Importer) Find(fn string) (string, bool) {
 	results := make([]string, 0)
@@ -45,3 +49,5 @@ func (i *Importer) Find(fn string) (string, bool) {
 	}
 	return fn, false
 }
+
+// ---------------------------------------------------------------------------------------------------------------------

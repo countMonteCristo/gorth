@@ -1,26 +1,18 @@
-package types
+package debugger
 
-import (
-	"Gorth/interpreter/utils"
-)
+import "Gorth/interpreter/types"
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-type IntType = int64
-type BoolType = IntType
-
-// ---------------------------------------------------------------------------------------------------------------------
-
-const (
-	BoolTrue  BoolType = 1
-	BoolFalse BoolType = 0
-)
-
-var BoolName = map[BoolType]string{
-	BoolTrue:  "true",
-	BoolFalse: "false",
+type BreakPointList struct {
+	Funcs []string
+	Addr  []types.IntType
 }
 
-var WordToBool = utils.RevMap(BoolName).(map[string]BoolType)
+// ---------------------------------------------------------------------------------------------------------------------
+
+func (l *BreakPointList) Count() int {
+	return len(l.Funcs) + len(l.Addr)
+}
 
 // ---------------------------------------------------------------------------------------------------------------------

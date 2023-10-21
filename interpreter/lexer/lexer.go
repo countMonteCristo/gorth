@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type Lexer struct {
 	Fn    string
 	Loc   utils.Location
@@ -17,39 +19,7 @@ type Lexer struct {
 	Col   int
 }
 
-type TokenHolder struct {
-	tokens []Token
-	idx    int
-}
-
-func NewTokenHolder() *TokenHolder {
-	return &TokenHolder{tokens: make([]Token, 0), idx: 0}
-}
-
-func (th *TokenHolder) AppendTokensFrom(oth *TokenHolder) {
-	th.tokens = append(th.tokens, oth.tokens...)
-}
-func (th *TokenHolder) AppendToken(token Token) {
-	th.tokens = append(th.tokens, token)
-}
-
-func (th *TokenHolder) GetNextToken() (token *Token) {
-	token = &(th.tokens[th.idx])
-	th.idx++
-	return
-}
-
-func (th *TokenHolder) NextToken() *Token {
-	return &(th.tokens[th.idx])
-}
-
-func (th *TokenHolder) Empty() bool {
-	return th.idx >= len(th.tokens)
-}
-
-func (th *TokenHolder) Reset() {
-	th.idx = 0
-}
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (lx *Lexer) ChopChar(data string, pos int) (b byte, escaped bool, err error) {
 	escaped = false
@@ -163,6 +133,8 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 
 	return
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (lx *Lexer) next_token() (token Token, end bool, err error) {
 	end = false
@@ -280,6 +252,8 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 	return
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (th *TokenHolder, err error) {
 	lx.Fn = fn
 	lx.Row = 0
@@ -362,3 +336,5 @@ func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (th
 
 	return
 }
+
+// ---------------------------------------------------------------------------------------------------------------------

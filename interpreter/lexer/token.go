@@ -2,6 +2,8 @@ package lexer
 
 import "Gorth/interpreter/utils"
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 // Type for different tokens
 type TokenType int
 
@@ -15,12 +17,16 @@ const (
 	TokenChar
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type Token struct {
 	Typ   TokenType
 	Text  string
 	Value interface{}
 	Loc   utils.Location
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 var TokenTypeName = map[TokenType]string{
 	TokenInt:     "TokenInt",
@@ -30,3 +36,5 @@ var TokenTypeName = map[TokenType]string{
 	TokenString:  "TokenString",
 	TokenChar:    "TokenChar",
 }
+
+// ---------------------------------------------------------------------------------------------------------------------

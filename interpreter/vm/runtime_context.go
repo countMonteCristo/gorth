@@ -7,10 +7,14 @@ import (
 	"os"
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type ExitCodeType struct {
 	Code types.IntType
 	Msg  string
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 type RuntimeSettings struct {
 	StringLiterals      *map[string]types.IntType
@@ -25,6 +29,8 @@ func NewRuntimeSettings(start types.IntType) *RuntimeSettings {
 		StringLiteralsStart: start,
 	}
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 type RunTimeContext struct {
 	Memory        ByteMemory
@@ -53,6 +59,8 @@ func NewRuntimeContext(s *VmSettings, global_scope_name string) *RunTimeContext 
 	return rc
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (rc *RunTimeContext) Reset() {
 	rc.Stack.Clear()
 	rc.ReturnStack.Clear()
@@ -63,6 +71,8 @@ func (rc *RunTimeContext) Reset() {
 	rc.Addr = rc.Settings.EntryPointAddr
 	rc.ReturnStack.Push(rc.OpsCount) // for exit after hitting OpFuncEnd of main function
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (rc *RunTimeContext) PrepareMemory(args []string, s *VmSettings) {
 	env := []string{}
@@ -76,6 +86,8 @@ func (rc *RunTimeContext) PrepareMemory(args []string, s *VmSettings) {
 	// in case we have global allocs
 	rc.Memory.OperativeMemRegion.Ptr = rc.Memory.OperativeMemRegion.Start + rc.Settings.GlobalMemorySize
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (rc *RunTimeContext) GetExitCode(err error) ExitCodeType {
 	if err == nil {
@@ -96,3 +108,5 @@ func (rc *RunTimeContext) GetExitCode(err error) ExitCodeType {
 
 	return rc.ExitCode
 }
+
+// ---------------------------------------------------------------------------------------------------------------------

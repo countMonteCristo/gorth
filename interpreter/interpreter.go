@@ -11,6 +11,15 @@ import (
 	"os"
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
+func show_err_and_exit(err error) {
+	fmt.Fprint(os.Stderr, err.Error())
+	utils.Exit(1)
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
 type Interpreter struct {
 	lexer       lexer.Lexer
 	vm          vm.VM
@@ -19,11 +28,6 @@ type Interpreter struct {
 	importer    lexer.Importer
 	debugger    debugger.Debugger
 	args        []string
-}
-
-func show_err_and_exit(err error) {
-	fmt.Fprint(os.Stderr, err.Error())
-	utils.Exit(1)
 }
 
 func NewInterpreter(arguments []string, pkg_dir string, s *vm.VmSettings) *Interpreter {
@@ -40,6 +44,8 @@ func NewInterpreter(arguments []string, pkg_dir string, s *vm.VmSettings) *Inter
 	return i
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (i *Interpreter) Prepare(fn string) {
 	tokens, err := i.lexer.ProcessFile(fn, []string{}, &i.importer)
 	if err != nil {
@@ -54,6 +60,8 @@ func (i *Interpreter) Prepare(fn string) {
 		show_err_and_exit(err)
 	}
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (i *Interpreter) Run(fn string) vm.ExitCodeType {
 	i.Prepare(fn)
@@ -75,6 +83,8 @@ func (i *Interpreter) RunDebug(fn string) {
 	}
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (i *Interpreter) ProcessExit(exit_code vm.ExitCodeType) {
 	if exit_code.Code != 0 {
 		fmt.Fprintf(os.Stderr, "Script finished with exit code %d", exit_code.Code)
@@ -85,3 +95,5 @@ func (i *Interpreter) ProcessExit(exit_code vm.ExitCodeType) {
 	}
 	os.Exit(int(exit_code.Code))
 }
+
+// ---------------------------------------------------------------------------------------------------------------------

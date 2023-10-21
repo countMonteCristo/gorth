@@ -2,6 +2,8 @@ package lexer
 
 import "Gorth/interpreter/utils"
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type IntrinsicType int
 
 const (
@@ -66,6 +68,8 @@ const (
 	IntrinsicCastBool
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 var IntrinsicName = map[IntrinsicType]string{
 	IntrinsicPlus:  "+",
 	IntrinsicMinus: "-",
@@ -129,3 +133,5 @@ var IntrinsicName = map[IntrinsicType]string{
 }
 
 var WordToIntrinsic = utils.RevMap(IntrinsicName).(map[string]IntrinsicType)
+
+// ---------------------------------------------------------------------------------------------------------------------

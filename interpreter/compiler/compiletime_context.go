@@ -3,87 +3,19 @@ package compiler
 import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/types"
-	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
 	"fmt"
 )
 
-type ScopeType int
+// ---------------------------------------------------------------------------------------------------------------------
 
-const (
-	ScopeGlobal ScopeType = iota
-	ScopeLocal
-	ScopeUnknown
-)
-
-type Allocation struct {
-	Offset types.IntType
-	Size   types.IntType
-}
-
-type Constant struct {
-	Value types.IntType
-	Typ   lexer.DataType
-}
-
-var DataTypeToOpType = map[lexer.DataType]vm.OpType{
-	lexer.DataTypeBool: vm.OpPushBool,
-	lexer.DataTypeInt:  vm.OpPushInt,
-	lexer.DataTypePtr:  vm.OpPushPtr,
-}
-
-type CapturedVal struct {
-	Name  string
-	Typ   lexer.DataType
-	Token *lexer.Token
-}
-
-type CaptureList struct {
-	Vals []CapturedVal
-}
-
-func NewCaptureList() *CaptureList {
-	return &CaptureList{Vals: make([]CapturedVal, 0)}
-}
-
-func (cl *CaptureList) Append(val CapturedVal) {
-	cl.Vals = append(cl.Vals, val)
-}
-
-// Allocations and constants visible only inside function
-type Scope struct {
-	ScopeName string
-	Allocs    map[string]Allocation
-	Consts    map[string]Constant
-	Names     map[string]lexer.Token
-	MemSize   types.IntType
-	Captures  utils.Stack
-}
-
-const GlobalScopeName = ""
-
-func NewScope(funcName string) *Scope {
-	return &Scope{
-		ScopeName: funcName, Consts: make(map[string]Constant), Allocs: make(map[string]Allocation),
-		Names: make(map[string]lexer.Token), MemSize: 0, Captures: utils.Stack{},
-	}
-}
-
-func (s *Scope) GetCapturedValue(name string) (types.IntType, bool) {
-	for i, v := range s.Captures.Data {
-		if v.(CapturedVal).Name == name {
-			return types.IntType(s.Captures.Size() - 1 - i), true
-		}
-	}
-	return -1, false
-}
-
+// Compile time context contains all information about compiled program
 type CompileTimeContext struct {
 	StringsMap           map[string]types.IntType // string literals to their memory addresses
 	Funcs                map[string]Function      // function name to function
 	Scopes               map[string]*Scope        // local function context (allocs, consts, etc)
-	Offset               types.IntType
-	CurrentFuncIsInlined bool
+	Offset               types.IntType            // current value for `offset` and `reset` keywords
+	CurrentFuncIsInlined bool                     // are we compiling inline function now or not
 }
 
 func NewCompileTimeContext() *CompileTimeContext {
@@ -98,6 +30,8 @@ func NewCompileTimeContext() *CompileTimeContext {
 
 	return ctx
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (ctx *CompileTimeContext) PreprocessStringLiterals(tokens *lexer.TokenHolder, start types.IntType) {
 	address := start
@@ -117,9 +51,13 @@ func (ctx *CompileTimeContext) PreprocessStringLiterals(tokens *lexer.TokenHolde
 	}
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (c *CompileTimeContext) GlobalScope() *Scope {
 	return c.Scopes[GlobalScopeName]
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (c *CompileTimeContext) GetLocalConst(name, scope_name string) (*Constant, bool) {
 	if scope_name != GlobalScopeName {
@@ -145,6 +83,8 @@ func (c *CompileTimeContext) GetConst(name, scope_name string) (*Constant, Scope
 	return nil, ScopeUnknown
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (c *CompileTimeContext) GetLocalAlloc(name, scope_name string) (Allocation, bool) {
 	if scope_name != GlobalScopeName {
 		alloc, exists := c.Scopes[scope_name].Allocs[name]
@@ -169,6 +109,8 @@ func (c *CompileTimeContext) GetAlloc(name, scope_name string) (Allocation, Scop
 	return Allocation{}, ScopeUnknown
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (c *CompileTimeContext) GetAllocInfo(name, scope_name string, mem *vm.ByteMemory) (types.IntType, []byte) {
 	alloc := c.Scopes[scope_name].Allocs[name]
 	var alloc_ptr types.IntType
@@ -181,6 +123,8 @@ func (c *CompileTimeContext) GetAllocInfo(name, scope_name string, mem *vm.ByteM
 	return alloc_ptr, alloc_mem
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (c *CompileTimeContext) DebugConsts(scope_name string) {
 	for const_name, constant := range c.Scopes[scope_name].Consts {
 		fmt.Printf("%s=%d ", const_name, constant.Value)
@@ -192,35 +136,30 @@ func (c *CompileTimeContext) DebugAllocs(scope_name string, mem *vm.ByteMemory) 
 		fmt.Printf("%s(%d,%d)=%d ", alloc_name, alloc_ptr, alloc.Size, alloc_mem)
 	}
 }
-
 func (c *CompileTimeContext) DebugConstNames(names []string, scope_name string) int {
 	n_found := 0
 	for _, name := range names {
-		constant, exists := c.GetLocalConst(name, scope_name)
-		if exists {
+		if constant, exists := c.GetLocalConst(name, scope_name); exists {
 			fmt.Printf("(%s) %s = %d type = %s\n", scope_name, name, constant.Value, lexer.DataTypeName[constant.Typ])
 			n_found++
 		}
-		constant, exists = c.GetGlobalConst(name)
-		if exists {
+		if constant, exists := c.GetGlobalConst(name); exists {
 			fmt.Printf("(%s) %s = %d type = %s\n", GlobalScopeName, name, constant.Value, lexer.DataTypeName[constant.Typ])
 			n_found++
 		}
 	}
 	return n_found
 }
-
 func (c *CompileTimeContext) DebugAllocNames(names []string, scope_name string, mem *vm.ByteMemory) int {
 	n_found := 0
 	for _, name := range names {
-		alloc, exists := c.GetLocalAlloc(name, scope_name)
-		if exists {
+		if alloc, exists := c.GetLocalAlloc(name, scope_name); exists {
 			alloc_ptr, alloc_mem := c.GetAllocInfo(name, scope_name, mem)
 			fmt.Printf("(%s) %s(%d,%d)=%v\n", scope_name, name, alloc_ptr, alloc.Size, alloc_mem)
 			n_found++
 		}
-		alloc, exists = c.GetGlobalAlloc(name)
-		if exists {
+
+		if alloc, exists := c.GetGlobalAlloc(name); exists {
 			alloc_ptr, alloc_mem := c.GetAllocInfo(name, GlobalScopeName, mem)
 			fmt.Printf("(%s) %s(%d,%d)=%v\n", GlobalScopeName, name, alloc_ptr, alloc.Size, alloc_mem)
 			n_found++
@@ -228,15 +167,17 @@ func (c *CompileTimeContext) DebugAllocNames(names []string, scope_name string, 
 	}
 	return n_found
 }
-
 func (c *CompileTimeContext) DebugFuncNames(names []string) int {
 	n_found := 0
 	for _, name := range names {
-		function, exists := c.Funcs[name]
-		if exists {
+		if function, exists := c.Funcs[name]; exists {
 			fmt.Printf("addr=%d %s\n", function.Addr, name)
 			n_found++
 		}
 	}
 	return n_found
 }
+
+// TODO: Debug captures
+
+// ---------------------------------------------------------------------------------------------------------------------

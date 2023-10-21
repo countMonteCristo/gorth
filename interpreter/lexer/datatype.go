@@ -6,10 +6,11 @@ import (
 	"strings"
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type DataType int
 type DataTypes []DataType
 
-// TODO: add `any` datatype?
 const (
 	DataTypeAny DataType = iota
 	DataTypeInt
@@ -24,6 +25,8 @@ var DataTypeName = map[DataType]string{
 	DataTypeBool: "bool",
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (t DataType) String() string {
 	return DataTypeName[t]
 }
@@ -33,4 +36,8 @@ func (types DataTypes) String() string {
 	return fmt.Sprintf("[%s]", strings.Join(res, ", "))
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 var WordToDataType = utils.RevMap(DataTypeName).(map[string]DataType)
+
+// ---------------------------------------------------------------------------------------------------------------------

@@ -10,9 +10,13 @@ import (
 	"strings"
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func Exit(exitcode int) {
 	os.Exit(exitcode)
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func RevMap(i interface{}) interface{} {
 	// Get type
@@ -35,6 +39,8 @@ func RevMap(i interface{}) interface{} {
 	}
 	panic(fmt.Sprintf("Unsupported type of input argument in utils.RevMap: %#v", t))
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func ReadFile(fn string) (lines []string) {
 	file, err := os.Open(fn)
@@ -65,6 +71,8 @@ func ReadFile(fn string) (lines []string) {
 	return
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type ArrayArgs []string
 
 func (a *ArrayArgs) String() string {
@@ -83,3 +91,5 @@ func MapF[T, V any](ts []T, fn func(T) V) []V {
     }
     return result
 }
+
+// ---------------------------------------------------------------------------------------------------------------------

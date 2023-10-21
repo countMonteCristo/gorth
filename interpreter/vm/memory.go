@@ -9,9 +9,13 @@ import (
 	"fmt"
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 const (
 	sizeof_ptr = 4
 )
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 type AccessRights int
 
@@ -19,6 +23,8 @@ const (
 	AccessRead AccessRights = 1 << iota
 	AccessWrite
 )
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 type MemoryRegion struct {
 	Start  types.IntType
@@ -31,9 +37,13 @@ func NewMemoryRegion(start, size types.IntType, a AccessRights) MemoryRegion {
 	return MemoryRegion{Start: start, Ptr: start, Size: size, Access: a}
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (r *MemoryRegion) HasRight(a AccessRights) bool {
 	return (r.Access & a) != 0
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 // Memory for the Gorth programm represented as array of bytes.
 // It is divided into several pieces:
@@ -64,6 +74,8 @@ func NewMemory(mem_size types.IntType) ByteMemory {
 	return mem
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (m *ByteMemory) getMemoryRegion(ptr types.IntType, size int) []*MemoryRegion {
 	result := make([]*MemoryRegion, 0)
 	eptr := ptr + types.IntType(size)
@@ -80,9 +92,13 @@ func (m *ByteMemory) getMemoryRegion(ptr types.IntType, size int) []*MemoryRegio
 	return result
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (m *ByteMemory) Size() int {
 	return len(m.Data)
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (m *ByteMemory) saveString(start types.IntType, s *string) types.IntType {
 	bytes := []byte(*s)
@@ -138,6 +154,8 @@ func (m *ByteMemory) Prepare(args, env []string, strings *map[string]types.IntTy
 	// form RAM region
 	m.OperativeMemRegion = NewMemoryRegion(ptr, types.IntType(m.Size())-ptr, AccessRead|AccessWrite)
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (m *ByteMemory) LoadFromMem(ptr types.IntType, size int, loc *utils.Location, ignore bool) (value types.IntType, err error) {
 	if ptr == 0 {
@@ -208,10 +226,12 @@ func (m *ByteMemory) StoreToMem(ptr types.IntType, value types.IntType, size int
 		return logger.VmRuntimeError(loc, "Cannot store value of size %d, only 1,2,4 and 8 are supported", size)
 	}
 	for i, b := range buf.Bytes() {
-		m.Data[ptr+int64(i)] = b
+		m.Data[ptr+types.IntType(i)] = b
 	}
 	return nil
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 var EscapedCharToString = map[byte]string{
 	'\n': "'\\n'", '\r': "'\\r'", '\t': "'\\t'", 0: "'\\0'",
@@ -250,3 +270,5 @@ func (m *ByteMemory) PrintDebug() {
 	)
 	fmt.Printf("  %v\n", m.Data[m.OperativeMemRegion.Start:m.OperativeMemRegion.Ptr])
 }
+
+// ---------------------------------------------------------------------------------------------------------------------

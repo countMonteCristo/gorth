@@ -10,6 +10,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type VM struct {
 	Rc RunTimeContext
 	S  VmSettings
@@ -23,6 +25,8 @@ func NewVM(s *VmSettings, global_scope_name string) *VM {
 
 	return &vm
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (vm *VM) ProcessSyscall1() {
 	switch syscall_id := vm.Rc.Stack.Pop().(types.IntType); syscall_id {
@@ -134,6 +138,8 @@ func (vm *VM) ProcessSyscall5() {
 		logger.VmCrash(nil, "syscall2 for #%d is not implemented yet\n", syscall_id)
 	}
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (vm *VM) Step(ops *[]Op) (err error) {
 	op := &(*ops)[vm.Rc.Addr]
@@ -328,10 +334,14 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 	return
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (vm *VM) PrepareRuntimeContext(args []string) {
 	vm.Rc.PrepareMemory(args, &vm.S)
 	vm.Rc.Reset()
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (vm *VM) Interprete(ops *[]Op, args []string) ExitCodeType {
 	vm.PrepareRuntimeContext(args)
@@ -344,3 +354,5 @@ func (vm *VM) Interprete(ops *[]Op, args []string) ExitCodeType {
 	}
 	return vm.Rc.GetExitCode(err)
 }
+
+// ---------------------------------------------------------------------------------------------------------------------

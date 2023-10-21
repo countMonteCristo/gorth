@@ -10,6 +10,8 @@ import (
 	"sort"
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type Debugger struct {
 	vm    *vm.VM
 	iface DebugInterface
@@ -21,6 +23,8 @@ func NewDebugger(vm *vm.VM) *Debugger {
 		iface: *NewDebugInterface(),
 	}
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (d *Debugger) Run() DebugTransition {
 	scanner := bufio.NewScanner(os.Stdin)
@@ -50,6 +54,8 @@ func (d *Debugger) Run() DebugTransition {
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func (d *Debugger) Debug(ops *[]vm.Op, args []string, ctx *compiler.CompileTimeContext) {
 loop:
@@ -257,6 +263,8 @@ loop:
 	}
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (d *Debugger) doSteps(ops *[]vm.Op, count int, go_up bool) error {
 	i := 0
 	for d.vm.Rc.Addr < d.vm.Rc.OpsCount {
@@ -298,3 +306,5 @@ func (d *Debugger) checkErr(err error, ops *[]vm.Op) {
 		d.iface.SendOK()
 	}
 }
+
+// ---------------------------------------------------------------------------------------------------------------------

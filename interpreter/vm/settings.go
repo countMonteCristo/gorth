@@ -8,6 +8,8 @@ import (
 	"strconv"
 )
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 type VmSettings struct {
 	Debug         bool // debug mode
 	Env           bool // store env variables to memory
@@ -16,6 +18,8 @@ type VmSettings struct {
 	CallStackSize int
 	IncludePaths  utils.ArrayArgs
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 // TODO: add flags for memory and call_stack instead of reading env?
 func NewSettings(debug, env, typecheck bool, mem types.IntType, call_stack_Size int, include_paths utils.ArrayArgs) *VmSettings {
@@ -42,3 +46,5 @@ func NewSettings(debug, env, typecheck bool, mem types.IntType, call_stack_Size 
 		IncludePaths: include_paths,
 	}
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
