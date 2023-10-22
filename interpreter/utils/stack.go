@@ -1,9 +1,5 @@
 package utils
 
-import (
-	"fmt"
-)
-
 // ---------------------------------------------------------------------------------------------------------------------
 
 type Stack struct {
@@ -29,8 +25,7 @@ func (s *Stack) Pop() (x interface{}) {
 		x = s.Data[len(s.Data)-1]
 		s.Data = s.Data[:len(s.Data)-1]
 	} else {
-		fmt.Println("Stack underflow")
-		Exit(1)
+		panic("Stack underflow")
 	}
 	// fmt.Printf("INFO: stack after pop: %v\n", s.Data)
 	return
@@ -40,8 +35,7 @@ func (s *Stack) Top() (x interface{}) {
 	if len(s.Data) > 0 {
 		x = s.Data[len(s.Data)-1]
 	} else {
-		fmt.Println("Stack underflow")
-		Exit(1)
+		panic("Stack underflow")
 	}
 	return
 }

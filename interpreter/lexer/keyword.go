@@ -8,6 +8,7 @@ type KeywordType int
 
 const (
 	KeywordIf KeywordType = iota
+	KeywordElif
 	KeywordElse
 	KeywordEnd
 
@@ -32,6 +33,7 @@ const (
 
 var Keyword2Str = map[KeywordType]string{
 	KeywordIf:   "if",
+	KeywordElif: "elif",
 	KeywordElse: "else",
 	KeywordEnd:  "end",
 

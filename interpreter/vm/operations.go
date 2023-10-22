@@ -131,6 +131,7 @@ type OpJumpType int
 
 const (
 	OpJumpIf OpJumpType = iota
+	OpJumpElif
 	OpJumpElse
 	OpJumpEnd
 
@@ -145,6 +146,7 @@ const (
 
 var OpJumpType2Str = map[OpJumpType]string{
 	OpJumpIf:       lexer.Keyword2Str[lexer.KeywordIf],
+	OpJumpElif:		lexer.Keyword2Str[lexer.KeywordElif],
 	OpJumpElse:     lexer.Keyword2Str[lexer.KeywordElse],
 	OpJumpEnd:      lexer.Keyword2Str[lexer.KeywordEnd],
 	OpJumpWhile:    lexer.Keyword2Str[lexer.KeywordWhile],
