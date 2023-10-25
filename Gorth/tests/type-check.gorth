@@ -3,9 +3,13 @@
 func f : do
   if 1 2 < do
     0 while dup 10 < do
-      if dup 3 = do 1 + continue end
-      dup puti
-      if dup 5 > do break end
+      if dup 3 = do
+        1 + continue
+      elif dup 6 > do
+        break
+      else
+        dup puti
+      end
       1 +
     end drop
   else

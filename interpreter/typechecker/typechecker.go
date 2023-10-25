@@ -70,9 +70,6 @@ func (tco *TypeCheckerOutputs) FormatStacks(indent string) string {
 }
 
 func OutputsAreSame(f, s *TypeCheckerOutputs) bool {
-	if f.Index != s.Index {
-		return false
-	}
 	for i := range f.Results {
 		if !utils.StacksAreEqual[lexer.DataType](&f.Results[i].Stack, &s.Results[i].Stack) {
 			return false
@@ -465,103 +462,132 @@ func (tc *TypeChecker) typeCheckWhileBlock(ops *[]vm.Op, i int, contextStack *Ty
 	return index, nil
 }
 
+/*
+	Example of how the spellchecker checks if-elif-else-end blocks:
+
+	if[0] () [1]do
+	()
+	[2]elif[3] () [4]do
+	()
+	[5]elif[6] () [7]do
+	()
+	[8]else[9]
+	()
+	[10]end
+
+	* 0-1-(copy stack)-2
+	* 0-1-(copy stack)-3-4-(copy stack)-5
+	* 0-1-(copy stack)-3-4-(copy stack)-6-7-(copy stack)-8
+	* 0-1-(copy stack)-3-4-(copy stack)-6-7-(copy stack)-9-10
+*/
 func (tc *TypeChecker) typeCheckIfBlock(ops *[]vm.Op, i int, contextStack *TypeCheckerContextStack) (int, error) {
 	index := -1
-
 	loc := &(*ops)[i].OpToken.Loc
 
-	// process if case
-	if err := tc.typeCheck(ops, i+1, contextStack); err != nil {
-		return i, err
-	}
-	top := contextStack.Top()
-	i = top.Outputs.Index
+	var true_stack, false_stack, current_stack *TypeCheckerContextStack
+	results := make([]*TypeCheckerContext, 0)
+	current_stack = contextStack
 
-	// now i points to the `do`-operation
-	do_op := &(*ops)[i]
-	do_op_operand := int(do_op.Operand.(types.IntType))
-	j := i + do_op_operand - 1
+	onlyif := true
+loop:
+	for {
+		if err := tc.typeCheck(ops, i+1, current_stack); err != nil {
+			return i, err
+		}
+		top := current_stack.Top()
+		i = top.Outputs.Index
 
-	switch (*ops)[j].Data.(vm.OpJumpType) {
-	case vm.OpJumpElse: // if-do-else-end, so if-branch should do the same stack as else-branch
-		true_stack := contextStack.Clone()
+		do_op := &(*ops)[i]
+		do_op_operand := int(do_op.Operand.(types.IntType))
+
+		j := i + do_op_operand - 1 // j points to `elif`, `else` or `end`
+
+		true_stack = current_stack.Clone()
 		ctx1 := top.Clone(context_type_if)
 		true_stack.Push(ctx1)
 
-		false_stack := contextStack.Clone()
-		ctx2 := top.Clone(context_type_if)
-		false_stack.Push(ctx2)
+		false_stack = current_stack.Clone()
 
-		if err := tc.typeCheck(ops, i+1, true_stack); err != nil {
-			return index, err
-		}
-		if err := tc.typeCheck(ops, j+1, false_stack); err != nil {
-			return index, err
-		}
-
-		false_ctx := false_stack.Top()
-		true_ctx := true_stack.Top()
-		if false_ctx.Terminated {
-			if true_ctx.Terminated {
-				if !ContextsAreSame(true_ctx, false_ctx) {
-					return index, logger.TypeCheckerError(
-						nil, "`true` and `false` branch results of if-else-end block (%s) do not match (both have return):\ntrue:  %s (%s)\nfalse: %s (%s)",
-						logger.FormatLoc(loc),
-						true_ctx.Stack.Data, logger.FormatLoc(&do_op.OpToken.Loc),
-						false_ctx.Stack.Data, logger.FormatLoc(&(*ops)[j].OpToken.Loc),
-					)
-				}
-				top.Stack = false_ctx.Stack
-				index = false_ctx.Outputs.Index // go to OpFuncEnd
-				top.Terminated = true
-			} else {
-				top.Stack = true_ctx.Stack
-				index = j + int((*ops)[j].Operand.(types.IntType)) // go to end+1
+		switch (*ops)[j].Data.(vm.OpJumpType) {
+		case vm.OpJumpElif: // [el]if (..) do (..) elif
+			if err := tc.typeCheck(ops, i+1, true_stack); err != nil {
+				return index, err
 			}
+			i = j
+			results = append(results, true_stack.Top())
+			current_stack = false_stack
+			onlyif = false
+		case vm.OpJumpElse: // [el]if (..) do (..) else (..) end
+			false_stack = current_stack.Clone()
+			ctx2 := top.Clone(context_type_if)
+			false_stack.Push(ctx2)
+
+			if err := tc.typeCheck(ops, i+1, true_stack); err != nil {
+				return index, err
+			}
+			results = append(results, true_stack.Top())
+			if err := tc.typeCheck(ops, j+1, false_stack); err != nil {
+				return index, err
+			}
+			results = append(results, false_stack.Top())
+			// index = false_stack.Top().Outputs.Index + 1
+			break loop
+		case vm.OpJumpEnd: // [el]if (..) do (..) end
+			if onlyif {
+				falsed := current_stack.Top().Clone(context_type_if)
+				falsed.Outputs.Index = j
+				results = append(results, falsed)
+			}
+			if err := tc.typeCheck(ops, i+1, true_stack); err != nil {
+				return index, err
+			}
+			i = j
+			results = append(results, true_stack.Top())
+			index = j + 1
+
+			break loop
+		default:
+			return index, logger.TypeCheckerError(loc, "UNHANDLED OpJumpType")
+		}
+	}
+
+	terminated := make([]*TypeCheckerContext, 0)
+	not_terminated := make([]*TypeCheckerContext, 0)
+	for _, c := range results {
+		if c.Terminated {
+			terminated = append(terminated, c)
 		} else {
-			if !true_ctx.Terminated && !ContextsAreSame(true_ctx, false_ctx) {
-				return index, logger.TypeCheckerError(
-					nil, "`true` and `false` branch results of if-else-end block (%s) do not match:\ntrue:  %s (%s)\nfalse: %s (%s)",
-					logger.FormatLoc(loc),
-					true_ctx.Stack.Data, logger.FormatLoc(&do_op.OpToken.Loc),
-					false_ctx.Stack.Data, logger.FormatLoc(&(*ops)[j].OpToken.Loc),
-				)
-			}
-			top.Stack = false_ctx.Stack
-			index = false_ctx.Outputs.Index + 1 // go to end+1
+			not_terminated = append(not_terminated, c)
 		}
-		return index, nil
-	case vm.OpJumpEnd: // if-do-end, so if-branch should preserve the stack
-		true_stack := contextStack.Clone()
-		ctx1 := top.Clone(context_type_if)
-		true_stack.Push(ctx1)
-
-		false_stack := contextStack.Clone()
-		ctx2 := top.Clone(context_type_if)
-		ctx2.Outputs.Results = append(ctx2.Outputs.Results, TypeCheckerJumpResult{Stack: ctx2.Stack, Token: &(*ops)[j].OpToken})
-		ctx2.Outputs.Index = j
-		false_stack.Push(ctx2)
-
-		if err := tc.typeCheck(ops, i+1, true_stack); err != nil {
-			return index, err
-		}
-
-		false_ctx := false_stack.Top()
-		true_ctx := true_stack.Top()
-		if !true_ctx.Terminated && !ContextsAreSame(true_ctx, false_ctx) {
-			return index, logger.TypeCheckerError(
-				nil, "`true` and `false` branch results of if-end-block (%s) do not match:\ntrue:  %s (%s)\nfalse: %s (%s)",
-				logger.FormatLoc(loc),
-				true_ctx.Stack.Data, logger.FormatLoc(&do_op.OpToken.Loc),
-				false_ctx.Stack.Data, logger.FormatLoc(&(*ops)[j].OpToken.Loc),
-			)
-		}
-		top.Stack = false_ctx.Stack
-		index = j + 1 // go to end+1
-		return index, nil
-	default:
-		return index, logger.TypeCheckerError(loc, "`do` does not point neither to `else`, not to `end`, probably bug in compiler")
 	}
+
+	switch len(not_terminated) {
+	case 0:
+		if len(terminated) == 0 {
+			return index, logger.TypeCheckerError(loc, "Both terminated and not_terminated contexts are empty")
+		}
+		same := true
+		for k := 0; k < len(terminated)-1; k++ {
+			same = same && ContextsAreSame(terminated[k], terminated[k+1])
+		}
+		if !same {
+			return index, logger.TypeCheckerError(loc, "Terminated contexts are not the same")
+		}
+		contextStack.Top().Stack = terminated[0].Stack
+		index = terminated[0].Outputs.Index // go to OpFuncEnd
+		contextStack.Top().Terminated = true
+	default:
+		same := true
+		for k := 0; k < len(not_terminated)-1; k++ {
+			same = same && ContextsAreSame(not_terminated[k], not_terminated[k+1])
+		}
+		if !same {
+			return index, logger.TypeCheckerError(loc, "not_terminated contexts are not the same")
+		}
+		index = not_terminated[0].Outputs.Index + 1
+		contextStack.Top().Stack = not_terminated[0].Stack
+	}
+	return index, nil
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -640,6 +666,12 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
 				})
 				ctx.Outputs.Index = i + int(op.Operand.(types.IntType)) - 1
+				return nil
+			case vm.OpJumpElif:
+				ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
+					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
+				})
+				ctx.Outputs.Index = i
 				return nil
 			default:
 				return logger.TypeCheckerError(&op.OpToken.Loc, "Type checking for %s (OpJump) is not implemented yet", vm.OpJumpType2Str[block_type])
