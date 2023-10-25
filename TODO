@@ -34,6 +34,7 @@
   [*] using stack for types
   [*] use function signatures
   [*] generic functions
+  [*] enable type checking by default
 
 [] Improve interpreter
   [*] Add debugger mode (run by step, go in, go out, continue, etc)

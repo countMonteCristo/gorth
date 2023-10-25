@@ -67,7 +67,7 @@ Record test outputs:
 
 ## Usage
 ```
-> ./bin/gorth [-debug] [-env] [-check] [-I include_dir] Gorth/examples/helloworld.gorth [args...]
+> ./bin/gorth [-debug] [-env] [-disable-typecheck] [-I include_dir] Gorth/examples/helloworld.gorth [args...]
 ```
 
 Supported flags:
@@ -390,7 +390,7 @@ It is not allowed for the captured value name and constant, allocation of functi
 Capture blocks can be nested and can be placed inside while-loops and if(-else)-end blocks. `break`s and `continue`s inside a capture block are not allowed (though you can do `return` from capture block).
 
 # Type checking
-You can run your script with `-check` option to enable type checking.
+Type checking is enabled by default. You can run your script with `-disanble-typecheck` option to disable type checking.
 
 The process of type checking is quite similar to the process of interpretation the script. Type checker process all the script operations using types instead of actual numbers. Here are some type checking rules:
 * only one iteration of while-loop is processed, and after it the type stack should remain the same as before
