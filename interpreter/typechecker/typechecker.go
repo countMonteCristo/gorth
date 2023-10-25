@@ -488,19 +488,16 @@ loop:
 		top := current_stack.Top()
 		i = top.Outputs.Index
 
-		do_op := &(*ops)[i]
-		do_op_operand := int(do_op.Operand.(types.IntType))
+		do_op_operand := int((*ops)[i].Operand.(types.IntType))
 
 		j := i + do_op_operand - 1 // j points to `elif`, `else` or `end`
 
 		true_stack = current_stack.Clone()
-		ctx1 := top.Clone(context_type_if)
-		true_stack.Push(ctx1)
-
 		false_stack = current_stack.Clone()
+		true_stack.Push(top.Clone(context_type_if))
 
 		switch (*ops)[j].Data.(vm.OpJumpType) {
-		case vm.OpJumpElif: // [el]if (..) do (..) elif
+		case vm.OpJumpElif: // .. do (..) elif ..
 			ti, err := tc.typeCheck(ops, i+1, true_stack)
 			if err != nil {
 				return index, err
@@ -512,11 +509,7 @@ loop:
 			}
 			current_stack = false_stack
 			onlyif = false
-		case vm.OpJumpElse: // [el]if (..) do (..) else (..) end
-			false_stack = current_stack.Clone()
-			ctx2 := top.Clone(context_type_if)
-			false_stack.Push(ctx2)
-
+		case vm.OpJumpElse: // .. do (..) else (..) end ...
 			ti, err := tc.typeCheck(ops, i+1, true_stack)
 			if err != nil {
 				return index, err
@@ -526,6 +519,7 @@ loop:
 				index = ti + 1
 			}
 
+			false_stack.Push(top.Clone(context_type_if))
 			ti, err = tc.typeCheck(ops, j+1, false_stack);
 			if err != nil {
 				return index, err
@@ -536,7 +530,7 @@ loop:
 			}
 
 			break loop
-		case vm.OpJumpEnd: // [el]if (..) do (..) end
+		case vm.OpJumpEnd: // ... do (..) end ...
 			if onlyif {
 				falsed := current_stack.Top().Clone(context_type_if)
 				falsed.Outputs.Index = j
@@ -545,7 +539,6 @@ loop:
 			if _, err := tc.typeCheck(ops, i+1, true_stack); err != nil {
 				return index, err
 			}
-			i = j
 			results = append(results, true_stack.Top())
 			index = j + 1
 
@@ -570,17 +563,13 @@ loop:
 		if len(terminated) == 0 {
 			logger.TypeCheckerCrash(loc, "Both terminated and not_terminated contexts are empty")
 		}
-		index = terminated[0].Outputs.Index // go to OpFuncEnd
+		index = terminated[0].Outputs.Index // go to termination (`end` for while-loops or functions)
 		contextStack.Top().Stack = terminated[0].Stack
 		contextStack.Top().Terminated = true
 	default:
 		same := true
-		// maxi := 0
 		for k := 0; k < len(not_terminated)-1; k++ {
 			same = same && ContextsAreSame(not_terminated[k], not_terminated[k+1])
-			// if not_terminated[k].Outputs.Index > maxi {
-			// 	maxi = not_terminated[k].Outputs.Index
-			// }
 		}
 		if !same {
 			return index, logger.TypeCheckerError(
@@ -588,7 +577,6 @@ loop:
 				logger.FormatLoc(loc), FormatContextSliceOutputs(not_terminated, " * "),
 			)
 		}
-		// index = maxi + 1
 		contextStack.Top().Stack = not_terminated[0].Stack
 	}
 	return index, nil
