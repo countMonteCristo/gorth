@@ -51,7 +51,6 @@ func NewTestCase(fn string) TestCase {
 		// TODO: build ./bin/gorth if it does not exist
 		Cmd: []string{
 			"./bin/gorth",
-			"-check",
 			fn,
 		},
 	}

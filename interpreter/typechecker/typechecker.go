@@ -510,25 +510,18 @@ loop:
 			current_stack = false_stack
 			onlyif = false
 		case vm.OpJumpElse: // .. do (..) else (..) end ...
-			ti, err := tc.typeCheck(ops, i+1, true_stack)
-			if err != nil {
+			if _, err := tc.typeCheck(ops, i+1, true_stack); err != nil {
 				return index, err
 			}
 			results = append(results, true_stack.Top())
-			if !true_stack.Top().Terminated {
-				index = ti + 1
-			}
 
 			false_stack.Push(top.Clone(context_type_if))
-			ti, err = tc.typeCheck(ops, j+1, false_stack)
-			if err != nil {
+			if _, err := tc.typeCheck(ops, j+1, false_stack); err != nil {
 				return index, err
 			}
 			results = append(results, false_stack.Top())
-			if !false_stack.Top().Terminated {
-				index = ti + 1
-			}
 
+			index = j + int((*ops)[j].Operand.(types.IntType))
 			break loop
 		case vm.OpJumpEnd: // ... do (..) end ...
 			if onlyif {
