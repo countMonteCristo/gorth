@@ -12,7 +12,7 @@ import (
 // ---------------------------------------------------------------------------------------------------------------------
 
 const (
-	sizeof_ptr = 4
+	SIZEOF_PTR = 4
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -20,8 +20,8 @@ const (
 type AccessRights int
 
 const (
-	AccessRead AccessRights = 1 << iota
-	AccessWrite
+	ACCESS_READ AccessRights = 1 << iota
+	ACCESS_WRITE
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -60,15 +60,15 @@ type Memory struct {
 	Argv types.IntType // pointer to the null-terminated array of pointers to input arguments
 	Env  types.IntType // pointer to the null-terminated array of pointers to environment variables
 
-	StringsRegion      MemoryRegion // string literals
-	PtrsRegion         MemoryRegion // pointers to argv[] and env[]
-	OperativeMemRegion MemoryRegion // RAM
+	Strings  MemoryRegion // string literals
+	Pointers MemoryRegion // pointers to argv[] and env[]
+	Ram      MemoryRegion // RAM
 }
 
 func NewMemory(mem_size types.IntType) Memory {
 	mem := Memory{
-		Data:          make([]byte, mem_size),
-		StringsRegion: NewMemoryRegion(1, 0, AccessRead),
+		Data:    make([]byte, mem_size),
+		Strings: NewMemoryRegion(1, 0, ACCESS_READ),
 	}
 
 	return mem
@@ -79,7 +79,7 @@ func NewMemory(mem_size types.IntType) Memory {
 func (m *Memory) getMemoryRegion(ptr types.IntType, size int) []*MemoryRegion {
 	result := make([]*MemoryRegion, 0)
 	eptr := ptr + types.IntType(size)
-	regions := []*MemoryRegion{&m.StringsRegion, &m.PtrsRegion, &m.OperativeMemRegion}
+	regions := []*MemoryRegion{&m.Strings, &m.Pointers, &m.Ram}
 	for i, r := range regions {
 		if r.Start <= ptr && ptr < r.Start+r.Size {
 			result = append(result, r)
@@ -108,14 +108,14 @@ func (m *Memory) saveString(start types.IntType, s *string) types.IntType {
 
 func (m *Memory) savePtrs(start types.IntType, ptrs *[]types.IntType) types.IntType {
 	for _, ptr := range *ptrs {
-		m.StoreToMem(start, ptr, sizeof_ptr, nil, true)
-		start += types.IntType(sizeof_ptr)
+		m.StoreToMem(start, ptr, SIZEOF_PTR, nil, true)
+		start += types.IntType(SIZEOF_PTR)
 	}
 	return start
 }
 
 func (m *Memory) Prepare(args, env []string, strings *map[string]types.IntType) {
-	ptr := m.StringsRegion.Start
+	ptr := m.Strings.Start
 
 	// store string literals
 	for literal, addr := range *strings {
@@ -139,20 +139,20 @@ func (m *Memory) Prepare(args, env []string, strings *map[string]types.IntType) 
 	env_ptrs = append(env_ptrs, 0)
 
 	// form StringsRegion
-	m.StringsRegion.Size = ptr - m.StringsRegion.Size
-	m.StringsRegion.Ptr = ptr
+	m.Strings.Size = ptr - m.Strings.Size
+	m.Strings.Ptr = ptr
 
 	// form PtrsRegion and save pointers to it
-	m.PtrsRegion = NewMemoryRegion(ptr, 0, AccessRead)
-	m.PtrsRegion.Ptr = ptr
+	m.Pointers = NewMemoryRegion(ptr, 0, ACCESS_READ)
+	m.Pointers.Ptr = ptr
 	m.Argv = ptr
 	ptr = m.savePtrs(ptr, &argv_ptrs)
 	m.Env = ptr
 	ptr = m.savePtrs(ptr, &env_ptrs)
-	m.PtrsRegion.Size = ptr - m.PtrsRegion.Start
+	m.Pointers.Size = ptr - m.Pointers.Start
 
 	// form RAM region
-	m.OperativeMemRegion = NewMemoryRegion(ptr, types.IntType(m.Size())-ptr, AccessRead|AccessWrite)
+	m.Ram = NewMemoryRegion(ptr, types.IntType(m.Size())-ptr, ACCESS_READ|ACCESS_WRITE)
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -164,7 +164,7 @@ func (m *Memory) LoadFromMem(ptr types.IntType, size int, loc *utils.Location, i
 
 	if !ignore {
 		for _, r := range m.getMemoryRegion(ptr, size) {
-			if !r.HasRight(AccessRead) {
+			if !r.HasRight(ACCESS_READ) {
 				return 0, logger.VmRuntimeError(loc, "Attempt to read from protected memory region")
 			}
 		}
@@ -202,7 +202,7 @@ func (m *Memory) StoreToMem(ptr types.IntType, value types.IntType, size int, lo
 
 	if !ignore {
 		for _, r := range m.getMemoryRegion(ptr, size) {
-			if !r.HasRight(AccessWrite) {
+			if !r.HasRight(ACCESS_WRITE) {
 				return logger.VmRuntimeError(loc, "Attempt to write to protected memory region")
 			}
 		}
@@ -238,11 +238,11 @@ var EscapedChar2Str = map[byte]string{
 }
 
 func (m *Memory) PrintDebug() {
-	fmt.Printf("Allocated: %d byte(s) total\n", m.OperativeMemRegion.Ptr-m.OperativeMemRegion.Start)
+	fmt.Printf("Allocated: %d byte(s) total\n", m.Ram.Ptr-m.Ram.Start)
 
-	fmt.Printf("String Literals (size=%d):\n", m.StringsRegion.Size)
-	data := make([]string, 0, m.StringsRegion.Ptr-m.StringsRegion.Start)
-	for _, b := range m.Data[m.StringsRegion.Start:m.StringsRegion.Ptr] {
+	fmt.Printf("String Literals (size=%d):\n", m.Strings.Size)
+	data := make([]string, 0, m.Strings.Ptr-m.Strings.Start)
+	for _, b := range m.Data[m.Strings.Start:m.Strings.Ptr] {
 		char, exists := EscapedChar2Str[b]
 		if !exists {
 			char = "'" + string(b) + "'"
@@ -251,24 +251,24 @@ func (m *Memory) PrintDebug() {
 	}
 	fmt.Printf("  %v\n", data)
 
-	fmt.Printf("Pointers region (size=%d)\n", m.PtrsRegion.Size)
+	fmt.Printf("Pointers region (size=%d)\n", m.Pointers.Size)
 	fmt.Printf("  Argv=%d Env=%d\n", m.Argv, m.Env)
 	ptrs := make([]types.IntType, 0)
 	// TODO: show error if can not load from memory
-	for p := m.PtrsRegion.Start; p < m.PtrsRegion.Start+m.PtrsRegion.Size; p += sizeof_ptr {
-		val, _ := m.LoadFromMem(p, sizeof_ptr, nil, true)
+	for p := m.Pointers.Start; p < m.Pointers.Start+m.Pointers.Size; p += SIZEOF_PTR {
+		val, _ := m.LoadFromMem(p, SIZEOF_PTR, nil, true)
 		ptrs = append(ptrs, val)
 	}
 	fmt.Printf("  %v\n", ptrs)
 
 	fmt.Printf(
 		"Operative memory (cap=%d size=%d start=%d ptr=%d):\n",
-		m.OperativeMemRegion.Size,
-		m.OperativeMemRegion.Ptr-m.OperativeMemRegion.Start,
-		m.OperativeMemRegion.Start,
-		m.OperativeMemRegion.Ptr,
+		m.Ram.Size,
+		m.Ram.Ptr-m.Ram.Start,
+		m.Ram.Start,
+		m.Ram.Ptr,
 	)
-	fmt.Printf("  %v\n", m.Data[m.OperativeMemRegion.Start:m.OperativeMemRegion.Ptr])
+	fmt.Printf("  %v\n", m.Data[m.Ram.Start:m.Ram.Ptr])
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

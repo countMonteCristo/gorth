@@ -195,18 +195,18 @@ func (tc *TypeChecker) enoughArgsCount(stack *utils.Stack, count int, token *lex
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (tc *TypeChecker) popType(op *vm.Op, stack *utils.Stack, expected lexer.DataType) error {
-	if err := tc.enoughArgsCount(stack, 1, &op.OpToken); err != nil {
+	if err := tc.enoughArgsCount(stack, 1, &op.Token); err != nil {
 		return err
 	}
 
 	actual, ok := stack.Top().(lexer.DataType)
 	if !ok {
-		return logger.TypeCheckerError(&op.OpToken.Loc, "Cannot convert stack item to DataType")
+		return logger.TypeCheckerError(&op.Token.Loc, "Cannot convert stack item to DataType")
 	}
 
 	if expected != lexer.DataTypeAny && actual != expected {
 		return logger.TypeCheckerError(
-			&op.OpToken.Loc, "Expected argument of type `%s` but got `%s`. Current stack: %s",
+			&op.Token.Loc, "Expected argument of type `%s` but got `%s`. Current stack: %s",
 			lexer.DataType2Str[expected], lexer.DataType2Str[actual], stack.Data,
 		)
 	}
@@ -216,7 +216,7 @@ func (tc *TypeChecker) popType(op *vm.Op, stack *utils.Stack, expected lexer.Dat
 }
 
 func (tc *TypeChecker) popTypes(op *vm.Op, stack, expected *utils.Stack) error {
-	if err := tc.enoughArgsCount(stack, expected.Size(), &op.OpToken); err != nil {
+	if err := tc.enoughArgsCount(stack, expected.Size(), &op.Token); err != nil {
 		return err
 	}
 
@@ -234,13 +234,13 @@ func (tc *TypeChecker) popTypes(op *vm.Op, stack, expected *utils.Stack) error {
 func (tc *TypeChecker) popTypeContract(op *vm.Op, stack *utils.Stack, expected lexer.DataType) (actual lexer.DataType, err error) {
 	actual, ok := stack.Pop().(lexer.DataType)
 	if !ok {
-		err = logger.TypeCheckerError(&op.OpToken.Loc, "Cannot convert stack item to DataType")
+		err = logger.TypeCheckerError(&op.Token.Loc, "Cannot convert stack item to DataType")
 		return
 	}
 
 	if expected != lexer.DataTypeAny && actual != expected {
 		err = logger.TypeCheckerError(
-			&op.OpToken.Loc, "Expected argument of type `%s` but got `%s`. Current stack: %s",
+			&op.Token.Loc, "Expected argument of type `%s` but got `%s`. Current stack: %s",
 			lexer.DataType2Str[expected], lexer.DataType2Str[actual], stack.Data,
 		)
 	}
@@ -248,7 +248,7 @@ func (tc *TypeChecker) popTypeContract(op *vm.Op, stack *utils.Stack, expected l
 }
 
 func (tc *TypeChecker) popTypesContract(op *vm.Op, stack *utils.Stack, contract *Contract) (d lexer.DataTypes, err error) {
-	if err = tc.enoughArgsCount(stack, contract.Inputs.Size(), &op.OpToken); err != nil {
+	if err = tc.enoughArgsCount(stack, contract.Inputs.Size(), &op.Token); err != nil {
 		return
 	}
 
@@ -268,8 +268,8 @@ func (tc *TypeChecker) popTypesContract(op *vm.Op, stack *utils.Stack, contract 
 func (tc *TypeChecker) typeCheckOutputs(op *vm.Op, outputs lexer.DataTypes, expected *utils.Stack) error {
 	if len(outputs) != expected.Size() {
 		return logger.TypeCheckerError(
-			&op.OpToken.Loc, "Outputs for `%s` don't fit to its contract(expected: %s actual: %s)",
-			op.OpToken.Text, expected.Data, outputs,
+			&op.Token.Loc, "Outputs for `%s` don't fit to its contract(expected: %s actual: %s)",
+			op.Token.Text, expected.Data, outputs,
 		)
 	}
 
@@ -277,8 +277,8 @@ func (tc *TypeChecker) typeCheckOutputs(op *vm.Op, outputs lexer.DataTypes, expe
 		e := expected.Data[i].(lexer.DataType)
 		if e != lexer.DataTypeAny && e != a {
 			return logger.TypeCheckerError(
-				&op.OpToken.Loc, "Output arg #%d for `%s` don't fit to its contract(expected: %s actual: %s)",
-				i, op.OpToken.Text, lexer.DataType2Str[e], lexer.DataType2Str[a],
+				&op.Token.Loc, "Output arg #%d for `%s` don't fit to its contract(expected: %s actual: %s)",
+				i, op.Token.Text, lexer.DataType2Str[e], lexer.DataType2Str[a],
 			)
 		}
 	}
@@ -290,7 +290,7 @@ func (tc *TypeChecker) typeCheckOutputs(op *vm.Op, outputs lexer.DataTypes, expe
 func (tc *TypeChecker) typeCheckIntrinsic(op *vm.Op, i lexer.IntrinsicType, ctx *TypeCheckerContext) error {
 	contract, err_msg := GetIntrinsicContract(i)
 	if err_msg != "" {
-		return logger.TypeCheckerError(&op.OpToken.Loc, "No contract for intrinsic found: %s", err_msg)
+		return logger.TypeCheckerError(&op.Token.Loc, "No contract for intrinsic found: %s", err_msg)
 	}
 
 	inputs, err := tc.popTypesContract(op, &ctx.Stack, contract)
@@ -300,13 +300,13 @@ func (tc *TypeChecker) typeCheckIntrinsic(op *vm.Op, i lexer.IntrinsicType, ctx 
 
 	logic, err_msg := GetIntrinsicLogic(i)
 	if err_msg != "" {
-		return logger.TypeCheckerError(&op.OpToken.Loc, "No logic for intrinsic found: %s", err_msg)
+		return logger.TypeCheckerError(&op.Token.Loc, "No logic for intrinsic found: %s", err_msg)
 	}
 
 	f := DefaultCustomFunc
 	if i == lexer.IntrinsicTypeDebug {
 		f = func() lexer.DataTypes {
-			fmt.Println(logger.FormatInfoMsg(&op.OpToken.Loc, "[TypeCheck DEBUG] stack: %s", ctx.Stack.Data))
+			fmt.Println(logger.FormatInfoMsg(&op.Token.Loc, "[TypeCheck DEBUG] stack: %s", ctx.Stack.Data))
 			return lexer.DataTypes{}
 		}
 	}
@@ -325,7 +325,7 @@ func (tc *TypeChecker) typeCheckIntrinsic(op *vm.Op, i lexer.IntrinsicType, ctx 
 func (tc *TypeChecker) typeCheckSimpleOps(op *vm.Op, ctx *TypeCheckerContext) error {
 	contract, err_msg := GetSimpleOpContract(op.Typ)
 	if err_msg != "" {
-		return logger.TypeCheckerError(&op.OpToken.Loc, "No contract for simple operation found: %s", err_msg)
+		return logger.TypeCheckerError(&op.Token.Loc, "No contract for simple operation found: %s", err_msg)
 	}
 
 	_, err := tc.popTypesContract(op, &ctx.Stack, contract)
@@ -347,7 +347,7 @@ func (tc *TypeChecker) typeCheckFunc(ops *[]vm.Op, i int, contextStack *TypeChec
 	contextStack.Push(ctx)
 
 	func_name := (*ops)[i].Data.(string)
-	loc := &(*ops)[i].OpToken.Loc
+	loc := &(*ops)[i].Token.Loc
 
 	f, exists := tc.Ctx.Funcs[func_name]
 	if !exists {
@@ -399,7 +399,7 @@ func (tc *TypeChecker) typeCheckWhileBlock(ops *[]vm.Op, i int, contextStack *Ty
 	index := -1
 	contextStackSize := contextStack.Size()
 
-	loc := &(*ops)[i].OpToken.Loc
+	loc := &(*ops)[i].Token.Loc
 
 	while_start := i + 1
 
@@ -473,7 +473,7 @@ if[0] () [1]do
 */
 func (tc *TypeChecker) typeCheckIfBlock(ops *[]vm.Op, i int, contextStack *TypeCheckerContextStack) (int, error) {
 	index := -1
-	loc := &(*ops)[i].OpToken.Loc
+	loc := &(*ops)[i].Token.Loc
 
 	var true_stack, false_stack, current_stack *TypeCheckerContextStack
 	results := make([]*TypeCheckerContext, 0)
@@ -520,7 +520,7 @@ loop:
 			}
 
 			false_stack.Push(top.Clone(context_type_if))
-			ti, err = tc.typeCheck(ops, j+1, false_stack);
+			ti, err = tc.typeCheck(ops, j+1, false_stack)
 			if err != nil {
 				return index, err
 			}
@@ -609,7 +609,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			case vm.OpJumpReturn:
 				func_ctx := contextStack.GetContext(context_type_func)
 				func_ctx.Outputs.Results = append(func_ctx.Outputs.Results, TypeCheckerJumpResult{
-					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
+					Stack: *ctx.Stack.Copy(), Token: &op.Token,
 				})
 				func_ctx.Outputs.Index = i + int(op.Operand.(types.IntType))
 
@@ -621,14 +621,14 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 
 			case vm.OpJumpEnd:
 				ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
-					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
+					Stack: *ctx.Stack.Copy(), Token: &op.Token,
 				})
 				ctx.Outputs.Index = i
 				return i, nil
 			case vm.OpJumpBreak, vm.OpJumpContinue:
 				while_ctx := contextStack.GetContext(context_type_while)
 				while_ctx.Outputs.Results = append(while_ctx.Outputs.Results, TypeCheckerJumpResult{
-					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
+					Stack: *ctx.Stack.Copy(), Token: &op.Token,
 				})
 
 				while_ctx.Outputs.Index = i + int(op.Operand.(types.IntType))
@@ -655,18 +655,18 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 				}
 			case vm.OpJumpElse:
 				ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
-					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
+					Stack: *ctx.Stack.Copy(), Token: &op.Token,
 				})
 				ctx.Outputs.Index = i + int(op.Operand.(types.IntType)) - 1
 				return i, nil
 			case vm.OpJumpElif:
 				ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
-					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
+					Stack: *ctx.Stack.Copy(), Token: &op.Token,
 				})
 				ctx.Outputs.Index = i
 				return i, nil
 			default:
-				return i, logger.TypeCheckerError(&op.OpToken.Loc, "Type checking for %s (OpJump) is not implemented yet", vm.OpJumpType2Str[block_type])
+				return i, logger.TypeCheckerError(&op.Token.Loc, "Type checking for %s (OpJump) is not implemented yet", vm.OpJumpType2Str[block_type])
 			}
 
 		case vm.OpCondJump:
@@ -683,7 +683,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			}
 		case vm.OpFuncEnd:
 			ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
-				Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
+				Stack: *ctx.Stack.Copy(), Token: &op.Token,
 			})
 			ctx.Outputs.Index = i
 			return i, nil
@@ -701,7 +701,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 		case vm.OpCapture:
 			typs := op.Data.(lexer.DataTypes)
 			if ctx.Stack.Size() < len(typs) {
-				err = logger.TypeCheckerError(&op.OpToken.Loc, "Not enought variables to capture: expected %s but got %s", typs, ctx.Stack.Data)
+				err = logger.TypeCheckerError(&op.Token.Loc, "Not enought variables to capture: expected %s but got %s", typs, ctx.Stack.Data)
 				return
 			}
 
@@ -709,7 +709,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 				e := ctx.Stack.Data[ctx.Stack.Size()-len(typs)+j].(lexer.DataType)
 				a := typs[j]
 				if e != lexer.DataTypeAny && e != a {
-					err = logger.TypeCheckerError(&op.OpToken.Loc, "Capture types mismatch: expected %s but got %s", typs, ctx.Stack.Data)
+					err = logger.TypeCheckerError(&op.Token.Loc, "Capture types mismatch: expected %s but got %s", typs, ctx.Stack.Data)
 					return
 				}
 				ctx.Captures.Push(a)
@@ -718,7 +718,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 		case vm.OpDropCaptures:
 			drop_count := op.Operand.(types.IntType)
 			if ctx.Captures.Size() < int(drop_count) {
-				err = logger.TypeCheckerError(&op.OpToken.Loc, "Not enought variables in capture stack to drop: expected %d but got %d", ctx.Captures.Size(), drop_count)
+				err = logger.TypeCheckerError(&op.Token.Loc, "Not enought variables in capture stack to drop: expected %d but got %d", ctx.Captures.Size(), drop_count)
 				return
 			}
 			for j := 0; j < int(drop_count); j++ {
@@ -729,7 +729,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			idx := op.Operand.(types.IntType)
 
 			if idx >= types.IntType(ctx.Captures.Size()) {
-				err = logger.TypeCheckerError(&op.OpToken.Loc, "Not enough variables in capture stack to push: expected to push %d but got %d", idx, ctx.Captures.Size())
+				err = logger.TypeCheckerError(&op.Token.Loc, "Not enough variables in capture stack to push: expected to push %d but got %d", idx, ctx.Captures.Size())
 				return i, err
 			}
 			t := ctx.Captures.Data[types.IntType(ctx.Captures.Size())-1-idx].(lexer.DataType)
@@ -737,7 +737,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			i++
 
 		default:
-			err = logger.TypeCheckerError(&op.OpToken.Loc, "Type check for `%s` op is not implemented yet", vm.OpType2Str[op.Typ])
+			err = logger.TypeCheckerError(&op.Token.Loc, "Type check for `%s` op is not implemented yet", vm.OpType2Str[op.Typ])
 			return
 		}
 	}

@@ -214,7 +214,7 @@ loop:
 			if d.vm.Rc.Addr >= d.vm.Rc.OpsCount {
 				d.iface.SendFailed("Can not print token: script finished")
 			} else {
-				token := (*ops)[d.vm.Rc.Addr].OpToken
+				token := (*ops)[d.vm.Rc.Addr].Token
 				fmt.Printf("%s:%d:%d Token(%s)\n", token.Loc.Filepath, token.Loc.Line+1, token.Loc.Column+1, token.Text)
 				d.iface.SendOK()
 			}

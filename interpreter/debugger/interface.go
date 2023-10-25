@@ -97,7 +97,7 @@ func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops *[]vm.Op
 		}
 		op := (*ops)[addr]
 
-		path := fmt.Sprintf("%s:%d:%d", op.OpToken.Loc.Filepath, op.OpToken.Loc.Line+1, op.OpToken.Loc.Column+1)
+		path := fmt.Sprintf("%s:%d:%d", op.Token.Loc.Filepath, op.Token.Loc.Line+1, op.Token.Loc.Column+1)
 		if len(path) > max_column_width {
 			max_column_width = len(path)
 		}

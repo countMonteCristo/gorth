@@ -64,7 +64,7 @@ var OpType2Str = map[OpType]string{
 type Op struct {
 	Typ       OpType
 	Operand   interface{}
-	OpToken   lexer.Token
+	Token     lexer.Token
 	Data      interface{}
 	DebugInfo interface{}
 }
@@ -80,25 +80,25 @@ func (op *Op) Str(addr types.IntType) (s string) {
 	case OpPushInt, OpPushBool, OpPushPtr, OpCall, OpPushLocalAlloc, OpPushGlobalAlloc:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
-			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
+			logger.VmCrash(&op.Token.Loc, "Can not cast interface to int: `%v`", op.Operand)
 		}
 		operand = fmt.Sprint(res)
 	case OpCondJump, OpFuncBegin, OpFuncEnd:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
-			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
+			logger.VmCrash(&op.Token.Loc, "Can not cast interface to int: `%v`", op.Operand)
 		}
 		operand = fmt.Sprintf("%d (%s)", res, op.Data.(string))
 	case OpJump:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
-			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
+			logger.VmCrash(&op.Token.Loc, "Can not cast interface to int: `%v`", op.Operand)
 		}
 		operand = fmt.Sprintf("%d (%s)", res, OpJumpType2Str[op.Data.(OpJumpType)])
 	case OpCapture:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
-			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
+			logger.VmCrash(&op.Token.Loc, "Can not cast interface to int: `%v`", op.Operand)
 		}
 		type_names := make([]string, 0)
 		for _, typ := range op.Data.(lexer.DataTypes) {
@@ -108,17 +108,17 @@ func (op *Op) Str(addr types.IntType) (s string) {
 	case OpPushCaptured:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
-			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int: `%v`", op.Operand)
+			logger.VmCrash(&op.Token.Loc, "Can not cast interface to int: `%v`", op.Operand)
 		}
 		operand = fmt.Sprintf("%d (%s)", res, lexer.DataType2Str[op.Data.(lexer.DataType)])
 	case OpDropCaptures:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
-			logger.VmCrash(&op.OpToken.Loc, "Can not cast interface to int for DropCaps: `%v`", op.Operand)
+			logger.VmCrash(&op.Token.Loc, "Can not cast interface to int for DropCaps: `%v`", op.Operand)
 		}
 		operand = fmt.Sprint(res)
 	default:
-		logger.VmCrash(&op.OpToken.Loc, "Unhandled operation: `%s`", OpType2Str[op.Typ])
+		logger.VmCrash(&op.Token.Loc, "Unhandled operation: `%s`", OpType2Str[op.Typ])
 	}
 
 	s = fmt.Sprintf("%4d: %s %v\t\t(debug: %s)", addr, OpType2Str[op.Typ], operand, op.DebugInfo.(string))
@@ -146,7 +146,7 @@ const (
 
 var OpJumpType2Str = map[OpJumpType]string{
 	OpJumpIf:       lexer.Keyword2Str[lexer.KeywordIf],
-	OpJumpElif:		lexer.Keyword2Str[lexer.KeywordElif],
+	OpJumpElif:     lexer.Keyword2Str[lexer.KeywordElif],
 	OpJumpElse:     lexer.Keyword2Str[lexer.KeywordElse],
 	OpJumpEnd:      lexer.Keyword2Str[lexer.KeywordEnd],
 	OpJumpWhile:    lexer.Keyword2Str[lexer.KeywordWhile],

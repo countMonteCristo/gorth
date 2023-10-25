@@ -115,9 +115,9 @@ func (c *CompileTimeContext) getAllocInfo(name, scope_name string, mem *vm.Memor
 	alloc := c.Scopes[scope_name].Allocs[name]
 	var alloc_ptr types.IntType
 	if scope_name != GlobalScopeName {
-		alloc_ptr = mem.OperativeMemRegion.Ptr - c.Scopes[scope_name].MemSize + alloc.Offset
+		alloc_ptr = mem.Ram.Ptr - c.Scopes[scope_name].MemSize + alloc.Offset
 	} else {
-		alloc_ptr = mem.OperativeMemRegion.Start + alloc.Offset
+		alloc_ptr = mem.Ram.Start + alloc.Offset
 	}
 	alloc_mem := mem.Data[alloc_ptr : alloc_ptr+alloc.Size]
 	return alloc_ptr, alloc_mem

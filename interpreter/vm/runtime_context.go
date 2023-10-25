@@ -55,7 +55,7 @@ func NewRuntimeContext(s *VmSettings, global_scope_name string) *RunTimeContext 
 		global_scope: global_scope_name,
 	}
 	rc.ScopeStack.Push(rc.global_scope)
-	rc.Settings = *NewRuntimeSettings(rc.Memory.StringsRegion.Start)
+	rc.Settings = *NewRuntimeSettings(rc.Memory.Strings.Start)
 	return rc
 }
 
@@ -84,7 +84,7 @@ func (rc *RunTimeContext) PrepareMemory(args []string, s *VmSettings) {
 	rc.Memory.Prepare(args, env, rc.Settings.StringLiterals) // load string literals and input args to memory
 
 	// in case we have global allocs
-	rc.Memory.OperativeMemRegion.Ptr = rc.Memory.OperativeMemRegion.Start + rc.Settings.GlobalMemorySize
+	rc.Memory.Ram.Ptr = rc.Memory.Ram.Start + rc.Settings.GlobalMemorySize
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

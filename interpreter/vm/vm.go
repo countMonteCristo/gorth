@@ -166,28 +166,28 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		case lexer.IntrinsicDiv:
 			b := vm.Rc.Stack.Pop().(types.IntType)
 			if b == 0 {
-				return logger.VmRuntimeError(&op.OpToken.Loc, "Division by zero")
+				return logger.VmRuntimeError(&op.Token.Loc, "Division by zero")
 			}
 			a := vm.Rc.Stack.Pop().(types.IntType)
 			vm.Rc.Stack.Push(a / b)
 		case lexer.IntrinsicMod:
 			b := vm.Rc.Stack.Pop().(types.IntType)
 			if b == 0 {
-				return logger.VmRuntimeError(&op.OpToken.Loc, "Division by zero")
+				return logger.VmRuntimeError(&op.Token.Loc, "Division by zero")
 			}
 			a := vm.Rc.Stack.Pop().(types.IntType)
 			vm.Rc.Stack.Push(a % b)
 		case lexer.IntrinsicShl:
 			b := vm.Rc.Stack.Pop().(types.IntType)
 			if b < 0 {
-				return logger.VmRuntimeError(&op.OpToken.Loc, "Negative shift amount in `<<`: %d", b)
+				return logger.VmRuntimeError(&op.Token.Loc, "Negative shift amount in `<<`: %d", b)
 			}
 			a := vm.Rc.Stack.Pop().(types.IntType)
 			vm.Rc.Stack.Push(a << b)
 		case lexer.IntrinsicShr:
 			b := vm.Rc.Stack.Pop().(types.IntType)
 			if b < 0 {
-				return logger.VmRuntimeError(&op.OpToken.Loc, "Negative shift amount in `>>`: %d", b)
+				return logger.VmRuntimeError(&op.Token.Loc, "Negative shift amount in `>>`: %d", b)
 			}
 			a := vm.Rc.Stack.Pop().(types.IntType)
 			vm.Rc.Stack.Push(a >> b)
@@ -231,14 +231,14 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		case lexer.IntrinsicDebug:
 			fmt.Printf(
 				"\tMem: %v\tStack: %v\n",
-				vm.Rc.Memory.Data[vm.Rc.Memory.OperativeMemRegion.Start:vm.Rc.Memory.OperativeMemRegion.Ptr],
+				vm.Rc.Memory.Data[vm.Rc.Memory.Ram.Start:vm.Rc.Memory.Ram.Ptr],
 				vm.Rc.Stack.Data,
 			)
 		case lexer.IntrinsicTypeDebug:
 			// do nothing
 		case lexer.IntrinsicLoad8, lexer.IntrinsicLoad16, lexer.IntrinsicLoad32, lexer.IntrinsicLoad64:
 			ptr := vm.Rc.Stack.Pop().(types.IntType)
-			val, err := vm.Rc.Memory.LoadFromMem(ptr, LoadSizes[intrinsic], &op.OpToken.Loc, false)
+			val, err := vm.Rc.Memory.LoadFromMem(ptr, LoadSizes[intrinsic], &op.Token.Loc, false)
 			if err != nil {
 				return err
 			}
@@ -246,7 +246,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		case lexer.IntrinsicStore8, lexer.IntrinsicStore16, lexer.IntrinsicStore32, lexer.IntrinsicStore64:
 			ptr := vm.Rc.Stack.Pop().(types.IntType)
 			x := vm.Rc.Stack.Pop().(types.IntType)
-			if err = vm.Rc.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic], &op.OpToken.Loc, false); err != nil {
+			if err = vm.Rc.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic], &op.Token.Loc, false); err != nil {
 				return err
 			}
 
@@ -270,18 +270,18 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 			// do nothing
 
 		default:
-			return logger.VmRuntimeError(&op.OpToken.Loc, "Unhandled intrinsic: `%s`", op.OpToken.Text)
+			return logger.VmRuntimeError(&op.Token.Loc, "Unhandled intrinsic: `%s`", op.Token.Text)
 		}
 		vm.Rc.Addr++
 	case OpCall:
 		if vm.Rc.ReturnStack.Size() >= int(vm.S.CallStackSize) {
-			return logger.VmRuntimeError(&op.OpToken.Loc, "Call stack overflow")
+			return logger.VmRuntimeError(&op.Token.Loc, "Call stack overflow")
 		}
 		vm.Rc.ReturnStack.Push(vm.Rc.Addr)
 		vm.Rc.ReturnStack.Push(vm.Rc.CapturesCount)
 		vm.Rc.Addr += op.Operand.(types.IntType)
 	case OpFuncBegin:
-		vm.Rc.Memory.OperativeMemRegion.Ptr += op.Operand.(types.IntType)
+		vm.Rc.Memory.Ram.Ptr += op.Operand.(types.IntType)
 		vm.Rc.CapturesCount = 0
 		vm.Rc.Addr++
 		if vm.S.Debug {
@@ -289,23 +289,23 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		}
 	case OpFuncEnd:
 		if vm.Rc.ReturnStack.Empty() {
-			return logger.VmRuntimeError(&op.OpToken.Loc, "Return stack is empty")
+			return logger.VmRuntimeError(&op.Token.Loc, "Return stack is empty")
 		}
 		for i := types.IntType(0); i < vm.Rc.CapturesCount; i++ {
 			vm.Rc.ReturnStack.Pop()
 		}
 		vm.Rc.CapturesCount = vm.Rc.ReturnStack.Pop().(types.IntType)
 		vm.Rc.Addr = vm.Rc.ReturnStack.Pop().(types.IntType) + 1
-		vm.Rc.Memory.OperativeMemRegion.Ptr -= op.Operand.(types.IntType)
+		vm.Rc.Memory.Ram.Ptr -= op.Operand.(types.IntType)
 		if vm.S.Debug {
 			vm.Rc.ScopeStack.Pop()
 		}
 	case OpPushLocalAlloc:
-		addr := vm.Rc.Memory.OperativeMemRegion.Ptr - op.Operand.(types.IntType)
+		addr := vm.Rc.Memory.Ram.Ptr - op.Operand.(types.IntType)
 		vm.Rc.Stack.Push(addr)
 		vm.Rc.Addr++
 	case OpPushGlobalAlloc:
-		addr := vm.Rc.Memory.OperativeMemRegion.Start + op.Operand.(types.IntType)
+		addr := vm.Rc.Memory.Ram.Start + op.Operand.(types.IntType)
 		vm.Rc.Stack.Push(addr)
 		vm.Rc.Addr++
 	case OpCapture:
@@ -329,7 +329,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		vm.Rc.Stack.Push(x)
 		vm.Rc.Addr++
 	default:
-		return logger.VmRuntimeError(&op.OpToken.Loc, "Unhandled operation: `%s`", OpType2Str[op.Typ])
+		return logger.VmRuntimeError(&op.Token.Loc, "Unhandled operation: `%s`", OpType2Str[op.Typ])
 	}
 	return
 }
