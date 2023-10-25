@@ -124,8 +124,12 @@ loop:
 				if !exists {
 					fmt.Printf("[WARN] Can not set break point to unknown function `%s`, skip\n", func_name)
 				} else {
-					found_names = append(found_names, func_name)
-					d.iface.BreakPoints[function.Addr] = true
+					if function.Inlined {
+						fmt.Printf("[WARN] Can not set break point to inline function `%s`, skip\n", func_name)
+					} else {
+						found_names = append(found_names, func_name)
+						d.iface.BreakPoints[function.Addr] = true
+					}
 				}
 			}
 
@@ -175,13 +179,18 @@ loop:
 				if !exists {
 					fmt.Printf("[WARN] Can not remove break point from unknown function `%s`\n", func_name)
 				} else {
-					_, exists := d.iface.BreakPoints[function.Addr]
-					if !exists {
-						fmt.Printf("[WARN] Can not remove break point from function `%s` - it was not set\n", func_name)
+					if function.Inlined {
+						fmt.Printf("[WARN] Can not remove break point from inline function `%s`\n", func_name)
 					} else {
-						removed_names = append(removed_names, func_name)
-						delete(d.iface.BreakPoints, function.Addr)
+						_, exists := d.iface.BreakPoints[function.Addr]
+						if !exists {
+							fmt.Printf("[WARN] Can not remove break point from function `%s` - it was not set\n", func_name)
+						} else {
+							removed_names = append(removed_names, func_name)
+							delete(d.iface.BreakPoints, function.Addr)
+						}
 					}
+
 				}
 			}
 

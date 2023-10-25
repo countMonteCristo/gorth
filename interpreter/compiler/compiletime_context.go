@@ -171,7 +171,12 @@ func (c *CompileTimeContext) DebugFuncNames(names []string) int {
 	n_found := 0
 	for _, name := range names {
 		if function, exists := c.Funcs[name]; exists {
-			fmt.Printf("addr=%d %s\n", function.Addr, name)
+			if function.Inlined {
+				fmt.Printf("(inlined) %s\n", name)
+			} else {
+				fmt.Printf("addr=%d %s\n", function.Addr, name)
+			}
+
 			n_found++
 		}
 	}
