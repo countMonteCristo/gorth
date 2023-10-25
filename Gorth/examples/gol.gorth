@@ -1,0 +1,217 @@
+include "std.gorth"
+
+const FPS 15 end
+const ROWS 10 end
+const COLS 20 end
+const BOARD_SIZE ROWS COLS * end
+const BOARD_BYTES BOARD_SIZE 2 * end
+alloc board BOARD_BYTES end
+alloc board_index 1 end
+
+// (row, col) -> row*COLS + col
+func get_index int int : int do
+  swap COLS * +
+end
+
+inline func get_board int : ptr do
+  capture bid int do drop
+    board bid BOARD_SIZE * ptr+
+  end
+end
+
+inline func wrap int int : int do
+  capture x int size int do drop drop
+    x size + size %
+  end
+end
+
+func board_at int int int : int do
+  capture bid int row int col int do drop drop drop
+    bid get_board
+      row ROWS wrap
+      col COLS wrap
+    get_index ptr+
+    @8
+  end
+end
+
+func board_save int int int int : do
+  capture bid int v int row int col int do drop drop drop drop
+    v
+    bid get_board
+      row ROWS wrap
+      col COLS wrap
+    get_index ptr+
+    !8
+  end
+end
+
+func init_board_random : do
+  board 0 BOARD_BYTES memset drop
+  0 board_index !8
+
+  0 while dup ROWS < do
+    0 while dup COLS < do
+      capture row int col int do
+        rand 100 %
+        if dup 40 < do
+          1 0 get_board row col get_index ptr+ !8
+        end drop
+      end
+      1 +
+    end drop
+    1 +
+  end drop
+end
+
+// .*.
+// ..*
+// ***
+func init_board_glyder : do
+  board 0 BOARD_BYTES memset drop
+  0 board_index !8
+
+  0 1 0 1 board_save
+  0 1 1 2 board_save
+  0 1 2 0 board_save
+  0 1 2 1 board_save
+  0 1 2 2 board_save
+end
+
+func print_board int : do
+  0 while dup ROWS < do
+    0 while dup COLS < do
+      capture bid int row int col int do
+        bid row col board_at
+        if dup 1 = do '*' else '.' end putc
+        drop
+      end // capture bid row col
+      1 +
+    end drop
+    '\n' putc
+    1 +
+  end drop
+  drop
+end
+
+func get_alive_neighbours int int int : int do
+  alloc count 1 end
+  0 count !8
+
+  capture bid int row int col int do drop drop drop
+    -1 while dup 1 <= do
+      -1 while dup 1 <= do
+        capture dr int dc int do
+          if dr 0 != dc 0 != || do
+            // '(' putc row dr + puti ',' putc col dc + puti ')' putc '\n' putc
+            bid row dr + col dc + board_at
+            count @8 + count !8
+          end
+        end
+        1 +
+      end drop
+      1 +
+    end drop
+  end // capture bid row col
+  count @8
+end
+
+func step : do
+  0 while dup ROWS < do
+    0 while dup COLS < do
+      capture row int col int do
+        board_index @8 row col board_at
+        board_index @8 row col get_alive_neighbours
+        capture state int nbrs int do drop drop
+
+          // '(' putc row puti ',' putc col puti ')' putc state puti ' ' putc nbrs puti "->" puts
+
+          1 board_index @8 -
+          if state 0 = do
+            if nbrs 3 =             do 1 else 0 end
+          else
+            if nbrs 2 = nbrs 3 = || do 1 else 0 end
+          end
+
+          // dup puti '\n' putc
+
+          row col board_save
+        end //capture state nbrs
+      end // capture row col
+      1 +
+    end drop
+    1 +
+  end drop
+
+  board_index @8 get_board 0 BOARD_SIZE memset drop
+end
+
+inline func swap_boards : do
+  1 board_index @8 - board_index !8
+end
+
+func usage : do
+  "Usage: gorth "                                                       eputs
+  0 argv_n dup strlen                                                   eputs
+  " <init_type> [seed]\n\n"                                             eputs
+  "Arguments:\n"                                                        eputs
+  "  * init_type - `random` or `glyder`\n"                              eputs
+  "  * seed      - seed for randomness (for `random` init_type only)\n" eputs
+end
+
+func main : int do
+  if argc 2 < do
+    "No init funcion was provided (supported: random|glyder)\n\n" eputs
+    usage
+    1 return
+  end
+
+  1 argv_n
+  if   dup "random" drop strcmp 0 = do
+
+    if argc 3 < do
+      "No seed was provided\n\n" eputs
+      usage
+      drop 1 return
+    end
+
+    2 argv_n dup strlen atoi
+    capture n int err int do drop drop
+      if err 0 != do
+        "Cannot convert seed argument to int: " eputs
+        2 argv_n dup strlen                     eputs
+        "\n\n"                                  eputs
+        usage
+        drop 1 return
+      end
+      n srand
+    end
+
+    init_board_random
+  elif dup "glyder" drop strcmp 0 = do
+    init_board_glyder
+  elif dup "help" drop strcmp 0 = do
+    usage
+    drop 0 return
+  else
+    "Unknown init type: "               eputs
+    dup dup strlen                      eputs
+    ". Supported types: random|glyder"  eputs
+    drop
+    1 return
+  end drop
+
+  board_index @8 print_board
+
+  0 while dup 100 < do
+    27 putc "[" puts ROWS puti "A" puts
+    27 putc "[" puts COLS puti "D" puts
+    step
+    swap_boards
+    board_index @8 print_board
+    1 +
+    NANOSEC_IN_SEC FPS / sleep_ns
+  end drop
+
+  0
+end

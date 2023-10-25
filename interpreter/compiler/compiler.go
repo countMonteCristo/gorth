@@ -141,7 +141,7 @@ func (c *Compiler) compileLocalAlloc(token *lexer.Token, scope *Scope) error {
 }
 
 func (c *Compiler) compileGlobalAlloc(token *lexer.Token, scope *Scope) error {
-	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushGlobalAlloc, Operand: scope.Allocs[token.Text].Offset, Token: *token})
+	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushGlobalAlloc, Operand: c.Ctx.GlobalScope().Allocs[token.Text].Offset, Token: *token})
 	return nil
 }
 

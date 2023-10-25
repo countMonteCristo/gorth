@@ -45,6 +45,15 @@ const sockaddr_in.sin_zero
                                               offset end // pad zeros to size of sockaddr
 const sizeof(sockaddr_in)                      reset end
 
+// Time constants
+const NANOSEC_IN_SEC  1000000000 end
+const MICROSEC_IN_SEC    1000000 end
+const MILLISEC_IN_SEC       1000 end
+
+// Structure for time (seconds and nanoseconds) <time.h>
+const timespec.tv_sec  sizeof(u64) offset end
+const timespec.tv_nsec sizeof(u64) offset end
+const sizeof(timespec)              reset end
 
 // ----------------------------------------------- Pointer Arithmetics -------------------------------------------------
 
@@ -318,6 +327,62 @@ inline func argv_n
   ptr   // pointer to argument as null-terminated string
 do
   sizeof(ptr) * argv swap ptr+ @32 cast(ptr)
+end
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+
+// -------------------------------------------------- Time functions ---------------------------------------------------
+
+// Sleep for given number of nanoseconds
+func sleep_ns int : do
+  alloc req sizeof(timespec) end
+
+  req 0 sizeof(timespec) memset drop
+
+  capture nanosecs int do drop
+    nanosecs NANOSEC_IN_SEC / req timespec.tv_sec  ptr+ !64
+    nanosecs NANOSEC_IN_SEC % req timespec.tv_nsec ptr+ !64
+    req NULL nanosleep drop
+  end
+end
+
+// Sleep for given number of microseconds
+func sleep_us int : do
+  alloc req sizeof(timespec) end
+
+  req 0 sizeof(timespec) memset drop
+
+  capture microseconds int do drop
+    microseconds        MICROSEC_IN_SEC / req timespec.tv_sec  ptr+ !64
+    microseconds 1000 *  NANOSEC_IN_SEC % req timespec.tv_nsec ptr+ !64
+    req NULL nanosleep drop
+  end
+end
+
+// Sleep for given number of milliseconds
+func sleep_ms int : do
+  alloc req sizeof(timespec) end
+
+  req 0 sizeof(timespec) memset drop
+
+  capture milliseconds int do drop
+    milliseconds            MILLISEC_IN_SEC / req timespec.tv_sec  ptr+ !64
+    milliseconds 1000000 *  NANOSEC_IN_SEC % req timespec.tv_nsec ptr+ !64
+    req NULL nanosleep drop
+  end
+end
+
+// Sleep for given number of seconds
+func sleep_s int : do
+  alloc req sizeof(timespec) end
+
+  req 0 sizeof(timespec) memset drop
+
+  capture seconds int do drop
+    seconds req timespec.tv_sec  ptr+ !64
+    req NULL nanosleep drop
+  end
 end
 
 // ---------------------------------------------------------------------------------------------------------------------

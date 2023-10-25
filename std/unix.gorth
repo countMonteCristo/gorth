@@ -3,6 +3,7 @@ const SYS_READ        0 end
 const SYS_WRITE       1 end
 const SYS_OPEN        2 end
 const SYS_CLOSE       3 end
+const SYS_NANOSLEEP  35 end
 const SYS_SOCKET     41 end
 const SYS_ACCEPT     43 end
 const SYS_BIND       49 end
@@ -165,6 +166,16 @@ inline func close
   int   // errno
 do
   SYS_CLOSE syscall1 swap drop // SYS_CLOSE returns {unused} {errno}, just drop {unused}
+end
+
+// Execute `nanosleep` system call
+inline func nanosleep
+  ptr   // required time
+  ptr   // remain time or NULL
+    :
+  int   // errno
+do
+  SYS_NANOSLEEP syscall2 drop
 end
 
 // Execute `socket` system call

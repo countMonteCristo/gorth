@@ -52,6 +52,23 @@ func (vm *VM) ProcessSyscall2() {
 		)
 		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
+	case unix.SYS_NANOSLEEP:
+		rem_ptr := vm.Rc.Stack.Pop().(types.IntType)
+		req_ptr := vm.Rc.Stack.Pop().(types.IntType)
+		r1, _, err := unix.Syscall(
+			unix.SYS_NANOSLEEP,
+			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[req_ptr])),
+			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[rem_ptr])),
+			0,
+		)
+		// fmt.Printf(
+		// 	"rem=%d req=%d r1=%d err=%v\n",
+		// 	vm.Rc.Memory.Data[rem_ptr:rem_ptr+16],
+		// 	vm.Rc.Memory.Data[req_ptr:req_ptr+16],
+		// 	r1, err,
+		// )
+		vm.Rc.Stack.Push(types.IntType(r1))
+		vm.Rc.Stack.Push(types.IntType(err))
 	default:
 		logger.VmCrash(nil, "syscall2 for #%d is not implemented yet\n", syscall_id)
 	}
@@ -231,7 +248,8 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		case lexer.IntrinsicDebug:
 			fmt.Printf(
 				"\tMem: %v\tStack: %v\n",
-				vm.Rc.Memory.Data[vm.Rc.Memory.Ram.Start:vm.Rc.Memory.Ram.Ptr],
+				// vm.Rc.Memory.Data[vm.Rc.Memory.Ram.Start:vm.Rc.Memory.Ram.Ptr],
+				0,
 				vm.Rc.Stack.Data,
 			)
 		case lexer.IntrinsicTypeDebug:
