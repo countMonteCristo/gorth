@@ -100,6 +100,15 @@ func (m *Memory) Size() int {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+func (m *Memory) checkLegalAddress(ptr types.IntType, loc *utils.Location) error {
+	if ptr < 0 || ptr >= int64(len(m.Data)) {
+		return logger.VmRuntimeError(loc, "Access to invalid address: %d", ptr)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (m *Memory) saveString(start types.IntType, s *string) types.IntType {
 	bytes := []byte(*s)
 	copy(m.Data[start:], bytes)
@@ -170,6 +179,10 @@ func (m *Memory) LoadFromMem(ptr types.IntType, size int, loc *utils.Location, i
 		}
 	}
 
+	if err = m.checkLegalAddress(ptr, loc); err != nil {
+		return
+	}
+
 	sub := m.Data[ptr : ptr+types.IntType(size)]
 	buf := bytes.NewReader(sub)
 	switch size {
@@ -195,7 +208,7 @@ func (m *Memory) LoadFromMem(ptr types.IntType, size int, loc *utils.Location, i
 	return
 }
 
-func (m *Memory) StoreToMem(ptr types.IntType, value types.IntType, size int, loc *utils.Location, ignore bool) error {
+func (m *Memory) StoreToMem(ptr types.IntType, value types.IntType, size int, loc *utils.Location, ignore bool) (err error) {
 	if ptr == 0 {
 		return logger.VmRuntimeError(loc, "Write operation into NULL pointer")
 	}
@@ -206,6 +219,10 @@ func (m *Memory) StoreToMem(ptr types.IntType, value types.IntType, size int, lo
 				return logger.VmRuntimeError(loc, "Attempt to write to protected memory region")
 			}
 		}
+	}
+
+	if err = m.checkLegalAddress(ptr, loc); err != nil {
+		return
 	}
 
 	buf := new(bytes.Buffer)

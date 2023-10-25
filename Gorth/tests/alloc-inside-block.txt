@@ -1,0 +1,7 @@
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "",
+  "stderr": "[ERROR] [COMPILER] alloc-blocks should be used only inside function or global scope, but not in do-block:\n  Gorth/tests/alloc-inside-block.gorth:3:5",
+  "exit_code": 1
+}

@@ -73,3 +73,4 @@
 
 [*] Improve error messsages
   [*] Add debug levels
+  [] Separate usual errors (bad Gorth code) and fatal errors (errors in source code)

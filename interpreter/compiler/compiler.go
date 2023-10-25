@@ -394,6 +394,15 @@ func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, 
 		return
 	}
 
+	if !c.Blocks.Empty() && c.Blocks.Top().(*Block).Typ != lexer.KeywordFunc {
+		err = logger.CompilerError(
+			&token.Loc,
+			"%s-blocks should be used only inside function or global scope, but not in %s-block",
+			token.Text,	lexer.Keyword2Str[c.Blocks.Top().(*Block).Typ],
+		)
+		return
+	}
+
 	name_token = *th.GetNextToken()
 
 	if name_token.Typ != lexer.TokenWord {
@@ -1069,6 +1078,15 @@ func (c *Compiler) CompileTokens(tokens *lexer.TokenHolder, rts *vm.RuntimeSetti
 		return logger.CompilerError(nil, "No entry point found (function `main` was not defined)")
 	}
 	c.pushOps(GlobalScopeName, vm.Op{Typ: vm.OpCall, Operand: f.Addr - c.getCurrentAddr(), Data: f.Sig.Name})
+
+	if !(f.Sig.Inputs.Size() == 0 && f.Sig.Outputs.Size() == 1 && f.Sig.Outputs.Top().(lexer.DataType) == lexer.DataTypeInt) {
+		logger.CompilerCrash(
+			&c.Ops[f.Addr].Token.Loc,
+			"Expected entry point `%s` to have zero inputs and `int` as an output, " +
+			"but got input=%s and output=%s",
+			f.Sig.Name, f.Sig.Inputs.Data, f.Sig.Outputs.Data,
+		)
+	}
 
 	// Set runtime parameters
 	rts.EntryPointAddr = c.EntryPointAddr()

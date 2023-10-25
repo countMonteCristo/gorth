@@ -1,6 +1,6 @@
 include "std.gorth"
 
-const FPS 15 end
+const FPS 10 end
 const ROWS 10 end
 const COLS 20 end
 const BOARD_SIZE ROWS COLS * end
@@ -67,7 +67,7 @@ end
 // .*.
 // ..*
 // ***
-func init_board_glyder : do
+func init_board_glider : do
   board 0 BOARD_BYTES memset drop
   0 board_index !8
 
@@ -155,13 +155,13 @@ func usage : do
   0 argv_n dup strlen                                                   eputs
   " <init_type> [seed]\n\n"                                             eputs
   "Arguments:\n"                                                        eputs
-  "  * init_type - `random` or `glyder`\n"                              eputs
+  "  * init_type - `random` or `glider`\n"                              eputs
   "  * seed      - seed for randomness (for `random` init_type only)\n" eputs
 end
 
 func main : int do
   if argc 2 < do
-    "No init funcion was provided (supported: random|glyder)\n\n" eputs
+    "No init funcion was provided (supported: random|glider)\n\n" eputs
     usage
     1 return
   end
@@ -188,15 +188,15 @@ func main : int do
     end
 
     init_board_random
-  elif dup "glyder" drop strcmp 0 = do
-    init_board_glyder
+  elif dup "glider" drop strcmp 0 = do
+    init_board_glider
   elif dup "help" drop strcmp 0 = do
     usage
     drop 0 return
   else
-    "Unknown init type: "               eputs
-    dup dup strlen                      eputs
-    ". Supported types: random|glyder"  eputs
+    "Unknown init type: "                 eputs
+    dup dup strlen                        eputs
+    ". Supported types: random|glider\n"  eputs
     drop
     1 return
   end drop

@@ -1,0 +1,6 @@
+func main : int do
+  if 1 2 < do
+    alloc x 42 end
+    puti x
+  end
+end
