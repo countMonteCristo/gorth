@@ -8,7 +8,9 @@ func f : do
       elif dup 6 > do
         break
       else
-        dup puti
+        capture x int do
+          x puti
+        end
       end
       1 +
     end drop

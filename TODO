@@ -1,6 +1,6 @@
 [*] Change if-block semantic:
   [*] now: <{case} if {...} else {...} end>; what i want it to be: <if {case} do {...} else {...} end>, just like in `while` loops
-  [] add `elif` keyword
+  [*] add `elif` keyword
 
 [*] Change Strings:
   [*] now string is a pointer to a go-string in string literals array

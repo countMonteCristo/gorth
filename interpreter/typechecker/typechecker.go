@@ -106,6 +106,14 @@ func ContextsAreSame(f, s *TypeCheckerContext) bool {
 	return f.Typ == s.Typ && utils.StacksAreEqual[lexer.DataType](&f.Stack, &s.Stack) && OutputsAreSame(&f.Outputs, &s.Outputs) && f.Terminated == s.Terminated
 }
 
+func FormatContextSliceOutputs(s []*TypeCheckerContext, indent string) string {
+	res := make([]string, 0)
+	for _, c := range s {
+		res = append(res, c.Outputs.FormatStacks(indent))
+	}
+	return strings.Join(res, "\n")
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 type TypeCheckerContextStack struct {
@@ -160,23 +168,6 @@ func (cs *TypeCheckerContextStack) GetContext(t context_type) *TypeCheckerContex
 func (cs *TypeCheckerContextStack) Clone() *TypeCheckerContextStack {
 	return &TypeCheckerContextStack{stack: *cs.stack.Copy()}
 }
-
-/*
-func ContextStacksAreSame(f, s *TypeCheckerContextStack) bool {
-	if f.Size() != s.Size() {
-		return false
-	}
-	if f.Size() == 0 {
-		return true
-	}
-	for i := range f.stack.Data {
-		if !ContextsAreSame(f.stack.Data[i].(*TypeCheckerContext), s.stack.Data[i].(*TypeCheckerContext)) {
-			return false
-		}
-	}
-	return true
-}
-*/
 
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -367,7 +358,7 @@ func (tc *TypeChecker) typeCheckFunc(ops *[]vm.Op, i int, contextStack *TypeChec
 		ctx.Stack.Push(t.(lexer.DataType))
 	}
 
-	if err = tc.typeCheck(ops, i+1, contextStack); err != nil {
+	if _, err = tc.typeCheck(ops, i+1, contextStack); err != nil {
 		return
 	}
 
@@ -413,7 +404,7 @@ func (tc *TypeChecker) typeCheckWhileBlock(ops *[]vm.Op, i int, contextStack *Ty
 	while_start := i + 1
 
 	// process while case
-	if err := tc.typeCheck(ops, while_start, contextStack); err != nil {
+	if _, err := tc.typeCheck(ops, while_start, contextStack); err != nil {
 		return i, err
 	}
 	do_start := contextStack.Top().Outputs.Index
@@ -421,11 +412,11 @@ func (tc *TypeChecker) typeCheckWhileBlock(ops *[]vm.Op, i int, contextStack *Ty
 	ctx := contextStack.Top().Clone(context_type_while)
 	contextStack.Push(ctx)
 
-	if err := tc.typeCheck(ops, do_start+1, contextStack); err != nil {
+	if _, err := tc.typeCheck(ops, do_start+1, contextStack); err != nil {
 		return i, err
 	}
 	end_index := contextStack.Top().Outputs.Index + 1
-	if err := tc.typeCheck(ops, while_start, contextStack); err != nil {
+	if _, err := tc.typeCheck(ops, while_start, contextStack); err != nil {
 		return i, err
 	}
 
@@ -463,22 +454,22 @@ func (tc *TypeChecker) typeCheckWhileBlock(ops *[]vm.Op, i int, contextStack *Ty
 }
 
 /*
-	Example of how the spellchecker checks if-elif-else-end blocks:
+Example of how the spellchecker checks if-elif-else-end blocks:
 
-	if[0] () [1]do
-	()
-	[2]elif[3] () [4]do
-	()
-	[5]elif[6] () [7]do
-	()
-	[8]else[9]
-	()
-	[10]end
+if[0] () [1]do
+()
+[2]elif[3] () [4]do
+()
+[5]elif[6] () [7]do
+()
+[8]else[9]
+()
+[10]end
 
-	* 0-1-(copy stack)-2
-	* 0-1-(copy stack)-3-4-(copy stack)-5
-	* 0-1-(copy stack)-3-4-(copy stack)-6-7-(copy stack)-8
-	* 0-1-(copy stack)-3-4-(copy stack)-6-7-(copy stack)-9-10
+* 0-1-(copy stack)-2
+* 0-1-(copy stack)-3-4-(copy stack)-5
+* 0-1-(copy stack)-3-4-(copy stack)-6-7-(copy stack)-8
+* 0-1-(copy stack)-3-4-(copy stack)-6-7-(copy stack)-9-10
 */
 func (tc *TypeChecker) typeCheckIfBlock(ops *[]vm.Op, i int, contextStack *TypeCheckerContextStack) (int, error) {
 	index := -1
@@ -491,7 +482,7 @@ func (tc *TypeChecker) typeCheckIfBlock(ops *[]vm.Op, i int, contextStack *TypeC
 	onlyif := true
 loop:
 	for {
-		if err := tc.typeCheck(ops, i+1, current_stack); err != nil {
+		if _, err := tc.typeCheck(ops, i+1, current_stack); err != nil {
 			return i, err
 		}
 		top := current_stack.Top()
@@ -510,11 +501,15 @@ loop:
 
 		switch (*ops)[j].Data.(vm.OpJumpType) {
 		case vm.OpJumpElif: // [el]if (..) do (..) elif
-			if err := tc.typeCheck(ops, i+1, true_stack); err != nil {
+			ti, err := tc.typeCheck(ops, i+1, true_stack)
+			if err != nil {
 				return index, err
 			}
 			i = j
 			results = append(results, true_stack.Top())
+			if !true_stack.Top().Terminated {
+				index = ti + 1
+			}
 			current_stack = false_stack
 			onlyif = false
 		case vm.OpJumpElse: // [el]if (..) do (..) else (..) end
@@ -522,15 +517,24 @@ loop:
 			ctx2 := top.Clone(context_type_if)
 			false_stack.Push(ctx2)
 
-			if err := tc.typeCheck(ops, i+1, true_stack); err != nil {
+			ti, err := tc.typeCheck(ops, i+1, true_stack)
+			if err != nil {
 				return index, err
 			}
 			results = append(results, true_stack.Top())
-			if err := tc.typeCheck(ops, j+1, false_stack); err != nil {
+			if !true_stack.Top().Terminated {
+				index = ti + 1
+			}
+
+			ti, err = tc.typeCheck(ops, j+1, false_stack);
+			if err != nil {
 				return index, err
 			}
 			results = append(results, false_stack.Top())
-			// index = false_stack.Top().Outputs.Index + 1
+			if !false_stack.Top().Terminated {
+				index = ti + 1
+			}
+
 			break loop
 		case vm.OpJumpEnd: // [el]if (..) do (..) end
 			if onlyif {
@@ -538,7 +542,7 @@ loop:
 				falsed.Outputs.Index = j
 				results = append(results, falsed)
 			}
-			if err := tc.typeCheck(ops, i+1, true_stack); err != nil {
+			if _, err := tc.typeCheck(ops, i+1, true_stack); err != nil {
 				return index, err
 			}
 			i = j
@@ -564,27 +568,27 @@ loop:
 	switch len(not_terminated) {
 	case 0:
 		if len(terminated) == 0 {
-			return index, logger.TypeCheckerError(loc, "Both terminated and not_terminated contexts are empty")
+			logger.TypeCheckerCrash(loc, "Both terminated and not_terminated contexts are empty")
 		}
-		same := true
-		for k := 0; k < len(terminated)-1; k++ {
-			same = same && ContextsAreSame(terminated[k], terminated[k+1])
-		}
-		if !same {
-			return index, logger.TypeCheckerError(loc, "Terminated contexts are not the same")
-		}
-		contextStack.Top().Stack = terminated[0].Stack
 		index = terminated[0].Outputs.Index // go to OpFuncEnd
+		contextStack.Top().Stack = terminated[0].Stack
 		contextStack.Top().Terminated = true
 	default:
 		same := true
+		// maxi := 0
 		for k := 0; k < len(not_terminated)-1; k++ {
 			same = same && ContextsAreSame(not_terminated[k], not_terminated[k+1])
+			// if not_terminated[k].Outputs.Index > maxi {
+			// 	maxi = not_terminated[k].Outputs.Index
+			// }
 		}
 		if !same {
-			return index, logger.TypeCheckerError(loc, "not_terminated contexts are not the same")
+			return index, logger.TypeCheckerError(
+				nil, "not_terminated contexts for if-block (%s) are not the same:\n%s",
+				logger.FormatLoc(loc), FormatContextSliceOutputs(not_terminated, " * "),
+			)
 		}
-		index = not_terminated[0].Outputs.Index + 1
+		// index = maxi + 1
 		contextStack.Top().Stack = not_terminated[0].Stack
 	}
 	return index, nil
@@ -592,10 +596,10 @@ loop:
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeCheckerContextStack) (err error) {
+func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeCheckerContextStack) (i int, err error) {
 	ctx := contextStack.Top()
 
-	for i := start; i < len(*ops); {
+	for i = start; i < len(*ops); {
 		op := &(*ops)[i]
 
 		switch op.Typ {
@@ -625,14 +629,14 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 					ctx.Terminated = true
 					ctx.Outputs.Index = func_ctx.Outputs.Index
 				}
-				return nil
+				return i, nil
 
 			case vm.OpJumpEnd:
 				ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
 					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
 				})
 				ctx.Outputs.Index = i
-				return nil
+				return i, nil
 			case vm.OpJumpBreak, vm.OpJumpContinue:
 				while_ctx := contextStack.GetContext(context_type_while)
 				while_ctx.Outputs.Results = append(while_ctx.Outputs.Results, TypeCheckerJumpResult{
@@ -648,7 +652,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 					ctx.Terminated = true
 					ctx.Outputs.Index = while_ctx.Outputs.Index
 				}
-				return nil
+				return i, nil
 
 			case vm.OpJumpWhile:
 				i, err = tc.typeCheckWhileBlock(ops, i, contextStack)
@@ -666,15 +670,15 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
 				})
 				ctx.Outputs.Index = i + int(op.Operand.(types.IntType)) - 1
-				return nil
+				return i, nil
 			case vm.OpJumpElif:
 				ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
 					Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
 				})
 				ctx.Outputs.Index = i
-				return nil
+				return i, nil
 			default:
-				return logger.TypeCheckerError(&op.OpToken.Loc, "Type checking for %s (OpJump) is not implemented yet", vm.OpJumpType2Str[block_type])
+				return i, logger.TypeCheckerError(&op.OpToken.Loc, "Type checking for %s (OpJump) is not implemented yet", vm.OpJumpType2Str[block_type])
 			}
 
 		case vm.OpCondJump:
@@ -694,7 +698,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 				Stack: *ctx.Stack.Copy(), Token: &op.OpToken,
 			})
 			ctx.Outputs.Index = i
-			return nil
+			return i, nil
 
 		case vm.OpCall:
 			f := tc.Ctx.Funcs[op.Data.(string)]
@@ -738,7 +742,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 
 			if idx >= types.IntType(ctx.Captures.Size()) {
 				err = logger.TypeCheckerError(&op.OpToken.Loc, "Not enough variables in capture stack to push: expected to push %d but got %d", idx, ctx.Captures.Size())
-				return err
+				return i, err
 			}
 			t := ctx.Captures.Data[types.IntType(ctx.Captures.Size())-1-idx].(lexer.DataType)
 			ctx.Stack.Push(t)
@@ -759,7 +763,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 	})
 	top.Outputs.Index = len(*ops)
 
-	return nil
+	return i, nil
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -775,7 +779,7 @@ func (tc *TypeChecker) TypeCheckProgram(ops *[]vm.Op, ctx *compiler.CompileTimeC
 	context := NewTypeCheckerContext(context_type_global)
 	contextStack.Push(context)
 
-	err := tc.typeCheck(ops, 0, contextStack)
+	_, err := tc.typeCheck(ops, 0, contextStack)
 	if err != nil {
 		return err
 	}

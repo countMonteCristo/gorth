@@ -203,26 +203,38 @@ Only three types are supported for now: `int`, `bool` and `ptr`.
 
 ### Misc
 - `???` - prints stack state
+- `!!!` - prints type stack size (only with `-check` option)
 - `argc` - pushes count of input arguments onto the stack
 - `argv` - pushes the pointer to the null-terminated list of pointers to the input arguments
 - `env`  - pushes the pointer to the null-terminated list of pointers to the environment variables
 
 ### System calls:
-- `syscall` - perform system call (description: ```man 2 syscalls```)
+- `syscallN` - perform system call (description: ```man 2 syscalls```)
 
-For now only 4 system calls are supported: `open`, `read`, `write` and `close`. See [cat.gorth](https://github.com/countMonteCristo/gorth/tree/main/Gorth/examples/cat.gorth) as an example.
+Supported syscall operations:
+- `syscall1`
+- `syscall2`
+- `syscall3`
+- `syscall5`
+
+For now only a few system calls are supported. See [cat.gorth](https://github.com/countMonteCristo/gorth/tree/main/Gorth/examples/cat.gorth) and [basic-web-server.gorth](https://github.com/countMonteCristo/gorth/tree/main/Gorth/examples/basic-web-server.gorth) as an example.
 
 ## Control Flow
-### If-do-else-end
+### If-do-[elif-do-[else-]]end
 ```gorth
 include "std.gorth"
 
 func main : int do
-  if 10 20 < do
-    30 puti '\n' putc
+  2
+  if dup 1 = do
+    10
+  elif dup 2 = do
+    20
+  elif dup 3 = do
+    30
   else
-    40 puti '\n' putc
-  end
+    50
+  end puti '\n' putc drop
   0
 end
 ```
