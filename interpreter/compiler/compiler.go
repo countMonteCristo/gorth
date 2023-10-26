@@ -135,10 +135,8 @@ func (c *Compiler) compileConst(token *lexer.Token, val *Constant, scope *Scope)
 	}
 }
 
-// TODO: if we do some stuff with allocs before allocating another one, compiled code
-// may produce bugs
 func (c *Compiler) compileLocalAlloc(token *lexer.Token, scope *Scope) error {
-	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushLocalAlloc, Operand: scope.MemSize - scope.Allocs[token.Text].Offset, Token: *token})
+	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushLocalAlloc, Operand: scope.Allocs[token.Text].Offset, Token: *token})
 	return nil
 }
 
@@ -1029,10 +1027,19 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope *Scope) error {
 				if alloc_size.Typ != lexer.DataTypeInt {
 					return logger.CompilerError(&tok.Loc, "Only `int` type is supported for `alloc` value, got %s", lexer.DataType2Str[alloc_size.Typ])
 				}
-				scope.Allocs[tok.Text] = Allocation{
-					Offset: scope.MemSize, Size: alloc_size.Value,
+
+				if scope.Name != GlobalScopeName {
+					scope.MemSize += alloc_size.Value
+					scope.Allocs[tok.Text] = Allocation{
+						Offset: scope.MemSize, Size: alloc_size.Value,
+					}
+				} else {
+					scope.Allocs[tok.Text] = Allocation{
+						Offset: scope.MemSize, Size: alloc_size.Value,
+					}
+					scope.MemSize += alloc_size.Value
 				}
-				scope.MemSize += alloc_size.Value
+
 
 			case lexer.KeywordFunc, lexer.KeywordInline:
 				if err := c.compileFunc(token, th, scope); err != nil {

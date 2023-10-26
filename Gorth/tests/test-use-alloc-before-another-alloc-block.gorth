@@ -1,0 +1,17 @@
+func f int : do
+  alloc x 4 end
+  3 x !32
+  alloc y 8 end
+
+  5 y !64
+
+  x @8 puti
+  y @8 puti
+
+  puti
+end
+
+func main : int do
+  1 f
+  0
+end
