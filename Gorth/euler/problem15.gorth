@@ -1,0 +1,56 @@
+include "std.gorth"
+
+// Starting in the top left corner of a 2x2 grid, and only being able to move to the
+// right and down, there are exactly 6 routes to the bottom right corner.
+//         s__ __
+//         |__|__|
+//         |__|__|
+//               f
+// How many such routes are there through a 20x20 grid?
+//
+// Answer: 137846528820
+
+const N 21 end
+const sizeof(cell) sizeof(u64) end
+
+// row col -> row*N + col
+func index int int : int do
+  swap N * +
+end
+
+// table row col -> table[row][col]
+func table_at ptr int int : int do
+  index sizeof(cell) * ptr+ @64
+end
+
+func main : int do
+  const table_size N N * sizeof(cell) * end
+  alloc table table_size end
+  table 0 table_size memset drop
+
+  0 while dup N < do
+    dup sizeof(cell) * table swap ptr+ 1 swap !64
+    1 +
+  end drop
+
+  0 while dup N < do
+    dup N * sizeof(cell) * table swap ptr+ 1 swap !64
+    1 +
+  end drop
+
+  1 while dup N < do
+    1 while dup N < do
+      capture row int col int do
+        table row 1 - col     table_at
+        table row     col 1 - table_at
+        +
+        table row col index sizeof(cell) * ptr+ !64
+      end
+      1 +
+    end drop
+    1 +
+  end drop
+
+  table table_size sizeof(cell) - ptr+ @64 puti
+  0
+end

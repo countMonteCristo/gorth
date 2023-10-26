@@ -1,0 +1,40 @@
+include "std.gorth"
+
+// The sum of the primes below 10 is
+//    2 + 3 + 5 + 7 = 17
+// Find the sum of all the primes below two million.
+//
+// Answer: 142913828922
+//
+// Note: skip in tests because execution time is quite big
+
+const N 2000000 end
+alloc primes N 1 + end
+
+func main : int do
+  primes 0 N 1 + memset drop
+
+  1 primes        !8
+  1 primes 1 ptr+ !8
+  1 primes 4 ptr+ !8
+
+  2 while dup N 2 / < do
+    dup 2 * while dup N < do
+      dup 1 primes rot ptr+ !8
+      over +
+    end drop
+    1 +
+  end drop
+
+  0
+  1 while dup N < do
+    dup primes swap ptr+ @8
+    if 0 = do
+      swap over + swap
+    end
+    1 +
+  end drop
+
+  puti
+  0
+end

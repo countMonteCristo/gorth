@@ -135,6 +135,8 @@ func (c *Compiler) compileConst(token *lexer.Token, val *Constant, scope *Scope)
 	}
 }
 
+// TODO: if we do some stuff with allocs before allocating another one, compiled code
+// may produce bugs
 func (c *Compiler) compileLocalAlloc(token *lexer.Token, scope *Scope) error {
 	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushLocalAlloc, Operand: scope.MemSize - scope.Allocs[token.Text].Offset, Token: *token})
 	return nil

@@ -1,0 +1,35 @@
+include "std.gorth"
+
+// A Pythagorean triplet is a set of three natural numbers, a, b, c, for which,
+//      a^2 + b^2 = c^2
+// For example,
+//      3^2 + 4^2 = 9 + 16 = 25 = 5^2
+// There exists exactly one Pythagorean triplet for which
+//      a + b + c = 1000
+// Find the product abc.
+//
+// Answer:  31875000
+
+func main : int do
+  const N 1000 end
+
+  1 while dup N < do
+    dup while dup N < do
+        over over             // a b
+        over over + N swap -  // c=N-a-b
+        rot dup *
+        rot dup * +
+        swap dup * -
+        if dup 0 = do
+          drop over over
+          over over + N swap - * * puti
+          drop drop
+          0 return
+        end drop
+      1 +
+    end drop
+    1 +
+  end drop
+
+  0
+end

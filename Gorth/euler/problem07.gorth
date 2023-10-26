@@ -1,0 +1,62 @@
+include "std.gorth"
+
+// By listing the first six prime numbers:
+//      2, 3, 5, 7, 11 and 13
+// we can see that the 6th prime is 13.
+// What is the 10001st prime number?
+
+// Answer:  104743
+
+// Skip this test beacuse the computation time is quite big
+
+const N 10001 end
+const sizeof(prime) sizeof(u32) end
+alloc primes_count sizeof(prime) end
+alloc primes N sizeof(prime) * end
+
+func push_prime int : do
+  primes primes_count @32 sizeof(prime) * ptr+ !32
+  primes_count @32 1 + primes_count !32
+end
+
+func top_prime : int do
+  primes primes_count @32 1 - sizeof(prime) * ptr+ @32
+end
+
+func prime_at int : int do
+  primes swap sizeof(prime) * ptr+ @32
+end
+
+func is_prime int : bool do
+  0 while dup primes_count @32 < do
+    dup prime_at
+    // n idx p
+    rot over over swap %
+    if dup 0 = do
+      drop drop drop drop false return
+    end drop
+    rot rot drop
+    1 +
+  end drop drop
+  true
+end
+
+func main : int do
+  primes 0 N sizeof(prime) * memset drop
+
+  2 push_prime
+  3 push_prime
+  5 push_prime
+  7 push_prime
+
+  while primes_count @32 N < do
+    top_prime 2 +
+    while dup is_prime ! do
+      2 +
+    end
+    push_prime
+  end
+
+  top_prime puti
+  0
+end

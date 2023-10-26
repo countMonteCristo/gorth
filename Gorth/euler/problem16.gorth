@@ -1,0 +1,51 @@
+include "std.gorth"
+
+// 2^15 = 32768 and the sum of its digits is 3 + 2 + 7 + 6 + 8 = 26
+// What is the sum of the digits of the number 2^1000?
+//
+// Answer: 1366
+
+const N 305 end
+alloc bignum N end
+
+func bignum_mult int : do
+  alloc x 1 end
+  alloc carry 1 end
+  x !8
+  0 carry !8
+
+  0 while dup N < do
+    bignum over ptr+ @8
+    if dup 0 = carry @8 0 = && do
+      drop 1 + continue
+    end
+
+    capture i int d int do drop
+      x @8 d * carry @8 +
+      dup 10 / carry !8
+      10 % bignum i ptr+ !8
+    end
+    1 +
+  end drop
+end
+
+func main : int do
+  bignum 0 N memset drop
+
+  1 bignum !8
+
+  0 while dup 1000 < do
+    2 bignum_mult
+    1 +
+  end drop
+
+  0
+  0 while dup N < do
+    dup bignum swap ptr+ @8
+    rot + swap
+    1 +
+  end drop
+  puti
+
+  0
+end
