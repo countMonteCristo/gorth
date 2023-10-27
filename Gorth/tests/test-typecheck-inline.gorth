@@ -1,0 +1,7 @@
+inline func f int : do
+end
+
+func main : int do
+  123 f
+  0
+end

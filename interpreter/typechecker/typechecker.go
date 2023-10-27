@@ -577,6 +577,35 @@ loop:
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+func (tc *TypeChecker) typeCheckInlineFunction(f *compiler.Function) error {
+	contextStack := NewTypeCheckerContextStack()
+	context := NewTypeCheckerContext(context_type_global)
+	contextStack.Push(context)
+
+	i, err := tc.typeCheckFunc(&f.Ops, 0, contextStack)
+	if err != nil {
+		return err
+	}
+	if i != len(f.Ops) {
+		return logger.TypeCheckerError(nil, "Not all ops were typechecked for inline function %s", f.Sig.Name)
+	}
+
+	return nil
+}
+
+func (tc *TypeChecker) typeCheckInlines() error {
+	for _, function := range tc.Ctx.Funcs {
+		if function.Inlined {
+			if err := tc.typeCheckInlineFunction(&function); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeCheckerContextStack) (i int, err error) {
 	ctx := contextStack.Top()
 
@@ -755,6 +784,10 @@ func (tc *TypeChecker) TypeCheckProgram(ops *[]vm.Op, ctx *compiler.CompileTimeC
 	}
 
 	tc.Ctx = ctx
+
+	if err := tc.typeCheckInlines(); err != nil {
+		return err
+	}
 
 	contextStack := NewTypeCheckerContextStack()
 	context := NewTypeCheckerContext(context_type_global)

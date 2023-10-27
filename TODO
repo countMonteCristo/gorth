@@ -8,7 +8,7 @@
   [*] store `data` in byte array
   [*] add argv
 
-[*] Functions:
+[ ] Functions:
   [*] local allocs
   [*] local consts
   [*] return stack
@@ -17,45 +17,47 @@
   [*] recursion limit?
   [*] entry point for executable Gorth script (`main` function)
   [*] `return` keyword
+  [*] main should not be inlined
 
-[] Captures
+[ ] Captures
   [*] supply captures syntax (capture x int y ptr z bool do ... end)
   [] add support for break's and continue's from capture statement
   [] capture function inputs
 
-[] Includes
+[ ] Includes
   [*] `include` keyword
   [*] check for circular includes
   [*] do not import already imported files
   [*] support -I flag for providing additional include paths
-  [] packages?
+  [ ] packages?
 
-[*] Compile-time type checking
+[ ] Compile-time type checking
   [*] using stack for types
   [*] use function signatures
   [*] generic functions
   [*] enable type checking by default
+  [*] type check inlines
 
-[] Improve interpreter
+[ ] Improve interpreter
   [*] Add debugger mode (run by step, go in, go out, continue, etc)
     [*] Add simple debugger
     [*] Add parameter loc/glb to env command
     [*] Add `p` command for printing consts, allocs or functions
     [*] Add command for showing parts of memory as a slice
-  [] Improve debugger
+  [ ] Improve debugger
     [*] Add command to go out of current function
 
-[] Low-level interaction with OS
-  [] syscalls
+[ ] Low-level interaction with OS
+  [ ] syscalls
     [*] read, write, open, close
-    [] other syscalls
+    [ ] other syscalls
 
-[] Collect stdlib for Gorth
+[ ] Collect stdlib for Gorth
 
-[] Testing
-  [] more tests
-  [] run tests asynchronously
-  [] add asserts
+[ ] Testing
+  [ ] more tests
+  [ ] run tests asynchronously
+  [ ] add asserts
   [*] implement testing tool:
     [*] test single file, test all files in directory, test all dirs
     [*] support for providing input args and stdin for testcases
@@ -63,7 +65,7 @@
     [*] update testcase expecting output file
 
 [*] Split Gorth project into modules
-  [] show compilation statuses and timing
+  [ ] show compilation statuses and timing
 
 [*] Add `break` and `continue` to while loops
   [*] break
@@ -73,4 +75,4 @@
 
 [*] Improve error messsages
   [*] Add debug levels
-  [] Separate usual errors (bad Gorth code) and fatal errors (errors in source code)
+  [ ] Separate usual errors (bad Gorth code) and fatal errors (errors in source code)

@@ -74,12 +74,8 @@ func (c *Compiler) prepareInlinedCache(inlined bool) {
 
 func (c *Compiler) resetInlinedCache() []vm.Op {
 	c.Ctx.CurrentFuncIsInlined = false
-	ops := make([]vm.Op, 0)
-
-	// Do not copy OpFuncBegin and OpFuncEnd
-	for i := 1; i < len(c.InlinedOps)-1; i++ {
-		ops = append(ops, c.InlinedOps[i])
-	}
+	ops := make([]vm.Op, len(c.InlinedOps))
+	copy(ops, c.InlinedOps)
 
 	return ops
 }
@@ -149,7 +145,7 @@ func (c *Compiler) compileGlobalAlloc(token *lexer.Token, scope *Scope) error {
 
 func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope *Scope) error {
 	if f.Inlined {
-		c.pushOps(scope.Name, f.Ops...)
+		c.pushOps(scope.Name, f.Ops[1:(len(f.Ops)-1)]...)	// do not copy OpFuncBegin and OpFuncEnd for inline function
 	} else {
 		if c.Ctx.CurrentFuncIsInlined {
 			return logger.CompilerError(&token.Loc, "Calling non-inlined functions from inlined are not allowed")
@@ -760,8 +756,8 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope 
 	if scope.Name != GlobalScopeName {
 		return logger.CompilerError(&token.Loc, "Cannot define functions inside a function %s", scope.Name)
 	}
-	if _, exists := c.Ctx.Funcs["main"]; exists {
-		return logger.CompilerError(&token.Loc, "Cannot define functions after `main`")
+	if _, exists := c.Ctx.Funcs[EntryPointName]; exists {
+		return logger.CompilerError(&token.Loc, "Cannot define functions after `%s`", EntryPointName)
 	}
 
 	inlined := false
@@ -779,6 +775,10 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope 
 	func_token, signature, err := c.compileFuncDef(token, th)
 	if err != nil {
 		return err
+	}
+
+	if inlined && signature.Name == EntryPointName {
+		return logger.CompilerError(&func_token.Loc, "Entry point can not be inlined")
 	}
 
 	// TODO: move to function
@@ -1082,9 +1082,9 @@ func (c *Compiler) CompileTokens(tokens *lexer.TokenHolder, rts *vm.RuntimeSetti
 		return logger.CompilerError(&top.Tok.Loc, "Unclosed `%s`-block", top.Tok.Text)
 	}
 
-	f, exists := c.Ctx.Funcs["main"]
+	f, exists := c.Ctx.Funcs[EntryPointName]
 	if !exists {
-		return logger.CompilerError(nil, "No entry point found (function `main` was not defined)")
+		return logger.CompilerError(nil, "No entry point found (function `%s` was not defined)", EntryPointName)
 	}
 	c.pushOps(GlobalScopeName, vm.Op{Typ: vm.OpCall, Operand: f.Addr - c.getCurrentAddr(), Data: f.Sig.Name})
 

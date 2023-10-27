@@ -24,6 +24,8 @@ type Function struct {
 	Ops     []vm.Op
 }
 
+const EntryPointName = "main"
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Local or global memory allocations

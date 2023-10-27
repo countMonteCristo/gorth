@@ -1,0 +1,7 @@
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "",
+  "stderr": "[ERROR] [TYPE_CHECKER] Function `f` does not fit to its signature. Expected `[]` but got `[int]`:\n  Gorth/tests/test-typecheck-inline.gorth:1:8",
+  "exit_code": 1
+}
