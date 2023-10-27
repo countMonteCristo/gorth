@@ -4,7 +4,6 @@ import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
-	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
 	"fmt"
 
@@ -14,7 +13,7 @@ import (
 // ---------------------------------------------------------------------------------------------------------------------
 
 type Compiler struct {
-	Blocks     utils.Stack
+	Blocks     BlockStack
 	Ops        []vm.Op
 	InlinedOps []vm.Op
 	Ctx        CompileTimeContext
@@ -23,7 +22,7 @@ type Compiler struct {
 
 func NewCompiler(debug bool) *Compiler {
 	return &Compiler{
-		Blocks: utils.Stack{}, Ops: make([]vm.Op, 0), Ctx: *NewCompileTimeContext(),
+		Blocks: BlockStack{}, Ops: make([]vm.Op, 0), Ctx: *NewCompileTimeContext(),
 		InlinedOps: make([]vm.Op, 0),
 		debug:      debug,
 	}
@@ -145,7 +144,7 @@ func (c *Compiler) compileGlobalAlloc(token *lexer.Token, scope *Scope) error {
 
 func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope *Scope) error {
 	if f.Inlined {
-		c.pushOps(scope.Name, f.Ops[1:(len(f.Ops)-1)]...)	// do not copy OpFuncBegin and OpFuncEnd for inline function
+		c.pushOps(scope.Name, f.Ops[1:(len(f.Ops)-1)]...) // do not copy OpFuncBegin and OpFuncEnd for inline function
 	} else {
 		if c.Ctx.CurrentFuncIsInlined {
 			return logger.CompilerError(&token.Loc, "Calling non-inlined functions from inlined are not allowed")
@@ -168,7 +167,7 @@ func (c *Compiler) compileElifBlock(token *lexer.Token, th *lexer.TokenHolder, s
 	if c.Blocks.Empty() {
 		return logger.CompilerError(&token.Loc, "Unexpected `elif` found")
 	}
-	block := c.Blocks.Pop().(*Block)
+	block := c.Blocks.Pop()
 
 	if block.Typ != lexer.KeywordDo && block.Parent.Typ != lexer.KeywordIf {
 		return logger.CompilerError(&token.Loc, "`elif` may come only after `if` or `elif`")
@@ -190,7 +189,7 @@ func (c *Compiler) compileElseBlock(token *lexer.Token, th *lexer.TokenHolder, s
 	if c.Blocks.Empty() {
 		return logger.CompilerError(&token.Loc, "Unexpected `else` found")
 	}
-	block := c.Blocks.Pop().(*Block)
+	block := c.Blocks.Pop()
 
 	if block.Typ != lexer.KeywordDo && block.Parent.Typ != lexer.KeywordIf {
 		return logger.CompilerError(&token.Loc, "`else` may come only after `if` or `elif`")
@@ -219,14 +218,13 @@ func (c *Compiler) compileDoBlock(token *lexer.Token, th *lexer.TokenHolder, sco
 	if c.Blocks.Empty() {
 		return logger.CompilerError(&token.Loc, "Unexpected `do` found")
 	}
-	parent := c.Blocks.Top().(*Block)
-
+	parent := c.Blocks.Top()
 	if !slices.Contains([]lexer.KeywordType{lexer.KeywordWhile, lexer.KeywordIf, lexer.KeywordElif, lexer.KeywordCapture}, parent.Typ) {
 		return logger.CompilerError(&token.Loc, "`do` may come only in `while`, `if`, `elif` or `capture` block, but not `%s`", lexer.Keyword2Str[parent.Typ])
 	}
 
 	if parent.Typ == lexer.KeywordElif {
-		parent = c.Blocks.Pop().(*Block).Parent
+		parent = c.Blocks.Pop().Parent
 	}
 
 	do_addr := c.getCurrentAddr()
@@ -248,7 +246,7 @@ func (c *Compiler) compileJumpKeyword(token *lexer.Token, kw lexer.KeywordType, 
 
 	var i int
 	for i = len(c.Blocks.Data) - 1; i >= 0; i-- {
-		cur_block := c.Blocks.Data[i].(*Block)
+		cur_block := c.Blocks.Data[i]
 
 		if cur_block.Typ == lexer.KeywordCapture {
 			return logger.CompilerError(&cur_block.Tok.Loc, "`%s` inside a capture block is not allowed", token.Text)
@@ -288,7 +286,7 @@ func (c *Compiler) compileReturnKeyword(token *lexer.Token, scope *Scope) error 
 
 	var i int
 	for i = len(c.Blocks.Data) - 1; i >= 0; i-- {
-		cur_block := c.Blocks.Data[i].(*Block)
+		cur_block := c.Blocks.Data[i]
 		t := &cur_block.Tok
 
 		if t.Typ == lexer.TokenKeyword && t.Value.(lexer.KeywordType) == lexer.KeywordFunc {
@@ -310,7 +308,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope *Scope) error {
 	if c.Blocks.Empty() {
 		return logger.CompilerError(&token.Loc, "Unexpected `end` found")
 	}
-	block := c.Blocks.Pop().(*Block)
+	block := c.Blocks.Pop()
 
 	if !slices.Contains([]lexer.KeywordType{lexer.KeywordDo, lexer.KeywordElse, lexer.KeywordFunc, lexer.KeywordCapture}, block.Typ) {
 		return logger.CompilerError(&token.Loc, "`end` should close only `do`, `else`, `func` or `capture` blocks, but not `%s`", lexer.Keyword2Str[block.Typ])
@@ -324,7 +322,6 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope *Scope) error {
 	case lexer.KeywordDo:
 		switch block.Parent.Typ {
 		case lexer.KeywordWhile: // while-do-end
-			// do_while_addr_diff := c.getOpOperand(block.Addr)
 			for _, jump := range block.Jumps {
 				switch jump.Keyword {
 				case lexer.KeywordBreak:
@@ -364,7 +361,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope *Scope) error {
 	case lexer.KeywordCapture:
 		count_drops := block.Data.(types.IntType)
 		for i := 0; i < int(count_drops); i++ {
-			v := scope.Captures.Pop().(CapturedVal)
+			v := scope.Captures.Pop()
 			delete(scope.Names, v.Name)
 		}
 		c.pushOps(scope.Name, vm.Op{Typ: vm.OpDropCaptures, Token: *token, Operand: block.Data.(types.IntType)})
@@ -390,11 +387,11 @@ func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, 
 		return
 	}
 
-	if !c.Blocks.Empty() && c.Blocks.Top().(*Block).Typ != lexer.KeywordFunc {
+	if !c.Blocks.Empty() && c.Blocks.Top().Typ != lexer.KeywordFunc {
 		err = logger.CompilerError(
 			&token.Loc,
 			"%s-blocks should be used only inside function or global scope, but not in %s-block",
-			token.Text,	lexer.Keyword2Str[c.Blocks.Top().(*Block).Typ],
+			token.Text, lexer.Keyword2Str[c.Blocks.Top().Typ],
 		)
 		return
 	}
@@ -448,7 +445,7 @@ func (c *Compiler) checkConstTypes(token *lexer.Token, expected, actual lexer.Da
 	return nil
 }
 
-func (c *Compiler) checkConstStackSize(token *lexer.Token, stack *utils.Stack, count int) error {
+func (c *Compiler) checkConstStackSize(token *lexer.Token, stack *ConstantStack, count int) error {
 	if stack.Size() < count {
 		return logger.CompilerError(
 			&token.Loc, "Const stack size has %d elements but `%s` needs to have at least %d",
@@ -459,7 +456,7 @@ func (c *Compiler) checkConstStackSize(token *lexer.Token, stack *utils.Stack, c
 }
 
 func (c *Compiler) constEval(token *lexer.Token, th *lexer.TokenHolder, scope *Scope) (value Constant, err error) {
-	const_stack := &utils.Stack{}
+	const_stack := &ConstantStack{}
 
 loop:
 	for !th.Empty() {
@@ -475,8 +472,8 @@ loop:
 					if err = c.checkConstStackSize(tok, const_stack, 2); err != nil {
 						return
 					}
-					b := const_stack.Pop().(Constant)
-					a := const_stack.Pop().(Constant)
+					b := const_stack.Pop()
+					a := const_stack.Pop()
 					if err = c.checkConstTypes(tok, lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
 						return
 					}
@@ -485,7 +482,7 @@ loop:
 					if err = c.checkConstStackSize(tok, const_stack, 1); err != nil {
 						return
 					}
-					a := const_stack.Pop().(Constant)
+					a := const_stack.Pop()
 					if err = c.checkConstTypes(tok, lexer.DataTypes{lexer.DataTypeInt}, lexer.DataTypes{a.Typ}); err != nil {
 						return
 					}
@@ -494,12 +491,12 @@ loop:
 					if err = c.checkConstStackSize(tok, const_stack, 2); err != nil {
 						return
 					}
-					b := const_stack.Pop().(Constant)
+					b := const_stack.Pop()
 					if b.Value == 0 {
 						err = logger.CompilerError(&tok.Loc, "Division by zero")
 						return
 					}
-					a := const_stack.Pop().(Constant)
+					a := const_stack.Pop()
 					if err = c.checkConstTypes(tok, lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
 						return
 					}
@@ -508,12 +505,12 @@ loop:
 					if err = c.checkConstStackSize(tok, const_stack, 2); err != nil {
 						return
 					}
-					b := const_stack.Pop().(Constant)
+					b := const_stack.Pop()
 					if b.Value == 0 {
 						err = logger.CompilerError(&tok.Loc, "Modulo by zero")
 						return
 					}
-					a := const_stack.Pop().(Constant)
+					a := const_stack.Pop()
 					if err = c.checkConstTypes(tok, lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
 						return
 					}
@@ -522,12 +519,12 @@ loop:
 					if err = c.checkConstStackSize(tok, const_stack, 2); err != nil {
 						return
 					}
-					b := const_stack.Pop().(Constant)
+					b := const_stack.Pop()
 					if b.Value < 0 {
 						err = logger.CompilerError(&tok.Loc, "Negative shift amount in `<<`: %d", b)
 						return
 					}
-					a := const_stack.Pop().(Constant)
+					a := const_stack.Pop()
 					if err = c.checkConstTypes(tok, lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
 						return
 					}
@@ -536,12 +533,12 @@ loop:
 					if err = c.checkConstStackSize(tok, const_stack, 2); err != nil {
 						return
 					}
-					b := const_stack.Pop().(Constant)
+					b := const_stack.Pop()
 					if b.Value < 0 {
 						err = logger.CompilerError(&tok.Loc, "Negative shift amount in `>>`: %d", b)
 						return
 					}
-					a := const_stack.Pop().(Constant)
+					a := const_stack.Pop()
 					if err = c.checkConstTypes(tok, lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
 						return
 					}
@@ -550,7 +547,7 @@ loop:
 					if err = c.checkConstStackSize(tok, const_stack, 1); err != nil {
 						return
 					}
-					off := const_stack.Pop().(Constant)
+					off := const_stack.Pop()
 					if err = c.checkConstTypes(tok, lexer.DataTypes{lexer.DataTypeInt}, lexer.DataTypes{off.Typ}); err != nil {
 						return
 					}
@@ -560,8 +557,8 @@ loop:
 					if err = c.checkConstStackSize(tok, const_stack, 2); err != nil {
 						return
 					}
-					b := const_stack.Pop().(Constant)
-					a := const_stack.Pop().(Constant)
+					b := const_stack.Pop()
+					a := const_stack.Pop()
 					if err = c.checkConstTypes(tok, lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
 						return
 					}
@@ -570,8 +567,8 @@ loop:
 					if err = c.checkConstStackSize(tok, const_stack, 2); err != nil {
 						return
 					}
-					b := const_stack.Pop().(Constant)
-					a := const_stack.Pop().(Constant)
+					b := const_stack.Pop()
+					a := const_stack.Pop()
 					if err = c.checkConstTypes(tok, lexer.DataTypes{lexer.DataTypeBool, lexer.DataTypeBool}, lexer.DataTypes{a.Typ, b.Typ}); err != nil {
 						return
 					}
@@ -580,7 +577,7 @@ loop:
 					if err = c.checkConstStackSize(tok, const_stack, 1); err != nil {
 						return
 					}
-					a := const_stack.Pop().(Constant)
+					a := const_stack.Pop()
 					if err = c.checkConstTypes(tok, lexer.DataTypes{lexer.DataTypeBool}, lexer.DataTypes{a.Typ}); err != nil {
 						return
 					}
@@ -592,30 +589,30 @@ loop:
 					if err = c.checkConstStackSize(tok, const_stack, 1); err != nil {
 						return
 					}
-					a := const_stack.Pop().(Constant)
+					a := const_stack.Pop()
 					const_stack.Push(Constant{Value: a.Value, Typ: lexer.DataTypeInt})
 				case lexer.IntrinsicCastBool:
 					if err = c.checkConstStackSize(tok, const_stack, 1); err != nil {
 						return
 					}
-					a := const_stack.Pop().(Constant)
+					a := const_stack.Pop()
 					const_stack.Push(Constant{Value: a.Value, Typ: lexer.DataTypeBool})
 				case lexer.IntrinsicCastPtr:
 					if err = c.checkConstStackSize(tok, const_stack, 1); err != nil {
 						return
 					}
-					a := const_stack.Pop().(Constant)
+					a := const_stack.Pop()
 					const_stack.Push(Constant{Value: a.Value, Typ: lexer.DataTypePtr})
 				case lexer.IntrinsicDebug:
 					values := make([]types.IntType, const_stack.Size())
 					for i := range const_stack.Data {
-						values[i] = const_stack.Data[i].(Constant).Value
+						values[i] = const_stack.Data[i].Value
 					}
 					fmt.Println(logger.FormatNoneMsg(&tok.Loc, "Const stack values: %v", values))
 				case lexer.IntrinsicTypeDebug:
 					values := make(lexer.DataTypes, const_stack.Size())
 					for i := range const_stack.Data {
-						values[i] = const_stack.Data[i].(Constant).Typ
+						values[i] = const_stack.Data[i].Typ
 					}
 					fmt.Println(logger.FormatNoneMsg(&tok.Loc, "Const stack types: %s", values))
 				default:
@@ -657,13 +654,13 @@ loop:
 		return
 	}
 
-	value, _ = const_stack.Pop().(Constant)
+	value = const_stack.Pop()
 	return
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (c *Compiler) compileFuncSignature(token *lexer.Token, th *lexer.TokenHolder) (inputs, outputs utils.Stack, err error) {
+func (c *Compiler) compileFuncSignature(token *lexer.Token, th *lexer.TokenHolder) (inputs, outputs lexer.TypeStack, err error) {
 	if th.Empty() {
 		err = logger.CompilerError(&token.Loc, "Expected function signature, but got nothing")
 		return
@@ -964,7 +961,13 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope *Scope) error {
 			}
 
 			if index, exists := scope.GetCapturedValue(name); exists {
-				c.pushOps(scope.Name, vm.Op{Token: *token, Typ: vm.OpPushCaptured, Operand: index, Data: scope.Captures.Data[scope.Captures.Size()-1-int(index)].(CapturedVal).Typ})
+				c.pushOps(
+					scope.Name,
+					vm.Op{
+						Token: *token, Typ: vm.OpPushCaptured, Operand: index,
+						Data: scope.Captures.Data[scope.Captures.Size()-1-int(index)].Typ,
+					},
+				)
 				continue
 			}
 
@@ -1040,7 +1043,6 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope *Scope) error {
 					scope.MemSize += alloc_size.Value
 				}
 
-
 			case lexer.KeywordFunc, lexer.KeywordInline:
 				if err := c.compileFunc(token, th, scope); err != nil {
 					return err
@@ -1078,7 +1080,7 @@ func (c *Compiler) CompileTokens(tokens *lexer.TokenHolder, rts *vm.RuntimeSetti
 	}
 
 	if len(c.Blocks.Data) > 0 {
-		top := c.Blocks.Data[len(c.Blocks.Data)-1].(*Block)
+		top := c.Blocks.Data[len(c.Blocks.Data)-1]
 		return logger.CompilerError(&top.Tok.Loc, "Unclosed `%s`-block", top.Tok.Text)
 	}
 
@@ -1088,11 +1090,11 @@ func (c *Compiler) CompileTokens(tokens *lexer.TokenHolder, rts *vm.RuntimeSetti
 	}
 	c.pushOps(GlobalScopeName, vm.Op{Typ: vm.OpCall, Operand: f.Addr - c.getCurrentAddr(), Data: f.Sig.Name})
 
-	if !(f.Sig.Inputs.Size() == 0 && f.Sig.Outputs.Size() == 1 && f.Sig.Outputs.Top().(lexer.DataType) == lexer.DataTypeInt) {
+	if !(f.Sig.Inputs.Size() == 0 && f.Sig.Outputs.Size() == 1 && f.Sig.Outputs.Top() == lexer.DataTypeInt) {
 		logger.CompilerCrash(
 			&c.Ops[f.Addr].Token.Loc,
-			"Expected entry point `%s` to have zero inputs and `int` as an output, " +
-			"but got input=%s and output=%s",
+			"Expected entry point `%s` to have zero inputs and `int` as an output, "+
+				"but got input=%s and output=%s",
 			f.Sig.Name, f.Sig.Inputs.Data, f.Sig.Outputs.Data,
 		)
 	}

@@ -2,12 +2,12 @@ package utils
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-type Stack struct {
-	Data []interface{}
+type Stack[T any] struct {
+	Data []T
 }
 
-func NewStack[T any](x []T) *Stack {
-	s := &Stack{}
+func NewStack[T any](x []T) *Stack[T] {
+	s := &Stack[T]{}
 	for _, i := range x {
 		s.Push(i)
 	}
@@ -16,22 +16,21 @@ func NewStack[T any](x []T) *Stack {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (s *Stack) Push(x interface{}) {
+func (s *Stack[T]) Push(x T) {
 	s.Data = append(s.Data, x)
 }
 
-func (s *Stack) Pop() (x interface{}) {
+func (s *Stack[T]) Pop() (x T) {
 	if len(s.Data) > 0 {
 		x = s.Data[len(s.Data)-1]
 		s.Data = s.Data[:len(s.Data)-1]
 	} else {
 		panic("Stack underflow")
 	}
-	// fmt.Printf("INFO: stack after pop: %v\n", s.Data)
 	return
 }
 
-func (s *Stack) Top() (x interface{}) {
+func (s *Stack[T]) Top() (x T) {
 	if len(s.Data) > 0 {
 		x = s.Data[len(s.Data)-1]
 	} else {
@@ -42,46 +41,44 @@ func (s *Stack) Top() (x interface{}) {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (s *Stack) Size() int {
+func (s *Stack[T]) Size() int {
 	return len(s.Data)
 }
 
-func (s *Stack) Empty() bool {
+func (s *Stack[T]) Empty() bool {
 	return s.Size() == 0
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (s *Stack) Copy() *Stack {
-	n := &Stack{Data: make([]interface{}, s.Size())}
+func (s *Stack[T]) Copy() *Stack[T] {
+	n := &Stack[T]{Data: make([]T, s.Size())}
 	copy(n.Data, s.Data)
 	return n
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (s *Stack) Clear() {
-	s.Data = make([]interface{}, 0)
+func (s *Stack[T]) Clear() {
+	s.Data = make([]T, 0)
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func StackAsSlice[T any](s *Stack) []T {
+func StackAsSlice[T any](s *Stack[T]) []T {
 	result := make([]T, s.Size())
-	for i, item := range s.Data {
-		result[i] = item.(T)
-	}
+	copy(result, s.Data)
 	return result
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func StacksAreEqual[T comparable](s, v *Stack) bool {
+func StacksAreEqual[T comparable](s, v *Stack[T]) bool {
 	if s.Size() != v.Size() {
 		return false
 	}
 	for i := range s.Data {
-		if s.Data[i].(T) != v.Data[i].(T) {
+		if s.Data[i] != v.Data[i] {
 			return false
 		}
 	}

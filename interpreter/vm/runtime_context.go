@@ -32,12 +32,14 @@ func NewRuntimeSettings(start types.IntType) *RuntimeSettings {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+type StringStack = utils.Stack[string]
+
 type RunTimeContext struct {
 	Memory        Memory
-	Stack         utils.Stack
-	ReturnStack   utils.Stack
+	Stack         IntStack
+	ReturnStack   IntStack
 	CapturesCount types.IntType
-	ScopeStack    utils.Stack
+	Scopes        StringStack
 	Addr          types.IntType
 	Argc          types.IntType
 	OpsCount      types.IntType
@@ -49,12 +51,12 @@ type RunTimeContext struct {
 func NewRuntimeContext(s *VmSettings, global_scope_name string) *RunTimeContext {
 	rc := &RunTimeContext{
 		Memory: NewMemory(s.MemorySize),
-		Stack:  utils.Stack{}, ReturnStack: utils.Stack{}, CapturesCount: 0,
-		Addr: 0, ScopeStack: utils.Stack{},
+		Stack:  IntStack{}, ReturnStack: IntStack{}, CapturesCount: 0,
+		Addr: 0, Scopes: StringStack{},
 		ExitCode:     ExitCodeType{Code: 0},
 		global_scope: global_scope_name,
 	}
-	rc.ScopeStack.Push(rc.global_scope)
+	rc.Scopes.Push(rc.global_scope)
 	rc.Settings = *NewRuntimeSettings(rc.Memory.Strings.Start)
 	return rc
 }
@@ -64,8 +66,8 @@ func NewRuntimeContext(s *VmSettings, global_scope_name string) *RunTimeContext 
 func (rc *RunTimeContext) Reset() {
 	rc.Stack.Clear()
 	rc.ReturnStack.Clear()
-	rc.ScopeStack.Clear()
-	rc.ScopeStack.Push(rc.global_scope)
+	rc.Scopes.Clear()
+	rc.Scopes.Push(rc.global_scope)
 	rc.OpsCount = rc.Settings.OpsCount
 
 	rc.Addr = rc.Settings.EntryPointAddr
@@ -99,7 +101,7 @@ func (rc *RunTimeContext) GetExitCode(err error) ExitCodeType {
 			rc.ExitCode.Code = types.IntType(2)
 			rc.ExitCode.Msg = "Empty stack after script exit"
 		default:
-			rc.ExitCode.Code = rc.Stack.Pop().(types.IntType)
+			rc.ExitCode.Code = rc.Stack.Pop()
 		}
 	} else {
 		rc.ExitCode.Code = types.IntType(3)

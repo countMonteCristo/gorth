@@ -29,9 +29,9 @@ func NewVM(s *VmSettings, global_scope_name string) *VM {
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (vm *VM) ProcessSyscall1() {
-	switch syscall_id := vm.Rc.Stack.Pop().(types.IntType); syscall_id {
+	switch syscall_id := vm.Rc.Stack.Pop(); syscall_id {
 	case unix.SYS_CLOSE:
-		fd := vm.Rc.Stack.Pop().(types.IntType)
+		fd := vm.Rc.Stack.Pop()
 		r1, _, err := unix.Syscall(
 			unix.SYS_CLOSE, uintptr(fd), 0, 0,
 		)
@@ -43,18 +43,18 @@ func (vm *VM) ProcessSyscall1() {
 }
 
 func (vm *VM) ProcessSyscall2() {
-	switch syscall_id := vm.Rc.Stack.Pop().(types.IntType); syscall_id {
+	switch syscall_id := vm.Rc.Stack.Pop(); syscall_id {
 	case unix.SYS_LISTEN:
-		backlog := vm.Rc.Stack.Pop().(types.IntType)
-		fd := vm.Rc.Stack.Pop().(types.IntType)
+		backlog := vm.Rc.Stack.Pop()
+		fd := vm.Rc.Stack.Pop()
 		r1, _, err := unix.Syscall(
 			unix.SYS_LISTEN, uintptr(fd), uintptr(backlog), 0,
 		)
 		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
 	case unix.SYS_NANOSLEEP:
-		rem_ptr := vm.Rc.Stack.Pop().(types.IntType)
-		req_ptr := vm.Rc.Stack.Pop().(types.IntType)
+		rem_ptr := vm.Rc.Stack.Pop()
+		req_ptr := vm.Rc.Stack.Pop()
 		r1, _, err := unix.Syscall(
 			unix.SYS_NANOSLEEP,
 			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[req_ptr])),
@@ -75,57 +75,57 @@ func (vm *VM) ProcessSyscall2() {
 }
 
 func (vm *VM) ProcessSyscall3() {
-	syscall_id := vm.Rc.Stack.Pop().(types.IntType)
+	syscall_id := vm.Rc.Stack.Pop()
 	switch syscall_id {
 	case unix.SYS_OPEN:
-		mode := vm.Rc.Stack.Pop().(types.IntType)
-		flags := vm.Rc.Stack.Pop().(types.IntType)
-		ptr := vm.Rc.Stack.Pop().(types.IntType)
+		mode := vm.Rc.Stack.Pop()
+		flags := vm.Rc.Stack.Pop()
+		ptr := vm.Rc.Stack.Pop()
 		r1, _, err := unix.Syscall(
 			unix.SYS_OPEN, uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[ptr])), uintptr(flags), uintptr(mode),
 		)
 		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
 	case unix.SYS_READ:
-		count := vm.Rc.Stack.Pop().(types.IntType)
-		ptr := vm.Rc.Stack.Pop().(types.IntType)
-		fd := vm.Rc.Stack.Pop().(types.IntType)
+		count := vm.Rc.Stack.Pop()
+		ptr := vm.Rc.Stack.Pop()
+		fd := vm.Rc.Stack.Pop()
 		r1, _, err := unix.Syscall(
 			unix.SYS_READ, uintptr(fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[ptr])), uintptr(count),
 		)
 		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
 	case unix.SYS_WRITE:
-		count := vm.Rc.Stack.Pop().(types.IntType)
-		ptr := vm.Rc.Stack.Pop().(types.IntType)
-		fd := vm.Rc.Stack.Pop().(types.IntType)
+		count := vm.Rc.Stack.Pop()
+		ptr := vm.Rc.Stack.Pop()
+		fd := vm.Rc.Stack.Pop()
 		r1, _, err := unix.Syscall(
 			unix.SYS_WRITE, uintptr(fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[ptr])), uintptr(count),
 		)
 		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
 	case unix.SYS_SOCKET:
-		protocol := vm.Rc.Stack.Pop().(types.IntType)
-		typ := vm.Rc.Stack.Pop().(types.IntType)
-		domain := vm.Rc.Stack.Pop().(types.IntType)
+		protocol := vm.Rc.Stack.Pop()
+		typ := vm.Rc.Stack.Pop()
+		domain := vm.Rc.Stack.Pop()
 		r1, _, err := unix.Syscall(
 			unix.SYS_SOCKET, uintptr(domain), uintptr(typ), uintptr(protocol),
 		)
 		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
 	case unix.SYS_BIND:
-		addrlen := vm.Rc.Stack.Pop().(types.IntType)
-		addr := vm.Rc.Stack.Pop().(types.IntType)
-		sock_fd := vm.Rc.Stack.Pop().(types.IntType)
+		addrlen := vm.Rc.Stack.Pop()
+		addr := vm.Rc.Stack.Pop()
+		sock_fd := vm.Rc.Stack.Pop()
 		r1, _, err := unix.Syscall(
 			unix.SYS_BIND, uintptr(sock_fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[addr])), uintptr(addrlen),
 		)
 		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
 	case unix.SYS_ACCEPT:
-		addrlen_ptr := vm.Rc.Stack.Pop().(types.IntType)
-		addr := vm.Rc.Stack.Pop().(types.IntType)
-		sock_fd := vm.Rc.Stack.Pop().(types.IntType)
+		addrlen_ptr := vm.Rc.Stack.Pop()
+		addr := vm.Rc.Stack.Pop()
+		sock_fd := vm.Rc.Stack.Pop()
 		r1, _, err := unix.Syscall(
 			unix.SYS_ACCEPT, uintptr(sock_fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[addr])), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[addrlen_ptr])),
 		)
@@ -137,13 +137,13 @@ func (vm *VM) ProcessSyscall3() {
 }
 
 func (vm *VM) ProcessSyscall5() {
-	switch syscall_id := vm.Rc.Stack.Pop().(types.IntType); syscall_id {
+	switch syscall_id := vm.Rc.Stack.Pop(); syscall_id {
 	case unix.SYS_SETSOCKOPT:
-		optlen := vm.Rc.Stack.Pop().(types.IntType)
-		optval_ptr := vm.Rc.Stack.Pop().(types.IntType)
-		optname := vm.Rc.Stack.Pop().(types.IntType)
-		level := vm.Rc.Stack.Pop().(types.IntType)
-		fd := vm.Rc.Stack.Pop().(types.IntType)
+		optlen := vm.Rc.Stack.Pop()
+		optval_ptr := vm.Rc.Stack.Pop()
+		optname := vm.Rc.Stack.Pop()
+		level := vm.Rc.Stack.Pop()
+		fd := vm.Rc.Stack.Pop()
 		r1, _, err := unix.Syscall6(
 			unix.SYS_SETSOCKOPT, uintptr(fd), uintptr(level), uintptr(optname),
 			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[optval_ptr])),
@@ -162,10 +162,10 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 	op := &(*ops)[vm.Rc.Addr]
 	switch op.Typ {
 	case OpPushInt, OpPushBool, OpPushPtr:
-		vm.Rc.Stack.Push(op.Operand)
+		vm.Rc.Stack.Push(op.Operand.(types.IntType))
 		vm.Rc.Addr++
 	case OpCondJump:
-		top := vm.Rc.Stack.Pop().(types.BoolType)
+		top := vm.Rc.Stack.Pop()
 		if I2B(top) {
 			vm.Rc.Addr++
 		} else {
@@ -177,47 +177,47 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		intrinsic := op.Operand.(lexer.IntrinsicType)
 		switch intrinsic {
 		case lexer.IntrinsicPlus, lexer.IntrinsicMinus, lexer.IntrinsicMul, lexer.IntrinsicBitAnd, lexer.IntrinsicBitOr, lexer.IntrinsicBitXor:
-			b := vm.Rc.Stack.Pop().(types.IntType)
-			a := vm.Rc.Stack.Pop().(types.IntType)
+			b := vm.Rc.Stack.Pop()
+			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(SafeArithmeticFunctions[intrinsic](a, b))
 		case lexer.IntrinsicDiv:
-			b := vm.Rc.Stack.Pop().(types.IntType)
+			b := vm.Rc.Stack.Pop()
 			if b == 0 {
 				return logger.VmRuntimeError(&op.Token.Loc, "Division by zero")
 			}
-			a := vm.Rc.Stack.Pop().(types.IntType)
+			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(a / b)
 		case lexer.IntrinsicMod:
-			b := vm.Rc.Stack.Pop().(types.IntType)
+			b := vm.Rc.Stack.Pop()
 			if b == 0 {
 				return logger.VmRuntimeError(&op.Token.Loc, "Division by zero")
 			}
-			a := vm.Rc.Stack.Pop().(types.IntType)
+			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(a % b)
 		case lexer.IntrinsicShl:
-			b := vm.Rc.Stack.Pop().(types.IntType)
+			b := vm.Rc.Stack.Pop()
 			if b < 0 {
 				return logger.VmRuntimeError(&op.Token.Loc, "Negative shift amount in `<<`: %d", b)
 			}
-			a := vm.Rc.Stack.Pop().(types.IntType)
+			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(a << b)
 		case lexer.IntrinsicShr:
-			b := vm.Rc.Stack.Pop().(types.IntType)
+			b := vm.Rc.Stack.Pop()
 			if b < 0 {
 				return logger.VmRuntimeError(&op.Token.Loc, "Negative shift amount in `>>`: %d", b)
 			}
-			a := vm.Rc.Stack.Pop().(types.IntType)
+			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(a >> b)
 		case lexer.IntrinsicBitNot:
-			a := vm.Rc.Stack.Pop().(types.IntType)
+			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(^a)
 		case lexer.IntrinsicLogicalAnd, lexer.IntrinsicLogicalOr:
-			b := vm.Rc.Stack.Pop().(types.BoolType)
-			a := vm.Rc.Stack.Pop().(types.BoolType)
+			b := vm.Rc.Stack.Pop()
+			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(LogicalFunctions[intrinsic](a, b))
 		case lexer.IntrinsicLogicalNot:
 			x := vm.Rc.Stack.Pop()
-			vm.Rc.Stack.Push(B2I(!I2B(x.(types.BoolType))))
+			vm.Rc.Stack.Push(B2I(!I2B(x)))
 		case lexer.IntrinsicDup:
 			x := vm.Rc.Stack.Top()
 			vm.Rc.Stack.Push(x)
@@ -239,8 +239,8 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 			vm.Rc.Stack.Push(c)
 			vm.Rc.Stack.Push(a)
 		case lexer.IntrinsicEq, lexer.IntrinsicNe, lexer.IntrinsicLe, lexer.IntrinsicGe, lexer.IntrinsicLt, lexer.IntrinsicGt:
-			b := vm.Rc.Stack.Pop().(types.IntType)
-			a := vm.Rc.Stack.Pop().(types.IntType)
+			b := vm.Rc.Stack.Pop()
+			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(ComparableFunctions[intrinsic](a, b))
 		case lexer.IntrinsicPuti:
 			x := vm.Rc.Stack.Pop()
@@ -255,15 +255,15 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		case lexer.IntrinsicTypeDebug:
 			// do nothing
 		case lexer.IntrinsicLoad8, lexer.IntrinsicLoad16, lexer.IntrinsicLoad32, lexer.IntrinsicLoad64:
-			ptr := vm.Rc.Stack.Pop().(types.IntType)
+			ptr := vm.Rc.Stack.Pop()
 			val, err := vm.Rc.Memory.LoadFromMem(ptr, LoadSizes[intrinsic], &op.Token.Loc, false)
 			if err != nil {
 				return err
 			}
 			vm.Rc.Stack.Push(val)
 		case lexer.IntrinsicStore8, lexer.IntrinsicStore16, lexer.IntrinsicStore32, lexer.IntrinsicStore64:
-			ptr := vm.Rc.Stack.Pop().(types.IntType)
-			x := vm.Rc.Stack.Pop().(types.IntType)
+			ptr := vm.Rc.Stack.Pop()
+			x := vm.Rc.Stack.Pop()
 			if err = vm.Rc.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic], &op.Token.Loc, false); err != nil {
 				return err
 			}
@@ -303,7 +303,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		vm.Rc.CapturesCount = 0
 		vm.Rc.Addr++
 		if vm.S.Debug {
-			vm.Rc.ScopeStack.Push(op.DebugInfo.(string))
+			vm.Rc.Scopes.Push(op.DebugInfo.(string))
 		}
 	case OpFuncEnd:
 		if vm.Rc.ReturnStack.Empty() {
@@ -312,11 +312,11 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		for i := types.IntType(0); i < vm.Rc.CapturesCount; i++ {
 			vm.Rc.ReturnStack.Pop()
 		}
-		vm.Rc.CapturesCount = vm.Rc.ReturnStack.Pop().(types.IntType)
-		vm.Rc.Addr = vm.Rc.ReturnStack.Pop().(types.IntType) + 1
+		vm.Rc.CapturesCount = vm.Rc.ReturnStack.Pop()
+		vm.Rc.Addr = vm.Rc.ReturnStack.Pop() + 1
 		vm.Rc.Memory.Ram.Ptr -= op.Operand.(types.IntType)
 		if vm.S.Debug {
-			vm.Rc.ScopeStack.Pop()
+			vm.Rc.Scopes.Pop()
 		}
 	case OpPushLocalAlloc:
 		addr := vm.Rc.Memory.Ram.Ptr - op.Operand.(types.IntType)
@@ -329,7 +329,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 	case OpCapture:
 		cap_count := op.Operand.(types.IntType)
 		for i := types.IntType(0); i < cap_count; i++ {
-			x := vm.Rc.Stack.Data[types.IntType(vm.Rc.Stack.Size())-cap_count+i].(types.IntType)
+			x := vm.Rc.Stack.Data[types.IntType(vm.Rc.Stack.Size())-cap_count+i]
 			vm.Rc.ReturnStack.Push(x)
 		}
 		vm.Rc.CapturesCount += cap_count
@@ -343,7 +343,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		vm.Rc.Addr++
 	case OpPushCaptured:
 		idx := op.Operand.(types.IntType)
-		x := vm.Rc.ReturnStack.Data[types.IntType(vm.Rc.ReturnStack.Size())-1-idx].(types.IntType)
+		x := vm.Rc.ReturnStack.Data[types.IntType(vm.Rc.ReturnStack.Size())-1-idx]
 		vm.Rc.Stack.Push(x)
 		vm.Rc.Addr++
 	default:

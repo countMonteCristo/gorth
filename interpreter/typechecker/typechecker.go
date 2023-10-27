@@ -34,7 +34,7 @@ func NewTypeChecker(enabled bool) *TypeChecker {
 // ---------------------------------------------------------------------------------------------------------------------
 
 type TypeCheckerJumpResult struct {
-	Stack utils.Stack
+	Stack lexer.TypeStack
 	Token *lexer.Token
 }
 
@@ -82,15 +82,15 @@ func OutputsAreSame(f, s *TypeCheckerOutputs) bool {
 
 type TypeCheckerContext struct {
 	Typ        context_type
-	Stack      utils.Stack
-	Captures   utils.Stack
+	Stack      lexer.TypeStack
+	Captures   lexer.TypeStack
 	Terminated bool
 	Outputs    TypeCheckerOutputs
 }
 
 func NewTypeCheckerContext(t context_type) *TypeCheckerContext {
 	return &TypeCheckerContext{
-		Typ: t, Stack: utils.Stack{}, Captures: utils.Stack{},
+		Typ: t, Stack: lexer.TypeStack{}, Captures: lexer.TypeStack{},
 		Outputs: *NewTypeCheckerOutputs(), Terminated: false,
 	}
 }
@@ -116,8 +116,10 @@ func FormatContextSliceOutputs(s []*TypeCheckerContext, indent string) string {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+type typeCheckerContextStack = utils.Stack[*TypeCheckerContext]
+
 type TypeCheckerContextStack struct {
-	stack utils.Stack
+	stack typeCheckerContextStack
 }
 
 func NewTypeCheckerContextStack() *TypeCheckerContextStack {
@@ -132,22 +134,14 @@ func (cs *TypeCheckerContextStack) Pop() *TypeCheckerContext {
 	if cs.stack.Empty() {
 		logger.TypeCheckerCrash(nil, "Pop from empty TypeCheckerContextStack")
 	}
-	c, ok := cs.stack.Pop().(*TypeCheckerContext)
-	if !ok {
-		logger.TypeCheckerCrash(nil, "Pop item from TypeCheckerContextStack has bad type")
-	}
-	return c
+	return cs.stack.Pop()
 }
 
 func (cs *TypeCheckerContextStack) Top() *TypeCheckerContext {
 	if cs.stack.Empty() {
 		logger.TypeCheckerCrash(nil, "Top from empty TypeCheckerContextStack")
 	}
-	c, ok := cs.stack.Top().(*TypeCheckerContext)
-	if !ok {
-		logger.TypeCheckerCrash(nil, "Top item from TypeCheckerContextStack has bad type")
-	}
-	return c
+	return cs.stack.Top()
 }
 
 func (cs *TypeCheckerContextStack) Size() int {
@@ -156,7 +150,7 @@ func (cs *TypeCheckerContextStack) Size() int {
 
 func (cs *TypeCheckerContextStack) GetContext(t context_type) *TypeCheckerContext {
 	for j := cs.Size() - 1; j >= 0; j-- {
-		ctx := cs.stack.Data[j].(*TypeCheckerContext)
+		ctx := cs.stack.Data[j]
 		if ctx.Typ == t {
 			return ctx
 		}
@@ -171,13 +165,13 @@ func (cs *TypeCheckerContextStack) Clone() *TypeCheckerContextStack {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (tc *TypeChecker) equalTypeStacks(expected, actual *utils.Stack) bool {
+func (tc *TypeChecker) equalTypeStacks(expected, actual *lexer.TypeStack) bool {
 	if expected.Size() != actual.Size() {
 		return false
 	}
 	for i := range expected.Data {
-		e := expected.Data[i].(lexer.DataType)
-		a := actual.Data[i].(lexer.DataType)
+		e := expected.Data[i]
+		a := actual.Data[i]
 		if e != lexer.DataTypeAny && a != e {
 			return false
 		}
@@ -185,7 +179,7 @@ func (tc *TypeChecker) equalTypeStacks(expected, actual *utils.Stack) bool {
 	return true
 }
 
-func (tc *TypeChecker) enoughArgsCount(stack *utils.Stack, count int, token *lexer.Token) (err error) {
+func (tc *TypeChecker) enoughArgsCount(stack *lexer.TypeStack, count int, token *lexer.Token) (err error) {
 	if stack.Size() < count {
 		err = logger.TypeCheckerError(&token.Loc, "Not enough arguments for `%s`", token.Text)
 	}
@@ -194,15 +188,12 @@ func (tc *TypeChecker) enoughArgsCount(stack *utils.Stack, count int, token *lex
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (tc *TypeChecker) popType(op *vm.Op, stack *utils.Stack, expected lexer.DataType) error {
+func (tc *TypeChecker) popType(op *vm.Op, stack *lexer.TypeStack, expected lexer.DataType) error {
 	if err := tc.enoughArgsCount(stack, 1, &op.Token); err != nil {
 		return err
 	}
 
-	actual, ok := stack.Top().(lexer.DataType)
-	if !ok {
-		return logger.TypeCheckerError(&op.Token.Loc, "Cannot convert stack item to DataType")
-	}
+	actual := stack.Top()
 
 	if expected != lexer.DataTypeAny && actual != expected {
 		return logger.TypeCheckerError(
@@ -215,13 +206,13 @@ func (tc *TypeChecker) popType(op *vm.Op, stack *utils.Stack, expected lexer.Dat
 	return nil
 }
 
-func (tc *TypeChecker) popTypes(op *vm.Op, stack, expected *utils.Stack) error {
+func (tc *TypeChecker) popTypes(op *vm.Op, stack, expected *lexer.TypeStack) error {
 	if err := tc.enoughArgsCount(stack, expected.Size(), &op.Token); err != nil {
 		return err
 	}
 
 	for i := expected.Size() - 1; i >= 0; i-- {
-		t := expected.Data[i].(lexer.DataType)
+		t := expected.Data[i]
 		if err := tc.popType(op, stack, t); err != nil {
 			return err
 		}
@@ -231,12 +222,8 @@ func (tc *TypeChecker) popTypes(op *vm.Op, stack, expected *utils.Stack) error {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (tc *TypeChecker) popTypeContract(op *vm.Op, stack *utils.Stack, expected lexer.DataType) (actual lexer.DataType, err error) {
-	actual, ok := stack.Pop().(lexer.DataType)
-	if !ok {
-		err = logger.TypeCheckerError(&op.Token.Loc, "Cannot convert stack item to DataType")
-		return
-	}
+func (tc *TypeChecker) popTypeContract(op *vm.Op, stack *lexer.TypeStack, expected lexer.DataType) (actual lexer.DataType, err error) {
+	actual = stack.Pop()
 
 	if expected != lexer.DataTypeAny && actual != expected {
 		err = logger.TypeCheckerError(
@@ -247,14 +234,14 @@ func (tc *TypeChecker) popTypeContract(op *vm.Op, stack *utils.Stack, expected l
 	return
 }
 
-func (tc *TypeChecker) popTypesContract(op *vm.Op, stack *utils.Stack, contract *Contract) (d lexer.DataTypes, err error) {
+func (tc *TypeChecker) popTypesContract(op *vm.Op, stack *lexer.TypeStack, contract *Contract) (d lexer.DataTypes, err error) {
 	if err = tc.enoughArgsCount(stack, contract.Inputs.Size(), &op.Token); err != nil {
 		return
 	}
 
 	d = make(lexer.DataTypes, contract.Inputs.Size())
 	for i := contract.Inputs.Size() - 1; i >= 0; i-- {
-		e := contract.Inputs.Data[i].(lexer.DataType)
+		e := contract.Inputs.Data[i]
 		d[i], err = tc.popTypeContract(op, stack, e)
 		if err != nil {
 			return
@@ -265,7 +252,7 @@ func (tc *TypeChecker) popTypesContract(op *vm.Op, stack *utils.Stack, contract 
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (tc *TypeChecker) typeCheckOutputs(op *vm.Op, outputs lexer.DataTypes, expected *utils.Stack) error {
+func (tc *TypeChecker) typeCheckOutputs(op *vm.Op, outputs lexer.DataTypes, expected *lexer.TypeStack) error {
 	if len(outputs) != expected.Size() {
 		return logger.TypeCheckerError(
 			&op.Token.Loc, "Outputs for `%s` don't fit to its contract(expected: %s actual: %s)",
@@ -274,7 +261,7 @@ func (tc *TypeChecker) typeCheckOutputs(op *vm.Op, outputs lexer.DataTypes, expe
 	}
 
 	for i, a := range outputs {
-		e := expected.Data[i].(lexer.DataType)
+		e := expected.Data[i]
 		if e != lexer.DataTypeAny && e != a {
 			return logger.TypeCheckerError(
 				&op.Token.Loc, "Output arg #%d for `%s` don't fit to its contract(expected: %s actual: %s)",
@@ -334,7 +321,7 @@ func (tc *TypeChecker) typeCheckSimpleOps(op *vm.Op, ctx *TypeCheckerContext) er
 	}
 
 	for _, item := range contract.Outputs.Data {
-		ctx.Stack.Push(item.(lexer.DataType))
+		ctx.Stack.Push(item)
 	}
 	return nil
 }
@@ -355,7 +342,7 @@ func (tc *TypeChecker) typeCheckFunc(ops *[]vm.Op, i int, contextStack *TypeChec
 		return
 	}
 	for _, t := range f.Sig.Inputs.Data {
-		ctx.Stack.Push(t.(lexer.DataType))
+		ctx.Stack.Push(t)
 	}
 
 	if _, err = tc.typeCheck(ops, i+1, contextStack); err != nil {
@@ -716,7 +703,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 				return
 			}
 			for _, t := range f.Sig.Outputs.Data {
-				ctx.Stack.Push(t.(lexer.DataType))
+				ctx.Stack.Push(t)
 			}
 			i++
 
@@ -728,7 +715,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			}
 
 			for j := 0; j < len(typs); j++ {
-				e := ctx.Stack.Data[ctx.Stack.Size()-len(typs)+j].(lexer.DataType)
+				e := ctx.Stack.Data[ctx.Stack.Size()-len(typs)+j]
 				a := typs[j]
 				if e != lexer.DataTypeAny && e != a {
 					err = logger.TypeCheckerError(&op.Token.Loc, "Capture types mismatch: expected %s but got %s", typs, ctx.Stack.Data)
@@ -754,7 +741,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 				err = logger.TypeCheckerError(&op.Token.Loc, "Not enough variables in capture stack to push: expected to push %d but got %d", idx, ctx.Captures.Size())
 				return i, err
 			}
-			t := ctx.Captures.Data[types.IntType(ctx.Captures.Size())-1-idx].(lexer.DataType)
+			t := ctx.Captures.Data[types.IntType(ctx.Captures.Size())-1-idx]
 			ctx.Stack.Push(t)
 			i++
 
@@ -807,7 +794,7 @@ func (tc *TypeChecker) TypeCheckProgram(ops *[]vm.Op, ctx *compiler.CompileTimeC
 	}
 
 	s := context.Outputs.Results[0].Stack
-	if !(context.Typ == context_type_global && s.Size() == 1 && s.Top().(lexer.DataType) == lexer.DataTypeInt) {
+	if !(context.Typ == context_type_global && s.Size() == 1 && s.Top() == lexer.DataTypeInt) {
 		return logger.TypeCheckerError(nil, "Expected typecheck stack to contain `int` as exit code at the end, but got %s", s.Data)
 	}
 	return nil

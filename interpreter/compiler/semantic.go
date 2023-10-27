@@ -9,11 +9,15 @@ import (
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+type ConstantStack = utils.Stack[Constant]
+
+// ---------------------------------------------------------------------------------------------------------------------
+
 // Function description describes input and output arguments
 type FuncSignature struct {
 	Name    string
-	Inputs  utils.Stack
-	Outputs utils.Stack
+	Inputs  lexer.TypeStack
+	Outputs lexer.TypeStack
 }
 
 // Function description - name, signature, inline flag, list of operations

@@ -8,6 +8,10 @@ import (
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+type CapturedValueStack = utils.Stack[CapturedVal]
+
+// ---------------------------------------------------------------------------------------------------------------------
+
 type ScopeType int
 
 const (
@@ -29,13 +33,13 @@ type Scope struct {
 	Consts   map[string]Constant
 	Names    map[string]lexer.Token
 	MemSize  types.IntType
-	Captures utils.Stack
+	Captures CapturedValueStack
 }
 
 func NewScope(funcName string) *Scope {
 	return &Scope{
 		Name: funcName, Consts: make(map[string]Constant), Allocs: make(map[string]Allocation),
-		Names: make(map[string]lexer.Token), MemSize: 0, Captures: utils.Stack{},
+		Names: make(map[string]lexer.Token), MemSize: 0, Captures: CapturedValueStack{},
 	}
 }
 
@@ -43,7 +47,7 @@ func NewScope(funcName string) *Scope {
 
 func (s *Scope) GetCapturedValue(name string) (types.IntType, bool) {
 	for i, v := range s.Captures.Data {
-		if v.(CapturedVal).Name == name {
+		if v.Name == name {
 			return types.IntType(s.Captures.Size() - 1 - i), true
 		}
 	}

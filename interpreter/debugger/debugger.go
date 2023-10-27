@@ -85,7 +85,7 @@ loop:
 			d.iface.SendOK()
 		case DebugCmdPrint:
 			names := cmd.Args.([]string)
-			scope_name := d.vm.Rc.ScopeStack.Top().(string)
+			scope_name := d.vm.Rc.Scopes.Top()
 			n_found := ctx.DebugConstNames(names, scope_name) +
 				ctx.DebugAllocNames(names, scope_name, &d.vm.Rc.Memory) +
 				ctx.DebugFuncNames(names)
@@ -243,7 +243,7 @@ loop:
 			if d.vm.Rc.Addr >= d.vm.Rc.OpsCount {
 				d.iface.SendFailed("Can not print environment: script finished")
 			} else {
-				current_scope_name := d.vm.Rc.ScopeStack.Top().(string)
+				current_scope_name := d.vm.Rc.Scopes.Top()
 
 				if typ == "all" || typ == "local" {
 					fmt.Printf("Scope: <%s>\n", current_scope_name)
