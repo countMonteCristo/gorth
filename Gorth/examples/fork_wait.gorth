@@ -1,0 +1,16 @@
+include "std.gorth"
+
+
+func main : int do
+  fork drop
+  if dup 0 = do
+    1 sleep_s
+    "CHILD: i'm a child" println
+    drop
+  else
+    "PARENT: spawn child.." println
+     NULL 0 NULL wait4 drop drop
+     "PARENT: child is done" println
+  end
+  0
+end

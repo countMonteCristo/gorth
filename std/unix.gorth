@@ -9,6 +9,8 @@ const SYS_ACCEPT     43 end
 const SYS_BIND       49 end
 const SYS_LISTEN     50 end
 const SYS_SETSOCKOPT 54 end
+const SYS_FORK       57 end
+const SYS_WAIT4      61 end
 
 // Standart streams
 const STDIN  0 end
@@ -234,6 +236,28 @@ inline func accept
   int // errno
 do
   SYS_ACCEPT syscall3
+end
+
+// Execute `fork` syscall
+func fork
+    :
+  int
+  int
+do
+  SYS_FORK syscall0
+end
+
+// execute wait4 syscall
+func wait4
+  int   // pid
+  ptr   // wstatus or NULL
+  int   // options
+  ptr   // rusage or NULL
+    :
+  int   // pid
+  int   // errno
+do
+  SYS_WAIT4 syscall4
 end
 
 // ---------------------------------------------------------------------------------------------------------------------

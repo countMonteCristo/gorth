@@ -28,6 +28,19 @@ func NewVM(s *VmSettings, global_scope_name string) *VM {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+func (vm *VM) ProcessSyscall0() {
+	switch syscall_id := vm.Rc.Stack.Pop(); syscall_id {
+	case unix.SYS_FORK:
+		r1, _, err := unix.Syscall(
+			unix.SYS_FORK, 0, 0, 0,
+		)
+		vm.Rc.Stack.Push(types.IntType(r1))
+		vm.Rc.Stack.Push(types.IntType(err))
+	default:
+		logger.VmCrash(nil, "syscall0 for #%d is not implemented yet\n", syscall_id)
+	}
+}
+
 func (vm *VM) ProcessSyscall1() {
 	switch syscall_id := vm.Rc.Stack.Pop(); syscall_id {
 	case unix.SYS_CLOSE:
@@ -61,12 +74,6 @@ func (vm *VM) ProcessSyscall2() {
 			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[rem_ptr])),
 			0,
 		)
-		// fmt.Printf(
-		// 	"rem=%d req=%d r1=%d err=%v\n",
-		// 	vm.Rc.Memory.Data[rem_ptr:rem_ptr+16],
-		// 	vm.Rc.Memory.Data[req_ptr:req_ptr+16],
-		// 	r1, err,
-		// )
 		vm.Rc.Stack.Push(types.IntType(r1))
 		vm.Rc.Stack.Push(types.IntType(err))
 	default:
@@ -136,6 +143,27 @@ func (vm *VM) ProcessSyscall3() {
 	}
 }
 
+func (vm *VM) ProcessSyscall4() {
+	switch syscall_id := vm.Rc.Stack.Pop(); syscall_id {
+	case unix.SYS_WAIT4:
+		rusage_ptr := vm.Rc.Stack.Pop()
+		options := vm.Rc.Stack.Pop()
+		wstatus_ptr := vm.Rc.Stack.Pop()
+		pid := vm.Rc.Stack.Pop()
+		r1, _, err := unix.Syscall6(
+			unix.SYS_WAIT4, uintptr(pid),
+			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[wstatus_ptr])),
+			uintptr(options),
+			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[rusage_ptr])),
+			0, 0,
+		)
+		vm.Rc.Stack.Push(types.IntType(r1))
+		vm.Rc.Stack.Push(types.IntType(err))
+	default:
+		logger.VmCrash(nil, "syscall4 for #%d is not implemented yet\n", syscall_id)
+	}
+}
+
 func (vm *VM) ProcessSyscall5() {
 	switch syscall_id := vm.Rc.Stack.Pop(); syscall_id {
 	case unix.SYS_SETSOCKOPT:
@@ -153,6 +181,13 @@ func (vm *VM) ProcessSyscall5() {
 		vm.Rc.Stack.Push(types.IntType(err))
 	default:
 		logger.VmCrash(nil, "syscall2 for #%d is not implemented yet\n", syscall_id)
+	}
+}
+
+func (vm *VM) ProcessSyscall6() {
+	switch syscall_id := vm.Rc.Stack.Pop(); syscall_id {
+	default:
+		logger.VmCrash(nil, "syscall6 for #%d is not implemented yet\n", syscall_id)
 	}
 }
 
@@ -275,14 +310,20 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		case lexer.IntrinsicEnv:
 			vm.Rc.Stack.Push(vm.Rc.Memory.Env)
 
+		case lexer.IntrinsicSyscall0:
+			vm.ProcessSyscall0()
 		case lexer.IntrinsicSyscall1:
 			vm.ProcessSyscall1()
 		case lexer.IntrinsicSyscall2:
 			vm.ProcessSyscall2()
 		case lexer.IntrinsicSyscall3:
 			vm.ProcessSyscall3()
+		case lexer.IntrinsicSyscall4:
+			vm.ProcessSyscall4()
 		case lexer.IntrinsicSyscall5:
 			vm.ProcessSyscall5()
+		case lexer.IntrinsicSyscall6:
+			vm.ProcessSyscall6()
 
 		case lexer.IntrinsicCastInt, lexer.IntrinsicCastPtr, lexer.IntrinsicCastBool:
 			// do nothing

@@ -183,6 +183,10 @@ var intrinsicType2Contract = map[lexer.IntrinsicType]*Contract{
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
 	},
 
+	lexer.IntrinsicSyscall0: {
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+	},
 	lexer.IntrinsicSyscall1: {
 		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeInt}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
@@ -195,8 +199,16 @@ var intrinsicType2Contract = map[lexer.IntrinsicType]*Contract{
 		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
 	},
+	lexer.IntrinsicSyscall4: {
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+	},
 	lexer.IntrinsicSyscall5: {
 		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+	},
+	lexer.IntrinsicSyscall6: {
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
 	},
 
@@ -258,7 +270,8 @@ func GetIntrinsicLogic(i lexer.IntrinsicType) (IntrinsicLogicFunc, string) {
 		lexer.IntrinsicArgc,
 		lexer.IntrinsicArgv, lexer.IntrinsicEnv,
 		lexer.IntrinsicCastInt, lexer.IntrinsicCastPtr, lexer.IntrinsicCastBool,
-		lexer.IntrinsicSyscall1, lexer.IntrinsicSyscall2, lexer.IntrinsicSyscall3, lexer.IntrinsicSyscall5:
+		lexer.IntrinsicSyscall0, lexer.IntrinsicSyscall1, lexer.IntrinsicSyscall2,
+		lexer.IntrinsicSyscall3, lexer.IntrinsicSyscall4, lexer.IntrinsicSyscall5, lexer.IntrinsicSyscall6:
 		return defaultLogic, ""
 
 	case lexer.IntrinsicOffset, lexer.IntrinsicReset:

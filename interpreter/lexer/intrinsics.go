@@ -58,10 +58,13 @@ const (
 	IntrinsicOffset
 	IntrinsicReset
 
+	IntrinsicSyscall0
 	IntrinsicSyscall1
 	IntrinsicSyscall2
 	IntrinsicSyscall3
+	IntrinsicSyscall4
 	IntrinsicSyscall5
+	IntrinsicSyscall6
 
 	IntrinsicCastInt
 	IntrinsicCastPtr
@@ -122,10 +125,13 @@ var Intrinsic2Str = map[IntrinsicType]string{
 	IntrinsicOffset: "offset",
 	IntrinsicReset:  "reset",
 
+	IntrinsicSyscall0: "syscall0",
 	IntrinsicSyscall1: "syscall1",
 	IntrinsicSyscall2: "syscall2",
 	IntrinsicSyscall3: "syscall3",
+	IntrinsicSyscall4: "syscall4",
 	IntrinsicSyscall5: "syscall5",
+	IntrinsicSyscall6: "syscall6",
 
 	IntrinsicCastInt:  "cast(int)",
 	IntrinsicCastPtr:  "cast(ptr)",

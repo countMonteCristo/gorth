@@ -55,6 +55,32 @@ const timespec.tv_sec  sizeof(u64) offset end
 const timespec.tv_nsec sizeof(u64) offset end
 const sizeof(timespec)              reset end
 
+// A time value that is accurate to the nearest microsecond but also has a range of years <struct_timeval.h>
+const timeval.tv_sec  sizeof(long) offset end // seconds
+const timeval.tv_usec sizeof(long) offset end // milliseconds
+const sizeof(timeval)               reset end
+
+// Structure which says how much of each resource has been used.
+// If the system does not keep track of a particular value, the struct
+// field is always zero <struct_rusage.h>
+const rusage.ru_utime     sizeof(timeval) offset end  // user CPU time used
+const rusage.ru_stime     sizeof(timeval) offset end  // system CPU time used
+const rusage.ru_maxrss    sizeof(long)    offset end  // maximum resident set size
+const rusage.ru_ixrss     sizeof(long)    offset end  // integral shared memory size
+const rusage.ru_idrss     sizeof(long)    offset end  // integral unshared data size
+const rusage.ru_isrss     sizeof(long)    offset end  // integral unshared stack size
+const rusage.ru_minflt    sizeof(long)    offset end  // page reclaims (soft page faults)
+const rusage.ru_majflt    sizeof(long)    offset end  // page faults (hard page faults)
+const rusage.ru_nswap     sizeof(long)    offset end  // swaps
+const rusage.ru_inblock   sizeof(long)    offset end  // block input operations
+const rusage.ru_oublock   sizeof(long)    offset end  // block output operations
+const rusage.ru_msgsnd    sizeof(long)    offset end  // IPC messages sent
+const rusage.ru_msgrcv    sizeof(long)    offset end  // IPC messages recieved
+const rusage.ru_nsignals  sizeof(long)    offset end  // signals received
+const rusage.ru_nvcsw     sizeof(long)    offset end  // voluntary context switches
+const rusage.ru_nivcsw    sizeof(long)    offset end  // involuntary context switches
+const sizeof(rusage)                       reset end
+
 // ----------------------------------------------- Pointer Arithmetics -------------------------------------------------
 
 // Adds ptr diff to ptr
