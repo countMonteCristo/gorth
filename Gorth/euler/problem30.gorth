@@ -1,0 +1,58 @@
+include "std.gorth"
+
+// Surprisingly there are only three numbers that can be written as the sum of fourth powers of their digits:
+//      1634 = 1^4 + 6^4 + 3^4 + 4^4
+//      8208 = 8^4 + 2^4 + 0^4 + 8^4
+//      9474 = 9^4 + 4^4 + 7^4 + 4^4
+// As 1 = 1^4 is not a sum it is not included.
+// The sum of these numbers is 1634 + 8208 + 9474 = 19316.
+// Find the sum of all the numbers that can be written as the sum of fifth powers of their digits.
+//
+// Answer:  443839
+// Note: skip in tests because execution time is quite big
+
+const N 10 end
+const sizeof(fifth) sizeof(u32) end
+const sizeof(fifths) sizeof(fifth) N * end
+alloc fifths sizeof(fifths) end
+
+// abcd == a^5 + b^5 + c^5 + d%
+func f int : bool do
+  alloc res sizeof(u32) end
+  0 res !32
+
+  dup while dup 0 > do
+    dup 10 %
+    fifths swap sizeof(fifth) * ptr+ @32
+    res @32 + res !32
+
+    if over res @32 < do
+      drop drop false return
+    end
+
+    10 /
+  end drop
+
+  res @32 =
+end
+
+func main : int do
+  alloc res sizeof(u32) end
+  0 res !32
+  fifths 0 sizeof(fifths) memset drop
+
+  0 while dup N < do
+    dup dup dup dup dup * * * *
+    over fifths swap sizeof(fifth) * ptr+ !32
+    1 +
+  end drop
+
+  1000 while dup 1000000 < do
+    dup
+    if dup f do res @32 + res !32 else drop end
+    1 +
+  end drop
+
+  res @32 puti
+  0
+end
