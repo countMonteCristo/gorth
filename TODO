@@ -19,6 +19,7 @@
   [*] `return` keyword
   [*] main should not be inlined
   [*] allow recursion for ordinary functions
+  [ ] add support for using function pointers
 
 [ ] Captures
   [*] supply captures syntax (capture x int y ptr z bool do ... end)
