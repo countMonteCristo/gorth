@@ -719,6 +719,11 @@ func (c *Compiler) compileFuncDef(token *lexer.Token, th *lexer.TokenHolder) (na
 		return
 	}
 
+	if _, exists := lexer.Str2Intrinsic[name_token.Text]; exists {
+		err = logger.CompilerError(&name_token.Loc, "Can not define function with the name of intrinsic")
+		return
+	}
+
 	defined_token, exists := c.Ctx.GlobalScope().Names[name_token.Text]
 	if exists {
 		msg := logger.FormatNoneMsg(&defined_token.Loc, "Previously defined here")

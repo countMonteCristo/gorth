@@ -1,16 +1,105 @@
 // system call identifiers
-const SYS_READ        0 end
-const SYS_WRITE       1 end
-const SYS_OPEN        2 end
-const SYS_CLOSE       3 end
-const SYS_NANOSLEEP  35 end
-const SYS_SOCKET     41 end
-const SYS_ACCEPT     43 end
-const SYS_BIND       49 end
-const SYS_LISTEN     50 end
-const SYS_SETSOCKOPT 54 end
-const SYS_FORK       57 end
-const SYS_WAIT4      61 end
+const SYS_READ             0 end
+const SYS_WRITE            1 end
+const SYS_OPEN             2 end
+const SYS_CLOSE            3 end
+const SYS_STAT             4 end
+const SYS_FSTAT            5 end
+const SYS_LSTAT            6 end
+const SYS_POLL             7 end
+const SYS_LSEEK            8 end
+// const SYS_MMAP             9 end // TODO: don't know how to do it properly yet
+// const SYS_MPROTECT        10 end // TODO: don't know how to do it properly yet
+// const SYS_MUNMAP          11 end // TODO: don't know how to do it properly yet
+// const SYS_BRK             12 end // TODO: don't know how to do it properly yet
+// const SYS_RT_SIGACTION    13 end // TODO: don't know how to do it properly yet (need pointers to functions)
+// const SYS_RT_SIGPROCMASK  14 end // TODO: don't know how to do it properly yet (need pointers to functions)
+// const SYS_RT_SIGRETURN    15 end // TODO: don't know how to do it properly yet (need pointers to functions)
+const SYS_IOCTL           16 end
+const SYS_PREAD64         17 end
+const SYS_PWRITE64        18 end
+const SYS_READV           19 end
+const SYS_WRITEV          20 end
+const SYS_ACCESS          21 end
+const SYS_PIPE            22 end
+const SYS_SELECT          23 end
+const SYS_SCHED_YIELD     24 end
+// const SYS_MREMAP          25 end  // TODO: don't know how to do it properly yet
+// const SYS_MSYNC           26 end  // TODO: don't know how to do it properly yet
+// const SYS_MINCORE         27 end  // TODO: don't know how to do it properly yet
+// const SYS_MADVISE         28 end  // TODO: don't know how to do it properly yet
+// const SYS_SHMGET          29 end  // TODO: don't know how to do it properly yet
+// const SYS_SHMAT           30 end  // TODO: don't know how to do it properly yet
+// const SYS_SHMCTL          31 end  // TODO: don't know how to do it properly yet
+const SYS_DUP             32 end
+const SYS_DUP2            33 end
+// const SYS_PAUSE           34 end  // TODO: don't know how to do it properly yet (need pointers to functions)
+const SYS_NANOSLEEP       35 end
+const SYS_GETTIMER        36 end
+const SYS_ALARM           37 end
+const SYS_SETTIMER        38 end
+const SYS_GETPID          39 end
+const SYS_SENDFILE        40 end
+const SYS_SOCKET          41 end
+const SYS_CONNECT         42 end
+const SYS_ACCEPT          43 end
+const SYS_SENDTO          44 end
+const SYS_RECVFROM        45 end
+const SYS_SENDMSG         46 end
+const SYS_RECVMSG         47 end
+const SYS_SHUTDOWN        48 end
+const SYS_BIND            49 end
+const SYS_LISTEN          50 end
+const SYS_GETSOCKNAME     51 end
+const SYS_GETPEERNAME     52 end
+const SYS_SOCKETPAIR      53 end
+const SYS_SETSOCKOPT      54 end
+const SYS_GETSOCKOPT      55 end
+const SYS_CLONE           56 end
+const SYS_FORK            57 end
+const SYS_VFORK           58 end
+const SYS_EXECVE          59 end
+const SYS_EXIT            60 end
+const SYS_WAIT4           61 end
+const SYS_KILL            62 end
+const SYS_UNAME           63 end
+const SYS_SEMGET          64 end
+const SYS_SEMOP           65 end
+const SYS_SEMCTL          66 end
+const SYS_SHMDT           67 end
+const SYS_MSGGET          68 end
+const SYS_MSGSND          69 end
+const SYS_MSGRCV          70 end
+const SYS_MSGCTL          71 end
+const SYS_FCNTL           72 end
+const SYS_FLOCK           73 end
+const SYS_FSYNC           74 end
+const SYS_FDATASYNC       75 end
+const SYS_TRUNCATE        76 end
+const SYS_FTRUNCATE       77 end
+const SYS_GETDENTS        78 end
+const SYS_GETCWD          79 end
+const SYS_CHDIR           80 end
+const SYS_FCHDIR          81 end
+const SYS_RENAME          82 end
+const SYS_MKDIR           83 end
+const SYS_RMDIR           84 end
+const SYS_CREAT           85 end
+const SYS_LINK            86 end
+const SYS_UNLINK          87 end
+const SYS_SYMLINK         88 end
+const SYS_READLINK        89 end
+const SYS_CHMOD           90 end
+const SYS_FCHMOD          91 end
+const SYS_CHOWN           92 end
+const SYS_FCHOWN          93 end
+const SYS_LCHOWN          94 end
+const SYS_UNMASK          95 end
+const SYS_GETTIMEOFDAY    96 end
+const SYS_GETRLIMIT       97 end
+const SYS_GETRUSAGE       98 end
+const SYS_SYSINFO         99 end
+const SYS_TIMES          100 end
 
 // Standart streams
 const STDIN  0 end
@@ -103,6 +192,39 @@ const SO_RCVLOWAT   18 end
 const SO_SNDLOWAT   19 end
 const SO_ACCEPTCONN 30 end
 
+// Siganls
+const SIG_HUP       1 end
+const SIG_INT       2 end
+const SIG_QUIT      3 end
+const SIG_ILL       4 end
+const SIG_TRAP      5 end
+const SIG_ABRT      6 end
+const SIG_BUS       7 end
+const SIG_FPE       8 end
+const SIG_KILL      9 end
+const SIG_USR1     10 end
+const SIG_SEGV     11 end
+const SIG_USR2     12 end
+const SIG_PIPE     13 end
+const SIG_ALRM     14 end
+const SIG_TERM     15 end
+const SIG_STKFLT   16 end
+const SIG_CHLD     17 end
+const SIG_CONT     18 end
+const SIG_STOP     19 end
+const SIG_TSTP     20 end
+const SIG_TTIN     21 end
+const SIG_TTOU     22 end
+const SIG_URG      23 end
+const SIG_XCPU     24 end
+const SIG_XFSZ     25 end
+const SIG_VTALRM   26 end
+const SIG_PROF     27 end
+const SIG_WINCH    28 end
+const SIG_POLL     29 end
+const SIG_PWR      30 end
+const SIG_SYS      31 end
+
 // Revverse byte order for 16-bit integers
 inline func htons
   int : int // 16-bit integers
@@ -170,6 +292,199 @@ do
   SYS_CLOSE syscall1 swap drop // SYS_CLOSE returns {unused} {errno}, just drop {unused}
 end
 
+// Execute `stat` system call
+inline func stat
+  ptr   // path name
+  ptr   // statbuf
+    :
+  int   // 0 on success and -1 on error
+  int   // errno
+do
+  SYS_STAT syscall2
+end
+
+// Execute `fstat` system call
+inline func fstat
+  int   // fd
+  ptr   // statbuf
+    :
+  int   // 0 on success and -1 on error
+  int   // errno
+do
+  SYS_FSTAT syscall2
+end
+
+// Execute `lstat` system call
+inline func lstat
+  ptr   // path name
+  ptr   // statbuf
+    :
+  int   // 0 on success and -1 on error
+  int   // errno
+do
+  SYS_LSTAT syscall2
+end
+
+// Execute `poll` system call
+inline func poll
+  ptr   // fds
+  int   // fds count
+  int   // timeout in ms
+    :
+  int   // count of fds where some event has happend or 0 when timeout
+  int   // errno
+do
+  SYS_POLL syscall3
+end
+
+// Execute `lseek` system call
+inline func lseek
+  int   // fd
+  int   // offset
+  int   // whence
+    :
+  int   // result offset in bytes or -1 on error
+  int   // errno
+do
+  SYS_LSEEK syscall3
+end
+
+// Execute `ioctl` system call
+inline func ioctl
+  int   // fd
+  int   // request
+  int   // arg
+    :
+  int   // 0 on success and -1 on error
+  int   // errno
+do
+  SYS_IOCTL syscall3
+end
+
+// Execute `pread64` system call
+inline func pread64
+  int   // fd
+  ptr   // buf
+  int   // count
+  int   // offset
+    :
+  int   // number of bytes read
+  int   // errno
+do
+  SYS_PREAD64 syscall4
+end
+
+// Execute `pwrite64` system call
+inline func pwrite64
+  int   // fd
+  ptr   // buf
+  int   // count
+  int   // offset
+    :
+  int   // number of bytes written
+  int   // errno
+do
+  SYS_PWRITE64 syscall4
+end
+
+// Execute `readv` system call
+inline func readv
+  int   // fd
+  ptr   // iov
+  int   // iovcnt
+    :
+  int   // number of bytes read
+  int   // errno
+do
+  SYS_READV syscall3
+end
+
+// Execute `writev` system call
+inline func writev
+  int   // fd
+  ptr   // iov
+  int   // iovcnt
+    :
+  int   // number of bytes written
+  int   // errno
+do
+  SYS_WRITEV syscall3
+end
+
+// Execute `access` system call
+inline func access
+  ptr   // filename
+  int   // mode
+    :
+  int   // 0 on success and -1 on error
+  int   // errno
+do
+  SYS_ACCESS syscall2
+end
+
+// Execute `pipe` system call
+inline func pipe
+  ptr   // fds[2]
+    :
+  int   // 0 on success and -1 on error
+  int   // errno
+do
+  SYS_PIPE syscall1
+end
+
+// Execute `select` system call
+inline func select
+  int   // n
+  ptr   // input fds
+  ptr   // output fds
+  ptr   // except fds
+  ptr   // timeout
+    :
+  int   // number of fds in three fds sets or 0 in case of timeout
+  int   // errno
+do
+  SYS_SELECT syscall5
+end
+
+// Execute `sched_yield` system call
+inline func sched_yield
+    :
+  int   // 0 on success and -1 on error
+  int   // errno
+do
+  SYS_SCHED_YIELD syscall0
+end
+
+// Execute `dup` system call
+inline func dup_
+  int   // oldfd
+    :
+  int   // new fd or -1
+  int   // errno
+do
+  SYS_DUP syscall1
+end
+
+// Execute `dup2` system call
+inline func dup2
+  int   // oldfd
+  int   // newfd
+    :
+  int   // new fd or -1
+  int   // errno
+do
+  SYS_DUP2 syscall2
+end
+
+// Execute `getpid` system call
+inline func getpid
+    :
+  int // pid
+  int // errno
+do
+  SYS_GETPID syscall0
+end
+
 // Execute `nanosleep` system call
 inline func nanosleep
   ptr   // required time
@@ -203,6 +518,17 @@ inline func setsockopt
   int // errno
 do
   SYS_SETSOCKOPT syscall5 swap drop
+end
+
+// Execute `shutdown` syscall
+inline func shutdown
+  int // socket fd
+  int // how
+    :
+  int // 0 on success and -1 on fail
+  int // errno
+do
+  SYS_SHUTDOWN syscall2
 end
 
 // Execute `bind` system call
@@ -239,16 +565,44 @@ do
 end
 
 // Execute `fork` syscall
-func fork
+inline func fork
     :
-  int
-  int
+  int // child pid or zero
+  int // errno
 do
   SYS_FORK syscall0
 end
 
+// Execute `vfork` syscall
+inline func vfork
+    :
+  int // child pid or zero
+  int // errno
+do
+  SYS_VFORK syscall0
+end
+
+// Execute `exit` syscall
+inline func exit
+  int // exit code
+    :
+do
+  SYS_EXIT syscall1 drop drop
+end
+
+// Execute `kill` signal
+inline func kill
+  int // pid
+  int // signal
+    :
+  int // 0 on success and -1 on error
+  int // errno
+do
+  SYS_KILL syscall2
+end
+
 // execute wait4 syscall
-func wait4
+inline func wait4
   int   // pid
   ptr   // wstatus or NULL
   int   // options
@@ -258,6 +612,60 @@ func wait4
   int   // errno
 do
   SYS_WAIT4 syscall4
+end
+
+// Execute `fcntl` syscall
+inline func fcntl
+  int   // fd
+  int   // cmd
+  int   // arg
+    :
+  int   // returned value depends on command
+  int   // errno
+do
+  SYS_FCNTL syscall3
+end
+
+// Execute `flock` syscall
+inline func flock
+  int   // fd
+  int   // cmd
+    :
+  int   // 0 on success and -1 on error
+  int   // errno
+do
+  SYS_FLOCK syscall2
+end
+
+// Execute `fsync` syscall
+inline func fsync
+  int   // fd
+    :
+  int   // 0 on success and -1 on error
+  int   // errno
+do
+  SYS_FSYNC syscall1
+end
+
+// Execute `fdatasync` syscall
+inline func fdatasync
+  int   // fd
+    :
+  int   // 0 on success and -1 on error
+  int   // errno
+do
+  SYS_FDATASYNC syscall1
+end
+
+// Execute `ftruncate` syscall
+inline func ftruncate
+  int   // fd
+  int   // length
+    :
+  int   // 0 on success and -1 on error
+  int   // errno
+do
+  SYS_FTRUNCATE syscall2
 end
 
 // ---------------------------------------------------------------------------------------------------------------------

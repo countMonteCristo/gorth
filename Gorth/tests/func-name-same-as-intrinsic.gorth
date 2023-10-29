@@ -1,0 +1,8 @@
+func dup : do
+  42 puti
+end
+
+func main : int do
+  dup
+  0
+end

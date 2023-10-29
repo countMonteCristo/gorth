@@ -1,0 +1,7 @@
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "",
+  "stderr": "[ERROR] [COMPILER] Can not define function with the name of intrinsic:\n  Gorth/tests/func-name-same-as-intrinsic.gorth:1:6",
+  "exit_code": 1
+}
