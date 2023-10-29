@@ -144,6 +144,9 @@ func (c *Compiler) compileGlobalAlloc(token *lexer.Token, scope *Scope) error {
 
 func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope *Scope) error {
 	if f.Inlined {
+		if scope.Name == f.Sig.Name {
+			return logger.CompilerError(&token.Loc, "Recursion is not allowed inside inline functions")
+		}
 		c.pushOps(scope.Name, f.Ops[1:(len(f.Ops)-1)]...) // do not copy OpFuncBegin and OpFuncEnd for inline function
 	} else {
 		if c.Ctx.CurrentFuncIsInlined {
@@ -794,6 +797,12 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope 
 	func_addr := c.getCurrentAddr()
 	c.Blocks.Push(NewBlock(func_addr, token, lexer.KeywordFunc, nil, nil))
 
+	// declare function before compiling its body to allow recursion call
+	f := Function{
+		Addr: func_addr, Sig: signature, Inlined: inlined,
+	}
+	c.Ctx.Funcs[signature.Name] = f
+
 	c.pushOps(signature.Name, vm.Op{Token: *token, Typ: vm.OpFuncBegin, Data: signature.Name})
 
 	// do not use compileDoBlock, because in this case `do` should not compile to OpCondJump
@@ -805,10 +814,8 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope 
 	c.setOpOperand(func_addr, new_scope.MemSize)            // OpFuncBegin $MEM - allocates   $MEM bytes in RAM
 	c.setOpOperand(c.getCurrentAddr()-1, new_scope.MemSize) // OpFuncEnd $MEM   - deallocates $MEM bytes in RAM
 
-	c.Ctx.Funcs[signature.Name] = Function{
-		Addr: func_addr, Sig: signature, Inlined: inlined,
-		Ops: c.resetInlinedCache(),
-	}
+	f.Ops = c.resetInlinedCache()
+	c.Ctx.Funcs[signature.Name] = f
 
 	return nil
 }

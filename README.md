@@ -316,6 +316,25 @@ func main : int do
 end
 ```
 
+#### Recursion
+You can call ordinary function from itself. Recursion for `inline`d functions is not allowed. Here is the typical example of how the factorial function can be implemented using recursion:
+
+```gorth
+func factorial int : int do
+  if dup 2 < do
+    drop
+    1 return
+  end
+  dup 1 - factorial
+  *
+end
+
+func main : int do
+  5 factorial puti // -> "120"
+  0
+end
+```
+
 ### Constants
 ```gorth
 const N 10 end

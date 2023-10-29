@@ -18,6 +18,7 @@
   [*] entry point for executable Gorth script (`main` function)
   [*] `return` keyword
   [*] main should not be inlined
+  [*] allow recursion for ordinary functions
 
 [ ] Captures
   [*] supply captures syntax (capture x int y ptr z bool do ... end)

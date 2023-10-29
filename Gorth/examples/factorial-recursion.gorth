@@ -1,0 +1,13 @@
+func factorial int : int do
+  if dup 2 < do
+    drop
+    1 return
+  end
+  dup 1 - factorial
+  *
+end
+
+func main : int do
+  5 factorial puti // -> "120"
+  0
+end
