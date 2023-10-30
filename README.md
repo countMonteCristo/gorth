@@ -141,7 +141,11 @@ end
 ```
 
 ## Types
-Only three types are supported for now: `int`, `bool` and `ptr`.
+Only four types are supported for now: `int`, `bool`, `ptr` and `fptr`:
+- `int`  - integer number
+- `bool` - boolean (`true` or `false`). `0` is treated as `false`, other numbers are converted to `true`
+- `ptr`  - pointer in memory
+- `fptr` - pointer to function
 
 ## Intrincisc
 ### Stack manipulation
@@ -208,14 +212,24 @@ Only three types are supported for now: `int`, `bool` and `ptr`.
 - `argv` - pushes the pointer to the null-terminated list of pointers to the input arguments
 - `env`  - pushes the pointer to the null-terminated list of pointers to the environment variables
 
+### Cast types
+- `cast(int)` - converts top element of the stack to `int`
+- `cast(bool)` - converts top element of the stack to `bool`
+- `cast(ptr)` - converts top element of the stack to `ptr`
+- `cast(fptr)` - converts top element of the stack to `fptr`
+Cast intrinsics are needed only for type checking phase. They will be skipped at runtime.
+
 ### System calls:
-- `syscallN` - perform system call (description: ```man 2 syscalls```)
+- `syscall{N}` - perform system call (description: ```man 2 syscalls```)
 
 Supported syscall operations:
+- `syscall0`
 - `syscall1`
 - `syscall2`
 - `syscall3`
+- `syscall4`
 - `syscall5`
+- `syscall6`
 
 For now only a few system calls are supported. See [cat.gorth](https://github.com/countMonteCristo/gorth/tree/main/Gorth/examples/cat.gorth) and [basic-web-server.gorth](https://github.com/countMonteCristo/gorth/tree/main/Gorth/examples/basic-web-server.gorth) as an example.
 
@@ -334,6 +348,20 @@ func main : int do
   0
 end
 ```
+
+#### Function pointers
+There is an ability to get the pointer to the functions. Here is an example of how it works:
+```gorth
+inline func f int : int do 2 * end
+
+func g int : int do dup * end
+
+func main : int do
+  7 fptr-of f call-like g puti  // -> 14
+  0
+end
+```
+Here `fptr-of f` pushes pointer to function `f` onto the stack, and `call-like g` pops this pointer from the stack and calls it as function with the same signature as function `g`.
 
 ### Constants
 ```gorth

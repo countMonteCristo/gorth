@@ -1,0 +1,11 @@
+inline func f int : int do 2 * end
+
+func g int : int do dup * end
+
+func main : int do
+  7 fptr-of f call-like g puti
+  7 fptr-of f call-like f puti
+  7 fptr-of g call-like f puti
+  7 fptr-of g call-like g puti
+  0
+end

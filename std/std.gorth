@@ -21,7 +21,8 @@ const sizeof(ulong)     sizeof(u64) end
 const sizeof(longlong)  sizeof(i64) end
 const sizeof(ulonglong) sizeof(u64) end
 
-const sizeof(ptr) sizeof(int) end
+const sizeof(ptr)  sizeof(int) end
+const sizeof(fptr) sizeof(ptr) end
 
 const NULL 0 cast(ptr) end
 

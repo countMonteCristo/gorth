@@ -21,6 +21,7 @@ const (
 	OpPushInt OpType = iota
 	OpPushBool
 	OpPushPtr
+	OpPushFptr
 
 	OpIntrinsic
 
@@ -28,6 +29,7 @@ const (
 	OpCondJump // jumps to current_addr + op.Operand only if top value at stack is false
 
 	OpCall
+	OpCallLike
 	OpFuncBegin
 	OpFuncEnd
 
@@ -45,6 +47,7 @@ var OpType2Str = map[OpType]string{
 	OpPushInt:  "PUSH_INT",
 	OpPushBool: "PUSH_BOOL",
 	OpPushPtr:  "PUSH_PTR",
+	OpPushFptr:	"PUSH_FPTR",
 
 	OpIntrinsic: "INTRINSIC",
 
@@ -52,6 +55,7 @@ var OpType2Str = map[OpType]string{
 	OpCondJump: "CJMP",
 
 	OpCall:      "CALL",
+	OpCallLike:  "CALL_LIKE",
 	OpFuncBegin: "FUNC_BEGIN",
 	OpFuncEnd:   "FUNC_END",
 
@@ -65,6 +69,7 @@ var OpType2Str = map[OpType]string{
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+// TODO: save Token as *lexer.Token
 type Op struct {
 	Typ       OpType
 	Operand   interface{}
@@ -81,7 +86,7 @@ func (op *Op) Str(addr types.IntType) (s string) {
 	switch op.Typ {
 	case OpIntrinsic:
 		operand = lexer.Intrinsic2Str[op.Operand.(lexer.IntrinsicType)]
-	case OpPushInt, OpPushBool, OpPushPtr, OpCall, OpPushLocalAlloc, OpPushGlobalAlloc:
+	case OpPushInt, OpPushBool, OpPushPtr, OpPushFptr, OpCall, OpPushLocalAlloc, OpPushGlobalAlloc:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
 			logger.VmCrash(&op.Token.Loc, "Can not cast interface to int: `%v`", op.Operand)
@@ -121,6 +126,8 @@ func (op *Op) Str(addr types.IntType) (s string) {
 			logger.VmCrash(&op.Token.Loc, "Can not cast interface to int for DropCaps: `%v`", op.Operand)
 		}
 		operand = fmt.Sprint(res)
+	case OpCallLike:
+		operand = fmt.Sprintf("- (%s)", op.Data.(string))
 	default:
 		logger.VmCrash(&op.Token.Loc, "Unhandled operation: `%s`", OpType2Str[op.Typ])
 	}

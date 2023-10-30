@@ -20,6 +20,7 @@ const (
 	DataTypeInt
 	DataTypePtr
 	DataTypeBool
+	DataTypeFptr
 )
 
 var DataType2Str = map[DataType]string{
@@ -27,6 +28,7 @@ var DataType2Str = map[DataType]string{
 	DataTypeInt:  "int",
 	DataTypePtr:  "ptr",
 	DataTypeBool: "bool",
+	DataTypeFptr: "fptr",
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

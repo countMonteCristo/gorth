@@ -414,7 +414,7 @@ func (vm *VM) ProcessSyscall6() {
 func (vm *VM) Step(ops *[]Op) (err error) {
 	op := &(*ops)[vm.Rc.Addr]
 	switch op.Typ {
-	case OpPushInt, OpPushBool, OpPushPtr:
+	case OpPushInt, OpPushBool, OpPushPtr, OpPushFptr:
 		vm.Rc.Stack.Push(op.Operand.(types.IntType))
 		vm.Rc.Addr++
 	case OpCondJump:
@@ -543,7 +543,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		case lexer.IntrinsicSyscall6:
 			vm.ProcessSyscall6()
 
-		case lexer.IntrinsicCastInt, lexer.IntrinsicCastPtr, lexer.IntrinsicCastBool:
+		case lexer.IntrinsicCastInt, lexer.IntrinsicCastPtr, lexer.IntrinsicCastBool, lexer.IntrinsicCastFptr:
 			// do nothing
 
 		default:
@@ -557,6 +557,14 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		vm.Rc.ReturnStack.Push(vm.Rc.Addr)
 		vm.Rc.ReturnStack.Push(vm.Rc.CapturesCount)
 		vm.Rc.Addr += op.Operand.(types.IntType)
+	case OpCallLike:
+		addr := vm.Rc.Stack.Pop()
+		if vm.Rc.ReturnStack.Size() >= int(vm.S.CallStackSize) {
+			return logger.VmRuntimeError(&op.Token.Loc, "Call stack overflow")
+		}
+		vm.Rc.ReturnStack.Push(vm.Rc.Addr)
+		vm.Rc.ReturnStack.Push(vm.Rc.CapturesCount)
+		vm.Rc.Addr = addr
 	case OpFuncBegin:
 		vm.Rc.Memory.Ram.Ptr += op.Operand.(types.IntType)
 		vm.Rc.CapturesCount = 0

@@ -69,6 +69,7 @@ const (
 	IntrinsicCastInt
 	IntrinsicCastPtr
 	IntrinsicCastBool
+	IntrinsicCastFptr
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -136,6 +137,7 @@ var Intrinsic2Str = map[IntrinsicType]string{
 	IntrinsicCastInt:  "cast(int)",
 	IntrinsicCastPtr:  "cast(ptr)",
 	IntrinsicCastBool: "cast(bool)",
+	IntrinsicCastFptr: "cast(fptr)",
 }
 
 var Str2Intrinsic = utils.RevMap(Intrinsic2Str).(map[string]IntrinsicType)

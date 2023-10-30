@@ -224,6 +224,10 @@ var intrinsicType2Contract = map[lexer.IntrinsicType]*Contract{
 		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
 	},
+	lexer.IntrinsicCastFptr: {
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeFptr}),
+	},
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -269,7 +273,7 @@ func GetIntrinsicLogic(i lexer.IntrinsicType) (IntrinsicLogicFunc, string) {
 		lexer.IntrinsicLoad64, lexer.IntrinsicStore64,
 		lexer.IntrinsicArgc,
 		lexer.IntrinsicArgv, lexer.IntrinsicEnv,
-		lexer.IntrinsicCastInt, lexer.IntrinsicCastPtr, lexer.IntrinsicCastBool,
+		lexer.IntrinsicCastInt, lexer.IntrinsicCastPtr, lexer.IntrinsicCastBool, lexer.IntrinsicCastFptr,
 		lexer.IntrinsicSyscall0, lexer.IntrinsicSyscall1, lexer.IntrinsicSyscall2,
 		lexer.IntrinsicSyscall3, lexer.IntrinsicSyscall4, lexer.IntrinsicSyscall5, lexer.IntrinsicSyscall6:
 		return defaultLogic, ""
@@ -319,6 +323,10 @@ var simpleOp2Contract = map[vm.OpType]*Contract{
 	vm.OpPushPtr: {
 		Inputs:  utils.NewStack(lexer.DataTypes{}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
+	},
+	vm.OpPushFptr: {
+		Inputs:  utils.NewStack(lexer.DataTypes{}),
+		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeFptr}),
 	},
 	vm.OpPushLocalAlloc: {
 		Inputs:  utils.NewStack(lexer.DataTypes{}),

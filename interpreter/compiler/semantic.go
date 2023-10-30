@@ -73,6 +73,7 @@ var DataType2OpType = map[lexer.DataType]vm.OpType{
 	lexer.DataTypeBool: vm.OpPushBool,
 	lexer.DataTypeInt:  vm.OpPushInt,
 	lexer.DataTypePtr:  vm.OpPushPtr,
+	lexer.DataTypeFptr: vm.OpPushFptr,
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

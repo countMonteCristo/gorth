@@ -1,0 +1,11 @@
+func f int : int do dup * end
+func h int : int do end
+
+func g : int do
+  fptr-of f cast(int)
+end
+
+func main : int do
+  5 g cast(fptr) call-like h puti
+  0
+end

@@ -564,43 +564,13 @@ loop:
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (tc *TypeChecker) typeCheckInlineFunction(f *compiler.Function) error {
-	contextStack := NewTypeCheckerContextStack()
-	context := NewTypeCheckerContext(context_type_global)
-	contextStack.Push(context)
-
-	i, err := tc.typeCheckFunc(&f.Ops, 0, contextStack)
-	if err != nil {
-		return err
-	}
-	if i != len(f.Ops) {
-		return logger.TypeCheckerError(nil, "Not all ops were typechecked for inline function %s", f.Sig.Name)
-	}
-
-	return nil
-}
-
-func (tc *TypeChecker) typeCheckInlines() error {
-	for _, function := range tc.Ctx.Funcs {
-		if function.Inlined {
-			if err := tc.typeCheckInlineFunction(&function); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-
 func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeCheckerContextStack) (i int, err error) {
 	ctx := contextStack.Top()
 
 	for i = start; i < len(*ops); {
 		op := &(*ops)[i]
-
 		switch op.Typ {
-		case vm.OpPushInt, vm.OpPushBool, vm.OpPushPtr, vm.OpPushGlobalAlloc, vm.OpPushLocalAlloc:
+		case vm.OpPushInt, vm.OpPushBool, vm.OpPushPtr, vm.OpPushFptr, vm.OpPushGlobalAlloc, vm.OpPushLocalAlloc:
 			if err = tc.typeCheckSimpleOps(op, ctx); err != nil {
 				return
 			}
@@ -744,6 +714,19 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			t := ctx.Captures.Data[types.IntType(ctx.Captures.Size())-1-idx]
 			ctx.Stack.Push(t)
 			i++
+		case vm.OpCallLike:
+			if err = tc.popType(op, &ctx.Stack, lexer.DataTypeFptr); err != nil {
+				return
+			}
+
+			f := tc.Ctx.Funcs[op.Data.(string)]
+			if err = tc.popTypes(op, &ctx.Stack, &f.Sig.Inputs); err != nil {
+				return
+			}
+			for _, t := range f.Sig.Outputs.Data {
+				ctx.Stack.Push(t)
+			}
+			i++
 
 		default:
 			err = logger.TypeCheckerError(&op.Token.Loc, "Type check for `%s` op is not implemented yet", vm.OpType2Str[op.Typ])
@@ -771,10 +754,6 @@ func (tc *TypeChecker) TypeCheckProgram(ops *[]vm.Op, ctx *compiler.CompileTimeC
 	}
 
 	tc.Ctx = ctx
-
-	if err := tc.typeCheckInlines(); err != nil {
-		return err
-	}
 
 	contextStack := NewTypeCheckerContextStack()
 	context := NewTypeCheckerContext(context_type_global)

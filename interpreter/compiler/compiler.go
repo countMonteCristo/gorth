@@ -606,6 +606,12 @@ loop:
 					}
 					a := const_stack.Pop()
 					const_stack.Push(Constant{Value: a.Value, Typ: lexer.DataTypePtr})
+				case lexer.IntrinsicCastFptr:
+					if err = c.checkConstStackSize(tok, const_stack, 1); err != nil {
+						return
+					}
+					a := const_stack.Pop()
+					const_stack.Push(Constant{Value: a.Value, Typ: lexer.DataTypeFptr})
 				case lexer.IntrinsicDebug:
 					values := make([]types.IntType, const_stack.Size())
 					for i := range const_stack.Data {
@@ -640,6 +646,24 @@ loop:
 			return
 		case lexer.TokenKeyword:
 			switch tok.Value.(lexer.KeywordType) {
+			case lexer.KeywordFptrOf:
+				if th.Empty() {
+					err = logger.CompilerError(&token.Loc, "Expected function name for getting its pointer, but got nothing")
+					return
+				}
+
+				func_token := th.GetNextToken()
+				if func_token.Typ != lexer.TokenWord {
+					err = logger.CompilerError(&func_token.Loc, "Expected argument of `%s` to be a word, but got `%s`", token.Text, func_token.Text)
+					return
+				}
+
+				f, exists := c.Ctx.Funcs[func_token.Text]
+				if !exists {
+					err = logger.CompilerError(&func_token.Loc, "Unknown function `%s`", func_token.Text)
+					return
+				}
+				const_stack.Push(Constant{Value: f.Addr, Typ: lexer.DataTypeFptr})
 			case lexer.KeywordEnd:
 				break loop
 			default:
@@ -817,6 +841,10 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope 
 	f.Ops = c.resetInlinedCache()
 	c.Ctx.Funcs[signature.Name] = f
 
+	if f.Inlined {
+		c.pushOps(scope.Name, f.Ops...)
+	}
+
 	return nil
 }
 
@@ -903,6 +931,58 @@ func (c *Compiler) compileCaptureKeyword(token *lexer.Token, th *lexer.TokenHold
 	if err := c.compile(th, scope); err != nil {
 		return err
 	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+func (c *Compiler) compileFptrOfKeyword(token *lexer.Token, th *lexer.TokenHolder, scope *Scope) error {
+	if scope.Name == GlobalScopeName {
+		return logger.CompilerError(&token.Loc, "Cannot get function pointer inside global scope")
+	}
+
+	if th.Empty() {
+		return logger.CompilerError(&token.Loc, "Expected function name for getting its pointer, but got nothing")
+	}
+
+	func_token := th.GetNextToken()
+	if func_token.Typ != lexer.TokenWord {
+		return logger.CompilerError(&func_token.Loc, "Expected argument of `%s` to be a word, but got `%s`", token.Text, func_token.Text)
+	}
+
+	f, exists := c.Ctx.Funcs[func_token.Text]
+	if !exists {
+		return logger.CompilerError(&func_token.Loc, "Unknown function `%s`", func_token.Text)
+	}
+
+	c.pushOps(scope.Name, vm.Op{
+		Typ: vm.OpPushFptr, Operand: f.Addr, Token: *token,
+	})
+	return nil
+}
+
+func (c *Compiler) compileCallLikeKeyword(token *lexer.Token, th *lexer.TokenHolder, scope *Scope) error {
+	if scope.Name == GlobalScopeName {
+		return logger.CompilerError(&token.Loc, "Cannot `%s` function inside global scope", token.Text)
+	}
+
+	if th.Empty() {
+		return logger.CompilerError(&token.Loc, "Expected function name as an argument for `%s`, but got nothing", token.Text)
+	}
+
+	func_token := th.GetNextToken()
+	if func_token.Typ != lexer.TokenWord {
+		return logger.CompilerError(&func_token.Loc, "Expected argument of `%s` to be a word, but got `%s`", token.Text, func_token.Text)
+	}
+
+	f, exists := c.Ctx.Funcs[func_token.Text]
+	if !exists {
+		return logger.CompilerError(&func_token.Loc, "Unknown function `%s`", func_token.Text)
+	}
+
+	c.pushOps(scope.Name, vm.Op{
+		Typ: vm.OpCallLike, Data: f.Sig.Name, Token: *token,
+	})
 	return nil
 }
 
@@ -1040,7 +1120,7 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope *Scope) error {
 					return logger.CompilerError(&tok.Loc, "Negative size for `alloc` block: %d", alloc_size)
 				}
 				if alloc_size.Typ != lexer.DataTypeInt {
-					return logger.CompilerError(&tok.Loc, "Only `int` type is supported for `alloc` value, got %s", lexer.DataType2Str[alloc_size.Typ])
+					return logger.CompilerError(&tok.Loc, "Only `int` type is supported for `alloc` value, got `%s`", lexer.DataType2Str[alloc_size.Typ])
 				}
 
 				if scope.Name != GlobalScopeName {
@@ -1064,6 +1144,15 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope *Scope) error {
 				return logger.CompilerError(&token.Loc, "`include` keyword should not appear in here, probably there is a bug in a lexer")
 			case lexer.KeywordCapture:
 				if err := c.compileCaptureKeyword(token, th, scope); err != nil {
+					return err
+				}
+
+			case lexer.KeywordFptrOf:
+				if err := c.compileFptrOfKeyword(token, th, scope); err != nil {
+					return err
+				}
+			case lexer.KeywordCallLike:
+				if err := c.compileCallLikeKeyword(token, th, scope); err != nil {
 					return err
 				}
 			default:

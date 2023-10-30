@@ -27,6 +27,9 @@ const (
 	KeywordColon
 
 	KeywordInclude
+
+	KeywordFptrOf
+	KeywordCallLike
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -52,6 +55,9 @@ var Keyword2Str = map[KeywordType]string{
 	KeywordColon:  ":",
 
 	KeywordInclude: "include",
+
+	KeywordFptrOf:   "fptr-of",
+	KeywordCallLike: "call-like",
 }
 
 var Str2Keyword = utils.RevMap(Keyword2Str).(map[string]KeywordType)

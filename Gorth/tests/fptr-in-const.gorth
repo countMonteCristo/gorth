@@ -1,0 +1,11 @@
+func f int : int do dup * end
+func g int : int do dup dup * * end
+
+const f_ptr fptr-of f end
+const g_ptr fptr-of g end
+
+func main : int do
+  3 f_ptr call-like g puti
+  5 g_ptr call-like f puti
+  0
+end
