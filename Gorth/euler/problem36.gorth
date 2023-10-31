@@ -1,0 +1,55 @@
+include "std.gorth"
+
+// The decimal number, 585 = 1001001001_2 (binary), is palindromic in both bases.
+// Find the sum of all numbers, less than one million, which are palindromic in base
+// 10 and base 2.
+// (Please note that the palindromic number, in either base, may not include leading zeros.)
+
+// Answer:  872187
+// Note: skip in tests because execution time is quite big
+
+// n base -> is `n` a palindrome in base `base`?
+func is-palin int int : bool do
+  const N 20 end
+  alloc count 1 end
+  alloc digits N end
+  digits 0 N memset drop
+  0 count !8
+
+  capture n int base int do drop drop
+    0 n while dup 0 > do
+      capture i int x int do drop drop
+        x base % digits i ptr+ !8
+        i 1 + dup count !8
+        x base /
+      end
+    end drop drop
+  end
+
+  0 while dup count @8 2 / < do
+    capture i int do
+      digits i                ptr+ @8
+      digits count @8 1 - i - ptr+ @8
+      if != do drop false return end
+    end
+    1 +
+  end drop
+  true
+end
+
+func main : int do
+  alloc ans 4 end
+  0 ans !32
+
+  1 while dup 1000000 <= do
+    dup   2 is-palin
+    over 10 is-palin
+    if && do
+      dup ans @32 + ans !32
+    end
+    2 +
+  end drop
+  ans @32 puti
+
+  0
+end

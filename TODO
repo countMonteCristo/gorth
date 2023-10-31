@@ -21,6 +21,16 @@
   [*] allow recursion for ordinary functions
   [*] add support for using function pointers
 
+[ ] Memory management
+  [ ] operation for allocating memory on the heap
+
+[ ] Types
+  [ ] custom types (aliases, structures)
+  [ ] arrays
+
+[ ] Optimization
+  [ ] remove dead code
+
 [ ] Captures
   [*] supply captures syntax (capture x int y ptr z bool do ... end)
   [] add support for break's and continue's from capture statement
@@ -48,6 +58,7 @@
     [*] Add command for showing parts of memory as a slice
   [ ] Improve debugger
     [*] Add command to go out of current function
+  [ ] add profiler
 
 [ ] Low-level interaction with OS
   [ ] syscalls
