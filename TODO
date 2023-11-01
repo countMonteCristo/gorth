@@ -30,6 +30,7 @@
 
 [ ] Optimization
   [ ] remove dead code
+    [*] remove unused functions
 
 [ ] Captures
   [*] supply captures syntax (capture x int y ptr z bool do ... end)

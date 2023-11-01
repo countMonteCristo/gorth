@@ -67,7 +67,7 @@ Record test outputs:
 
 ## Usage
 ```
-> ./bin/gorth [-debug] [-env] [-disable-typecheck] [-I include_dir] Gorth/examples/helloworld.gorth [args...]
+> ./bin/gorth [-debug] [-env] [-disable-typecheck] [-I include_dir] [-O level] Gorth/examples/helloworld.gorth [args...]
 ```
 
 Supported flags:
@@ -75,6 +75,7 @@ Supported flags:
 * `env` - adds environment variables to VM memory (turned off by default)
 * `check` - perform type checking before running the script
 * `I` - provide additional include directories (i.e. "-I dir1 -I dir2 ... -I dirN")
+* `O` - optimization level (`0` - no optimizations, `1` - eliminate dead code)
 
 ## Debugger
 Run script with debugger.
