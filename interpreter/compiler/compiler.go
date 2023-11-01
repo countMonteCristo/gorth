@@ -646,24 +646,6 @@ loop:
 			return
 		case lexer.TokenKeyword:
 			switch tok.Value.(lexer.KeywordType) {
-			case lexer.KeywordFptrOf:
-				if th.Empty() {
-					err = logger.CompilerError(&token.Loc, "Expected function name for getting its pointer, but got nothing")
-					return
-				}
-
-				func_token := th.GetNextToken()
-				if func_token.Typ != lexer.TokenWord {
-					err = logger.CompilerError(&func_token.Loc, "Expected argument of `%s` to be a word, but got `%s`", token.Text, func_token.Text)
-					return
-				}
-
-				f, exists := c.Ctx.Funcs[func_token.Text]
-				if !exists {
-					err = logger.CompilerError(&func_token.Loc, "Unknown function `%s`", func_token.Text)
-					return
-				}
-				const_stack.Push(Constant{Value: f.Addr, Typ: lexer.DataTypeFptr})
 			case lexer.KeywordEnd:
 				break loop
 			default:
@@ -956,7 +938,7 @@ func (c *Compiler) compileFptrOfKeyword(token *lexer.Token, th *lexer.TokenHolde
 	}
 
 	c.pushOps(scope.Name, vm.Op{
-		Typ: vm.OpPushFptr, Operand: f.Addr, Token: *token,
+		Typ: vm.OpPushFptr, Operand: f.Addr, Token: *token, Data: f.Sig.Name,
 	})
 	return nil
 }

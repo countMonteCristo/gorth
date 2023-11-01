@@ -71,7 +71,6 @@ func (rc *RunTimeContext) Reset() {
 	rc.OpsCount = rc.Settings.OpsCount
 
 	rc.Addr = rc.Settings.EntryPointAddr
-	rc.ReturnStack.Push(rc.OpsCount) // for exit after hitting OpFuncEnd of main function
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

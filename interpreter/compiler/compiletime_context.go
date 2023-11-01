@@ -150,6 +150,7 @@ func (c *CompileTimeContext) DebugConstNames(names []string, scope_name string) 
 	}
 	return n_found
 }
+// TODO: fix printing local allocs addresses
 func (c *CompileTimeContext) DebugAllocNames(names []string, scope_name string, mem *vm.Memory) int {
 	n_found := 0
 	for _, name := range names {

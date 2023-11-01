@@ -4,6 +4,7 @@ import (
 	"Gorth/interpreter/compiler"
 	"Gorth/interpreter/debugger"
 	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/optimizer"
 	"Gorth/interpreter/typechecker"
 	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
@@ -18,6 +19,7 @@ type Interpreter struct {
 	vm          vm.VM
 	compiler    compiler.Compiler
 	typechecker typechecker.TypeChecker
+	optimizer   optimizer.Optimizer
 	importer    lexer.Importer
 	debugger    debugger.Debugger
 	args        []string
@@ -29,6 +31,7 @@ func NewInterpreter(arguments []string, pkg_dir string, s *vm.VmSettings) *Inter
 		vm:          *vm.NewVM(s, compiler.GlobalScopeName),
 		compiler:    *compiler.NewCompiler(s.Debug),
 		typechecker: *typechecker.NewTypeChecker(s.TypeCheck),
+		optimizer:   *optimizer.NewOptimizer(s.Optimization),
 		args:        arguments,
 		importer:    *lexer.NewImporter(pkg_dir, s.IncludePaths),
 	}
@@ -52,6 +55,11 @@ func (i *Interpreter) Prepare(fn string) {
 	if err = i.typechecker.TypeCheckProgram(&i.compiler.Ops, &i.compiler.Ctx); err != nil {
 		utils.ExitWithError(err)
 	}
+
+	if err = i.optimizer.Optimize(&i.compiler.Ops, &i.compiler.Ctx, &i.vm.Rc.Settings); err != nil {
+		utils.ExitWithError(err)
+	}
+
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

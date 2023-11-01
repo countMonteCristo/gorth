@@ -56,6 +56,10 @@ func TypeCheckerError(loc *utils.Location, msg string, args ...any) error {
 	return formatErrMsg(loc, ModuleTypeChecker, msg, args...)
 }
 
+func OptimizerError(loc *utils.Location, msg string, args ...any) error {
+	return formatErrMsg(loc, ModuleOptimizer, msg, args...)
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 func FormatInfoMsg(loc *utils.Location, msg string, args ...any) string {
@@ -90,6 +94,10 @@ func CompilerCrash(loc *utils.Location, msg string, args ...any) {
 
 func TypeCheckerCrash(loc *utils.Location, msg string, args ...any) {
 	crash(loc, ModuleTypeChecker, msg, args...)
+}
+
+func OptimizerCrash(loc *utils.Location, msg string, args ...any) {
+	crash(loc, ModuleOptimizer, msg, args...)
 }
 
 func VmCrash(loc *utils.Location, msg string, args ...any) {

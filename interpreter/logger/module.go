@@ -9,6 +9,7 @@ const (
 	ModuleLexer
 	ModuleCompiler
 	ModuleTypeChecker
+	ModuleOptimizer
 	ModuleVm
 	ModuleDebugger
 )
@@ -25,6 +26,8 @@ func ModuleToStr(module ModuleType) string {
 		return "COMPILER"
 	case ModuleTypeChecker:
 		return "TYPE_CHECKER"
+	case ModuleOptimizer:
+		return "OPTIMIZER"
 	case ModuleVm:
 		return "VM"
 	case ModuleDebugger:

@@ -26,11 +26,15 @@ func main() {
 	debugFlag := flag.Bool("debug", false, "run with debuger mode")
 	envFlag := flag.Bool("env", false, "save environment variables to VM memory")
 	tcFlag := flag.Bool("disable-typecheck", false, "disable type checking")
+	optFlag := flag.Int("O", 0, "optimization level")
 	flag.Var(&includePaths, "I", "provide additional include paths")
 
 	flag.Parse()
 
-	settings := vm.NewSettings(*debugFlag, *envFlag, !*tcFlag, vm_memory_size, recursion_limit, includePaths)
+	settings := vm.NewSettings(
+		*debugFlag, *envFlag, !*tcFlag, vm_memory_size, recursion_limit, includePaths,
+		*optFlag,
+	)
 
 	gorth_script := flag.Args()[0]
 	i := interpreter.NewInterpreter(flag.Args(), package_dir, settings)

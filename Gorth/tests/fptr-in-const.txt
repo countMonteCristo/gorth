@@ -1,7 +1,7 @@
 {
   "argv": [],
   "stdin": "",
-  "stdout": "9125",
-  "stderr": "",
-  "exit_code": 0
+  "stdout": "",
+  "stderr": "[ERROR] [COMPILER] Unsupported keyword in compile-time const-block evaluation: `fptr-of`:\n  Gorth/tests/fptr-in-const.gorth:4:13",
+  "exit_code": 1
 }
