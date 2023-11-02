@@ -1,0 +1,29 @@
+include "std.gorth"
+
+// The series, 1^1 + 2^2 + 3^3 + ... + 10^10 = 10405071317.
+// Find the last ten digits of the series, 1^1 + 2^2 + 3^3 + ... + 1000^1000.
+//
+// Answer:  9110846700
+
+// x m -> x^x mod m
+func f int int : int do
+  capture x int m int do drop drop
+    1
+    0 while dup x < do
+      swap x * m % swap
+      1 +
+    end drop
+  end
+end
+
+func main : int do
+  const M 10000000000 end
+  0
+  1 while dup 1000 < do
+    dup M f
+    rot + M % swap
+    1 +
+  end drop
+  puti
+  0
+end
