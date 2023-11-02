@@ -69,11 +69,10 @@ var OpType2Str = map[OpType]string{
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-// TODO: save Token as *lexer.Token
 type Op struct {
 	Typ       OpType
 	Operand   interface{}
-	Token     lexer.Token
+	Token     *lexer.Token
 	Data      interface{}
 	DebugInfo interface{}
 }

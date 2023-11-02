@@ -189,7 +189,7 @@ func (tc *TypeChecker) enoughArgsCount(stack *lexer.TypeStack, count int, token 
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (tc *TypeChecker) popType(op *vm.Op, stack *lexer.TypeStack, expected lexer.DataType) error {
-	if err := tc.enoughArgsCount(stack, 1, &op.Token); err != nil {
+	if err := tc.enoughArgsCount(stack, 1, op.Token); err != nil {
 		return err
 	}
 
@@ -207,7 +207,7 @@ func (tc *TypeChecker) popType(op *vm.Op, stack *lexer.TypeStack, expected lexer
 }
 
 func (tc *TypeChecker) popTypes(op *vm.Op, stack, expected *lexer.TypeStack) error {
-	if err := tc.enoughArgsCount(stack, expected.Size(), &op.Token); err != nil {
+	if err := tc.enoughArgsCount(stack, expected.Size(), op.Token); err != nil {
 		return err
 	}
 
@@ -235,7 +235,7 @@ func (tc *TypeChecker) popTypeContract(op *vm.Op, stack *lexer.TypeStack, expect
 }
 
 func (tc *TypeChecker) popTypesContract(op *vm.Op, stack *lexer.TypeStack, contract *Contract) (d lexer.DataTypes, err error) {
-	if err = tc.enoughArgsCount(stack, contract.Inputs.Size(), &op.Token); err != nil {
+	if err = tc.enoughArgsCount(stack, contract.Inputs.Size(), op.Token); err != nil {
 		return
 	}
 
@@ -588,7 +588,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			case vm.OpJumpReturn:
 				func_ctx := contextStack.GetContext(context_type_func)
 				func_ctx.Outputs.Results = append(func_ctx.Outputs.Results, TypeCheckerJumpResult{
-					Stack: *ctx.Stack.Copy(), Token: &op.Token,
+					Stack: *ctx.Stack.Copy(), Token: op.Token,
 				})
 				func_ctx.Outputs.Index = i + int(op.Operand.(types.IntType))
 
@@ -600,14 +600,14 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 
 			case vm.OpJumpEnd:
 				ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
-					Stack: *ctx.Stack.Copy(), Token: &op.Token,
+					Stack: *ctx.Stack.Copy(), Token: op.Token,
 				})
 				ctx.Outputs.Index = i
 				return i, nil
 			case vm.OpJumpBreak, vm.OpJumpContinue:
 				while_ctx := contextStack.GetContext(context_type_while)
 				while_ctx.Outputs.Results = append(while_ctx.Outputs.Results, TypeCheckerJumpResult{
-					Stack: *ctx.Stack.Copy(), Token: &op.Token,
+					Stack: *ctx.Stack.Copy(), Token: op.Token,
 				})
 
 				while_ctx.Outputs.Index = i + int(op.Operand.(types.IntType))
@@ -634,13 +634,13 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 				}
 			case vm.OpJumpElse:
 				ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
-					Stack: *ctx.Stack.Copy(), Token: &op.Token,
+					Stack: *ctx.Stack.Copy(), Token: op.Token,
 				})
 				ctx.Outputs.Index = i + int(op.Operand.(types.IntType)) - 1
 				return i, nil
 			case vm.OpJumpElif:
 				ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
-					Stack: *ctx.Stack.Copy(), Token: &op.Token,
+					Stack: *ctx.Stack.Copy(), Token: op.Token,
 				})
 				ctx.Outputs.Index = i
 				return i, nil
@@ -662,7 +662,7 @@ func (tc *TypeChecker) typeCheck(ops *[]vm.Op, start int, contextStack *TypeChec
 			}
 		case vm.OpFuncEnd:
 			ctx.Outputs.Results = append(ctx.Outputs.Results, TypeCheckerJumpResult{
-				Stack: *ctx.Stack.Copy(), Token: &op.Token,
+				Stack: *ctx.Stack.Copy(), Token: op.Token,
 			})
 			ctx.Outputs.Index = i
 			return i, nil

@@ -82,7 +82,7 @@ func (c *Compiler) resetInlinedCache() []vm.Op {
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (c *Compiler) compileTokenInt(token *lexer.Token, scope *Scope) error {
-	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushInt, Operand: token.Value.(types.IntType), Token: *token})
+	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushInt, Operand: token.Value.(types.IntType), Token: token})
 	return nil
 }
 
@@ -92,20 +92,20 @@ func (c *Compiler) compileTokenString(token *lexer.Token, scope *Scope) error {
 		return logger.CompilerError(&token.Loc, "Unknown string literal at compile-time: `%s`", literal)
 	} else {
 		c.pushOps(scope.Name,
-			vm.Op{Typ: vm.OpPushPtr, Operand: literal_addr, Token: *token},
-			vm.Op{Typ: vm.OpPushInt, Operand: types.IntType(len(literal)), Token: *token},
+			vm.Op{Typ: vm.OpPushPtr, Operand: literal_addr, Token: token},
+			vm.Op{Typ: vm.OpPushInt, Operand: types.IntType(len(literal)), Token: token},
 		)
 	}
 	return nil
 }
 
 func (c *Compiler) compileTokenChar(token *lexer.Token, scope *Scope) error {
-	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushInt, Operand: token.Value.(types.IntType), Token: *token})
+	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushInt, Operand: token.Value.(types.IntType), Token: token})
 	return nil
 }
 
 func (c *Compiler) compileTokenBool(token *lexer.Token, scope *Scope) error {
-	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushBool, Operand: token.Value.(types.IntType), Token: *token})
+	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushBool, Operand: token.Value.(types.IntType), Token: token})
 	return nil
 }
 
@@ -115,7 +115,7 @@ func (c *Compiler) compileTokenIntrinsic(token *lexer.Token, scope *Scope, intri
 	if intrinsic == lexer.IntrinsicOffset || intrinsic == lexer.IntrinsicReset {
 		return logger.CompilerError(&token.Loc, "`%s` intrinsic is not allowed outside `const` or `alloc` blocks", token.Text)
 	}
-	c.pushOps(scope.Name, vm.Op{Typ: vm.OpIntrinsic, Operand: intrinsic, Token: *token})
+	c.pushOps(scope.Name, vm.Op{Typ: vm.OpIntrinsic, Operand: intrinsic, Token: token})
 	return nil
 }
 
@@ -125,18 +125,18 @@ func (c *Compiler) compileConst(token *lexer.Token, val *Constant, scope *Scope)
 	if typ, exists := DataType2OpType[val.Typ]; !exists {
 		return logger.CompilerError(&token.Loc, "Can not compile constant of type `%s`", lexer.DataType2Str[val.Typ])
 	} else {
-		c.pushOps(scope.Name, vm.Op{Typ: typ, Operand: val.Value, Token: *token})
+		c.pushOps(scope.Name, vm.Op{Typ: typ, Operand: val.Value, Token: token})
 		return nil
 	}
 }
 
 func (c *Compiler) compileLocalAlloc(token *lexer.Token, scope *Scope) error {
-	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushLocalAlloc, Operand: scope.Allocs[token.Text].Offset, Token: *token})
+	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushLocalAlloc, Operand: scope.Allocs[token.Text].Offset, Token: token})
 	return nil
 }
 
 func (c *Compiler) compileGlobalAlloc(token *lexer.Token, scope *Scope) error {
-	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushGlobalAlloc, Operand: c.Ctx.GlobalScope().Allocs[token.Text].Offset, Token: *token})
+	c.pushOps(scope.Name, vm.Op{Typ: vm.OpPushGlobalAlloc, Operand: c.Ctx.GlobalScope().Allocs[token.Text].Offset, Token: token})
 	return nil
 }
 
@@ -152,7 +152,7 @@ func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope *Scope
 		if c.Ctx.CurrentFuncIsInlined {
 			return logger.CompilerError(&token.Loc, "Calling non-inlined functions from inlined are not allowed")
 		} else {
-			c.pushOps(scope.Name, vm.Op{Typ: vm.OpCall, Operand: f.Addr - c.getCurrentAddr(), Token: *token, Data: f.Sig.Name})
+			c.pushOps(scope.Name, vm.Op{Typ: vm.OpCall, Operand: f.Addr - c.getCurrentAddr(), Token: token, Data: f.Sig.Name})
 		}
 	}
 	return nil
@@ -162,7 +162,7 @@ func (c *Compiler) compileFuncCall(token *lexer.Token, f *Function, scope *Scope
 
 func (c *Compiler) compileIfBlock(token *lexer.Token, th *lexer.TokenHolder, scope *Scope) error {
 	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token, lexer.KeywordIf, nil, nil))
-	c.pushOps(scope.Name, vm.Op{Token: *token, Typ: vm.OpJump, Operand: types.IntType(1), Data: vm.Str2OpJumpType[token.Text]})
+	c.pushOps(scope.Name, vm.Op{Token: token, Typ: vm.OpJump, Operand: types.IntType(1), Data: vm.Str2OpJumpType[token.Text]})
 	return c.compile(th, scope)
 }
 
@@ -183,7 +183,7 @@ func (c *Compiler) compileElifBlock(token *lexer.Token, th *lexer.TokenHolder, s
 	c.setOpOperand(block.Addr, addr-block.Addr+1) // do -> [elif]+1
 
 	c.Blocks.Push(NewBlock(addr, token, lexer.KeywordElif, nil, block.Parent))
-	c.pushOps(scope.Name, vm.Op{Token: *token, Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]})
+	c.pushOps(scope.Name, vm.Op{Token: token, Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]})
 
 	return nil
 }
@@ -206,14 +206,14 @@ func (c *Compiler) compileElseBlock(token *lexer.Token, th *lexer.TokenHolder, s
 	c.setOpOperand(block.Addr, addr-block.Addr+1) // do -> [else] + 1
 
 	c.Blocks.Push(NewBlock(addr, token, lexer.KeywordElse, nil, block.Parent))
-	c.pushOps(scope.Name, vm.Op{Token: *token, Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]})
+	c.pushOps(scope.Name, vm.Op{Token: token, Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]})
 
 	return nil
 }
 
 func (c *Compiler) compileWhileBlock(token *lexer.Token, th *lexer.TokenHolder, scope *Scope) error {
 	c.Blocks.Push(NewBlock(c.getCurrentAddr(), token, lexer.KeywordWhile, nil, nil))
-	c.pushOps(scope.Name, vm.Op{Token: *token, Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text], Operand: types.IntType(1)})
+	c.pushOps(scope.Name, vm.Op{Token: token, Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text], Operand: types.IntType(1)})
 	return c.compile(th, scope)
 }
 
@@ -232,7 +232,7 @@ func (c *Compiler) compileDoBlock(token *lexer.Token, th *lexer.TokenHolder, sco
 
 	do_addr := c.getCurrentAddr()
 	c.Blocks.Push(NewBlock(do_addr, token, lexer.KeywordDo, nil, parent))
-	c.pushOps(scope.Name, vm.Op{Token: *token, Typ: vm.OpCondJump, Operand: parent.Addr - do_addr, Data: token.Text})
+	c.pushOps(scope.Name, vm.Op{Token: token, Typ: vm.OpCondJump, Operand: parent.Addr - do_addr, Data: token.Text})
 	return nil
 }
 
@@ -264,7 +264,7 @@ func (c *Compiler) compileJumpKeyword(token *lexer.Token, kw lexer.KeywordType, 
 		return logger.CompilerError(&token.Loc, "`%s` should be inside while-loop, but it doesn't", token.Text)
 	}
 
-	c.pushOps(scope.Name, vm.Op{Token: *token, Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]})
+	c.pushOps(scope.Name, vm.Op{Token: token, Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]})
 	return nil
 }
 
@@ -290,7 +290,7 @@ func (c *Compiler) compileReturnKeyword(token *lexer.Token, scope *Scope) error 
 	var i int
 	for i = len(c.Blocks.Data) - 1; i >= 0; i-- {
 		cur_block := c.Blocks.Data[i]
-		t := &cur_block.Tok
+		t := cur_block.Tok
 
 		if t.Typ == lexer.TokenKeyword && t.Value.(lexer.KeywordType) == lexer.KeywordFunc {
 			cur_block.Jumps = append(cur_block.Jumps, Jump{Keyword: lexer.KeywordReturn, Addr: c.getCurrentAddr()})
@@ -301,7 +301,7 @@ func (c *Compiler) compileReturnKeyword(token *lexer.Token, scope *Scope) error 
 		return logger.CompilerError(&token.Loc, "`%s` should be inside function, but it doesn't", token.Text)
 	}
 
-	c.pushOps(scope.Name, vm.Op{Token: *token, Operand: types.IntType(1), Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]})
+	c.pushOps(scope.Name, vm.Op{Token: token, Operand: types.IntType(1), Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]})
 	return nil
 }
 
@@ -317,7 +317,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope *Scope) error {
 		return logger.CompilerError(&token.Loc, "`end` should close only `do`, `else`, `func` or `capture` blocks, but not `%s`", lexer.Keyword2Str[block.Typ])
 	}
 
-	op := vm.Op{Token: *token, Operand: types.IntType(1), Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]}
+	op := vm.Op{Token: token, Operand: types.IntType(1), Typ: vm.OpJump, Data: vm.Str2OpJumpType[token.Text]}
 	addr := c.getCurrentAddr()
 	end_diff := addr - block.Addr + 1
 
@@ -367,7 +367,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope *Scope) error {
 			v := scope.Captures.Pop()
 			delete(scope.Names, v.Name)
 		}
-		c.pushOps(scope.Name, vm.Op{Typ: vm.OpDropCaptures, Token: *token, Operand: block.Data.(types.IntType)})
+		c.pushOps(scope.Name, vm.Op{Typ: vm.OpDropCaptures, Token: token, Operand: block.Data.(types.IntType)})
 
 		return nil
 	default:
@@ -384,7 +384,7 @@ func (c *Compiler) compileEndKeyword(token *lexer.Token, scope *Scope) error {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, scope *Scope) (name_token lexer.Token, value Constant, err error) {
+func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, scope *Scope) (name_token *lexer.Token, value Constant, err error) {
 	if th.Empty() {
 		err = logger.CompilerError(&token.Loc, "Expected `%s` name, but got nothing", token.Text)
 		return
@@ -399,7 +399,7 @@ func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, 
 		return
 	}
 
-	name_token = *th.GetNextToken()
+	name_token = th.GetNextToken()
 
 	if name_token.Typ != lexer.TokenWord {
 		err = logger.CompilerError(&token.Loc, "Expected `%s` name to be a word, but got `%s`", token.Text, name_token.Text)
@@ -428,7 +428,7 @@ func (c *Compiler) compileNamedBlock(token *lexer.Token, th *lexer.TokenHolder, 
 
 	scope.Names[name_token.Text] = name_token
 
-	value, err = c.constEval(&name_token, th, scope)
+	value, err = c.constEval(name_token, th, scope)
 	return
 }
 
@@ -716,13 +716,13 @@ func (c *Compiler) compileFuncSignature(token *lexer.Token, th *lexer.TokenHolde
 	return
 }
 
-func (c *Compiler) compileFuncDef(token *lexer.Token, th *lexer.TokenHolder) (name_token lexer.Token, sig FuncSignature, err error) {
+func (c *Compiler) compileFuncDef(token *lexer.Token, th *lexer.TokenHolder) (name_token *lexer.Token, sig FuncSignature, err error) {
 	if th.Empty() {
 		err = logger.CompilerError(&token.Loc, "Expected `%s` name, but got nothing", token.Text)
 		return
 	}
 
-	name_token = *th.GetNextToken()
+	name_token = th.GetNextToken()
 	if name_token.Typ != lexer.TokenWord {
 		err = logger.CompilerError(&token.Loc, "Expected `%s` name to be a word, but got `%s`", token.Text, name_token.Text)
 		return
@@ -804,12 +804,12 @@ func (c *Compiler) compileFunc(token *lexer.Token, th *lexer.TokenHolder, scope 
 	c.Blocks.Push(NewBlock(func_addr, token, lexer.KeywordFunc, nil, nil))
 
 	// declare function before compiling its body to allow recursion call
-	f := Function{
+	f := &Function{
 		Addr: func_addr, Sig: signature, Inlined: inlined,
 	}
 	c.Ctx.Funcs[signature.Name] = f
 
-	c.pushOps(signature.Name, vm.Op{Token: *token, Typ: vm.OpFuncBegin, Data: signature.Name})
+	c.pushOps(signature.Name, vm.Op{Token: token, Typ: vm.OpFuncBegin, Data: signature.Name})
 
 	// do not use compileDoBlock, because in this case `do` should not compile to OpCondJump
 	if err = c.compile(th, new_scope); err != nil {
@@ -902,12 +902,12 @@ func (c *Compiler) compileCaptureKeyword(token *lexer.Token, th *lexer.TokenHold
 	val_types := lexer.DataTypes{}
 	for _, v := range captures.Vals {
 		c.Ctx.Scopes[scope.Name].Captures.Push(v)
-		c.Ctx.Scopes[scope.Name].Names[v.Name] = *v.Token
+		c.Ctx.Scopes[scope.Name].Names[v.Name] = v.Token
 		val_types = append(val_types, v.Typ)
 	}
 
 	cap_count := types.IntType(len(captures.Vals))
-	c.pushOps(scope.Name, vm.Op{Typ: vm.OpCapture, Operand: cap_count, Token: *token, Data: val_types})
+	c.pushOps(scope.Name, vm.Op{Typ: vm.OpCapture, Operand: cap_count, Token: token, Data: val_types})
 
 	c.Blocks.Push(NewBlock(-1, token, lexer.KeywordCapture, cap_count, nil))
 	if err := c.compile(th, scope); err != nil {
@@ -938,7 +938,7 @@ func (c *Compiler) compileFptrOfKeyword(token *lexer.Token, th *lexer.TokenHolde
 	}
 
 	c.pushOps(scope.Name, vm.Op{
-		Typ: vm.OpPushFptr, Operand: f.Addr, Token: *token, Data: f.Sig.Name,
+		Typ: vm.OpPushFptr, Operand: f.Addr, Token: token, Data: f.Sig.Name,
 	})
 	return nil
 }
@@ -963,7 +963,7 @@ func (c *Compiler) compileCallLikeKeyword(token *lexer.Token, th *lexer.TokenHol
 	}
 
 	c.pushOps(scope.Name, vm.Op{
-		Typ: vm.OpCallLike, Data: f.Sig.Name, Token: *token,
+		Typ: vm.OpCallLike, Data: f.Sig.Name, Token: token,
 	})
 	return nil
 }
@@ -1028,7 +1028,7 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope *Scope) error {
 			}
 
 			if function, exists := c.Ctx.Funcs[name]; exists {
-				if err := c.compileFuncCall(token, &function, scope); err != nil {
+				if err := c.compileFuncCall(token, function, scope); err != nil {
 					return err
 				}
 				continue
@@ -1038,7 +1038,7 @@ func (c *Compiler) compile(th *lexer.TokenHolder, scope *Scope) error {
 				c.pushOps(
 					scope.Name,
 					vm.Op{
-						Token: *token, Typ: vm.OpPushCaptured, Operand: index,
+						Token: token, Typ: vm.OpPushCaptured, Operand: index,
 						Data: scope.Captures.Data[scope.Captures.Size()-1-int(index)].Typ,
 					},
 				)

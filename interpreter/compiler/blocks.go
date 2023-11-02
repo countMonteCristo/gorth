@@ -23,7 +23,7 @@ type Jump struct {
 // Blocks are: if-else-end, while-do-end, func-do-end
 type Block struct {
 	Addr   types.IntType // absolute block start address
-	Tok    lexer.Token
+	Tok    *lexer.Token
 	Jumps  []Jump
 	Typ    lexer.KeywordType
 	Parent *Block
@@ -31,7 +31,7 @@ type Block struct {
 }
 
 func NewBlock(addr types.IntType, token *lexer.Token, typ lexer.KeywordType, data interface{}, parent *Block) *Block {
-	return &Block{Addr: addr, Tok: *token, Jumps: make([]Jump, 0), Typ: typ, Data: data, Parent: parent}
+	return &Block{Addr: addr, Tok: token, Jumps: make([]Jump, 0), Typ: typ, Data: data, Parent: parent}
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

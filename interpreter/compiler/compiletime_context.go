@@ -12,7 +12,7 @@ import (
 // Compile time context contains all information about compiled program
 type CompileTimeContext struct {
 	StringsMap           map[string]types.IntType // string literals to their memory addresses
-	Funcs                map[string]Function      // function name to function
+	Funcs                map[string]*Function     // function name to function
 	Scopes               map[string]*Scope        // local function context (allocs, consts, etc)
 	Offset               types.IntType            // current value for `offset` and `reset` keywords
 	CurrentFuncIsInlined bool                     // are we compiling inline function now or not
@@ -21,7 +21,7 @@ type CompileTimeContext struct {
 func NewCompileTimeContext() *CompileTimeContext {
 	ctx := &CompileTimeContext{
 		StringsMap:           make(map[string]types.IntType),
-		Funcs:                make(map[string]Function),
+		Funcs:                make(map[string]*Function),
 		Scopes:               make(map[string]*Scope),
 		Offset:               0,
 		CurrentFuncIsInlined: false,
@@ -115,7 +115,7 @@ func (c *CompileTimeContext) getAllocInfo(name, scope_name string, mem *vm.Memor
 	alloc := c.Scopes[scope_name].Allocs[name]
 	var alloc_ptr types.IntType
 	if scope_name != GlobalScopeName {
-		alloc_ptr = mem.Ram.Ptr - c.Scopes[scope_name].MemSize + alloc.Offset
+		alloc_ptr = mem.Ram.Ptr - alloc.Offset
 	} else {
 		alloc_ptr = mem.Ram.Start + alloc.Offset
 	}
@@ -150,7 +150,7 @@ func (c *CompileTimeContext) DebugConstNames(names []string, scope_name string) 
 	}
 	return n_found
 }
-// TODO: fix printing local allocs addresses
+
 func (c *CompileTimeContext) DebugAllocNames(names []string, scope_name string, mem *vm.Memory) int {
 	n_found := 0
 	for _, name := range names {
