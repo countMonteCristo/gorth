@@ -11,9 +11,9 @@ import (
 // ---------------------------------------------------------------------------------------------------------------------
 
 type VmSettings struct {
-	Debug         bool // debug mode
-	Env           bool // store env variables to memory
-	TypeCheck     bool // do type checking before running the program
+	Mode          string // running mode
+	Env           bool   // store env variables to memory
+	TypeCheck     bool   // do type checking before running the program
 	MemorySize    types.IntType
 	CallStackSize int
 	IncludePaths  utils.ArrayArgs
@@ -24,7 +24,7 @@ type VmSettings struct {
 
 // TODO: add flags for memory and call_stack instead of reading env?
 func NewSettings(
-	debug, env, typecheck bool, mem types.IntType, call_stack_Size int, include_paths utils.ArrayArgs, opt int) *VmSettings {
+	mode string, env, typecheck bool, mem types.IntType, call_stack_Size int, include_paths utils.ArrayArgs, opt int) *VmSettings {
 	value, exists := os.LookupEnv("GORTH_VM_MEMORY")
 	if exists {
 		val_int, err := strconv.ParseInt(value, 10, 64)
@@ -44,9 +44,13 @@ func NewSettings(
 	}
 
 	return &VmSettings{
-		Debug: debug, Env: env, TypeCheck: typecheck, MemorySize: mem, CallStackSize: call_stack_Size,
+		Mode: mode, Env: env, TypeCheck: typecheck, MemorySize: mem, CallStackSize: call_stack_Size,
 		IncludePaths: include_paths, Optimization: opt,
 	}
+}
+
+func (s *VmSettings) IsDebug() bool {
+	return s.Mode == "debug"
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

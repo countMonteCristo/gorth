@@ -5,6 +5,7 @@ import (
 	"Gorth/interpreter/debugger"
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/optimizer"
+	"Gorth/interpreter/profiler"
 	"Gorth/interpreter/typechecker"
 	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
@@ -22,6 +23,7 @@ type Interpreter struct {
 	optimizer   optimizer.Optimizer
 	importer    lexer.Importer
 	debugger    debugger.Debugger
+	profiler    profiler.Profiler
 	args        []string
 }
 
@@ -29,7 +31,7 @@ func NewInterpreter(arguments []string, pkg_dir string, s *vm.VmSettings) *Inter
 	i := &Interpreter{
 		lexer:       lexer.Lexer{},
 		vm:          *vm.NewVM(s, compiler.GlobalScopeName),
-		compiler:    *compiler.NewCompiler(s.Debug),
+		compiler:    *compiler.NewCompiler(s.IsDebug()),
 		typechecker: *typechecker.NewTypeChecker(s.TypeCheck),
 		optimizer:   *optimizer.NewOptimizer(s.Optimization),
 		args:        arguments,
@@ -82,6 +84,13 @@ func (i *Interpreter) RunDebug(fn string) {
 			break
 		}
 	}
+}
+
+func (i *Interpreter) RunProfile(fn string) {
+	i.Prepare(fn)
+	i.vm.PrepareRuntimeContext(i.args)
+	i.profiler = *profiler.NewProfiler(&i.vm)
+	i.profiler.Run(&i.compiler.Ops, i.args)
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

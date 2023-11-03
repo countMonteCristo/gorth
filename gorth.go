@@ -23,7 +23,8 @@ func main() {
 
 	var includePaths utils.ArrayArgs
 
-	debugFlag := flag.Bool("debug", false, "run with debuger mode")
+	// debugFlag := flag.Bool("debug", false, "run with debuger mode")
+	modeFlag := flag.String("mode", "interprete", "how to run (interprete|debug|profile)")
 	envFlag := flag.Bool("env", false, "save environment variables to VM memory")
 	tcFlag := flag.Bool("disable-typecheck", false, "disable type checking")
 	optFlag := flag.Int("O", 0, "optimization level")
@@ -32,17 +33,20 @@ func main() {
 	flag.Parse()
 
 	settings := vm.NewSettings(
-		*debugFlag, *envFlag, !*tcFlag, vm_memory_size, recursion_limit, includePaths,
+		*modeFlag, *envFlag, !*tcFlag, vm_memory_size, recursion_limit, includePaths,
 		*optFlag,
 	)
 
 	gorth_script := flag.Args()[0]
 	i := interpreter.NewInterpreter(flag.Args(), package_dir, settings)
 
-	if !*debugFlag {
+	switch *modeFlag {
+	case "interprete":
 		exit_code := i.Run(gorth_script)
 		i.ProcessExit(exit_code)
-	} else {
+	case "debug":
 		i.RunDebug(gorth_script)
+	case "profile":
+		i.RunProfile(gorth_script)
 	}
 }

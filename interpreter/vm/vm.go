@@ -569,7 +569,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		vm.Rc.Memory.Ram.Ptr += op.Operand.(types.IntType)
 		vm.Rc.CapturesCount = 0
 		vm.Rc.Addr++
-		if vm.S.Debug {
+		if vm.S.IsDebug() {
 			vm.Rc.Scopes.Push(op.DebugInfo.(string))
 		}
 	case OpFuncEnd:
@@ -582,7 +582,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		vm.Rc.CapturesCount = vm.Rc.ReturnStack.Pop()
 		vm.Rc.Addr = vm.Rc.ReturnStack.Pop() + 1
 		vm.Rc.Memory.Ram.Ptr -= op.Operand.(types.IntType)
-		if vm.S.Debug {
+		if vm.S.IsDebug() {
 			vm.Rc.Scopes.Pop()
 		}
 	case OpPushLocalAlloc:
