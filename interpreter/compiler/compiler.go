@@ -4,6 +4,7 @@ import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
+	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
 	"fmt"
 
@@ -1171,7 +1172,13 @@ func (c *Compiler) CompileTokens(tokens *lexer.TokenHolder, rts *vm.RuntimeSetti
 	if !exists {
 		return logger.CompilerError(nil, "No entry point found (function `%s` was not defined)", EntryPointName)
 	}
-	c.pushOps(GlobalScopeName, vm.Op{Typ: vm.OpCall, Operand: f.Addr - c.getCurrentAddr(), Data: f.Sig.Name})
+	c.pushOps(GlobalScopeName, vm.Op{
+		Typ: vm.OpCall, Operand: f.Addr - c.getCurrentAddr(), Data: f.Sig.Name,
+		Token: &lexer.Token{
+			Typ: lexer.TokenWord, Text: EntryPointName, Value: EntryPointName,
+			Loc: utils.Location{Filepath: "", Line: -1, Column: -1},
+		},
+	})
 
 	if !(f.Sig.Inputs.Size() == 0 && f.Sig.Outputs.Size() == 1 && f.Sig.Outputs.Top() == lexer.DataTypeInt) {
 		logger.CompilerCrash(
