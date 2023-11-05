@@ -12,6 +12,7 @@ const (
 	ModuleOptimizer
 	ModuleVm
 	ModuleDebugger
+	ModuleProfiler
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -32,6 +33,8 @@ func ModuleToStr(module ModuleType) string {
 		return "VM"
 	case ModuleDebugger:
 		return "DEBUGGER"
+	case ModuleProfiler:
+		return "PROFILER"
 	default:
 		panic("Unknown module type")
 	}

@@ -67,11 +67,14 @@ Record test outputs:
 
 ## Usage
 ```
-> ./bin/gorth [-debug] [-env] [-disable-typecheck] [-I include_dir] [-O level] Gorth/examples/helloworld.gorth [args...]
+> ./bin/gorth [-mode debug|profile|interprete] [-env] [-disable-typecheck] [-I include_dir] [-O level] Gorth/examples/helloworld.gorth [args...]
 ```
 
 Supported flags:
-* `debug` - run interpreter in debug mode
+* `mode` - interpreter mode:
+  * `interpreter` - default value, simply execute gorth script
+  * `debug` - run as debugger
+  * `profile` - run profiler
 * `env` - adds environment variables to VM memory (turned off by default)
 * `check` - perform type checking before running the script
 * `I` - provide additional include directories (i.e. "-I dir1 -I dir2 ... -I dirN")
@@ -80,7 +83,7 @@ Supported flags:
 ## Debugger
 Run script with debugger.
 ```console
-> ./bin/gorth -debug Gorth/examples/helloworld.gorth
+> ./bin/gorth -mode debug Gorth/examples/helloworld.gorth
 ```
 Availavle commands:
  * `n` [`count`]       - process at most `count` instructions (by default `count`=1)
@@ -99,6 +102,13 @@ Availavle commands:
  * `e` [`type`]        - print current environment (consts, allocs), `type` could be [`all`, `local`, `global`], by default `type`=`all`
  * `h`                 - print help
  * `q`                 - exit debugger
+
+## Profiler
+Run script in profiler mode:
+```console
+> ./bin/gorth -mode profile Gorth/examples/helloworld.gorth
+```
+Profiler will save all stats into `Gorth/examples/helloworld.gorth.prof` file.
 
 # Language Reference
 ## Literals

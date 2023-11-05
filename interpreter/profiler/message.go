@@ -2,7 +2,9 @@ package profiler
 
 import (
 	"Gorth/interpreter/types"
+	"Gorth/interpreter/vm"
 	"fmt"
+	"io"
 	"sort"
 
 	"golang.org/x/exp/constraints"
@@ -51,17 +53,17 @@ func NewOpStat(id types.IntType, t *OpTimings) OpStat {
 	return s
 }
 
-func PrintHeader() {
-	fmt.Printf(
-		"%5s\t%8s\t%9s\t%8s\t%8s\t%8s\t%10s\n",
-		"id", "count", "total[ns]", "mean[ns]", "min[ns]", "max[ns]", "median[ns]",
+func PrintHeader(w io.Writer) {
+	fmt.Fprintf(w,
+		"%5s\t%12s\t%8s\t%9s\t%8s\t%8s\t%8s\t%10s\t%s\n",
+		"id", "op", "count", "total[ns]", "mean[ns]", "min[ns]", "max[ns]", "median[ns]", "loc",
 	)
 }
 
-func (o *OpStat) Print() {
-	fmt.Printf(
-		"%5d\t%8d\t%9d\t%8.2f\t%8d\t%8d\t%10.1f\n",
-		o.Id, o.Count, o.Total, o.Mean, o.Min, o.Max, o.Median,
+func (o *OpStat) Print(w io.Writer, op *vm.Op) {
+	fmt.Fprintf(w,
+		"%5d\t%12s\t%8d\t%9d\t%8.2f\t%8d\t%8d\t%10.1f\t%s\n",
+		o.Id, vm.OpType2Str[op.Typ], o.Count, o.Total, o.Mean, o.Min, o.Max, o.Median, &op.Token.Loc,
 	)
 }
 

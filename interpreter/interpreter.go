@@ -89,7 +89,7 @@ func (i *Interpreter) RunDebug(fn string) {
 func (i *Interpreter) RunProfile(fn string) {
 	i.Prepare(fn)
 	i.vm.PrepareRuntimeContext(i.args)
-	i.profiler = *profiler.NewProfiler(&i.vm)
+	i.profiler = *profiler.NewProfiler(&i.vm, i.vm.S.ProfilePath)
 	i.profiler.Run(&i.compiler.Ops, i.args)
 }
 

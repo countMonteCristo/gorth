@@ -1,20 +1,24 @@
 package profiler
 
 import (
+	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/vm"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 )
 
 type Profiler struct {
 	logger Logger
 	vm     *vm.VM
+	fn     string
 }
 
-func NewProfiler(vm *vm.VM) *Profiler {
+func NewProfiler(vm *vm.VM, fn string) *Profiler {
 	return &Profiler{
-		logger: *NewLogger(), vm: vm,
+		logger: *NewLogger(), vm: vm, fn: fn,
 	}
 }
 
@@ -35,17 +39,29 @@ func (p *Profiler) Run(ops *[]vm.Op, args []string) {
 	p.logger.Messages <- Message{OpId: -1}
 	close(p.logger.Messages)
 
-	p.Summurize()
+	p.Summurize(ops)
 }
 
-func (p *Profiler) Summurize() {
-	fmt.Printf("\n\n========================================== PROFILE STATS ===========================================\n")
-	PrintHeader()
+func (p *Profiler) Summurize(ops *[]vm.Op) {
+	fout, err := os.Create(p.fn)
+	if err != nil {
+		logger.ProfilerCrash(nil, "Cannot create profiler file %s: %s", p.fn, err)
+	}
+	defer func() {
+		if err := fout.Close(); err != nil {
+			logger.ProfilerCrash(nil, "Cannot close profiler file %s: %s", p.fn, err)
+		}
+	}()
+
+	sep := fmt.Sprintf("%s PROFILE STATS %s", strings.Repeat("=", 60), strings.Repeat("=", 60))
+
+	fmt.Fprintf(fout, "%s\n", sep)
+	PrintHeader(fout)
 	for id := types.IntType(0); id < p.vm.Rc.OpsCount; id++ {
 		if timings, exists := p.logger.Stats[id]; exists {
 			stats := NewOpStat(id, timings)
-			stats.Print()
+			stats.Print(fout, &(*ops)[id])
 		}
 	}
-	fmt.Printf("====================================================================================================\n")
+	fmt.Fprintf(fout, "%s\n", strings.Repeat("=", len(sep)))
 }

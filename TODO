@@ -60,6 +60,8 @@
   [ ] Improve debugger
     [*] Add command to go out of current function
   [ ] add profiler
+    [*] basic profiler
+    [ ] aggregate byf functions
 
 [ ] Low-level interaction with OS
   [ ] syscalls

@@ -18,13 +18,15 @@ type VmSettings struct {
 	CallStackSize int
 	IncludePaths  utils.ArrayArgs
 	Optimization  int
+	ProfilePath   string
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
 // TODO: add flags for memory and call_stack instead of reading env?
 func NewSettings(
-	mode string, env, typecheck bool, mem types.IntType, call_stack_Size int, include_paths utils.ArrayArgs, opt int) *VmSettings {
+	mode string, env, typecheck bool, mem types.IntType, call_stack_Size int,
+	include_paths utils.ArrayArgs, opt int, profile_fn string) *VmSettings {
 	value, exists := os.LookupEnv("GORTH_VM_MEMORY")
 	if exists {
 		val_int, err := strconv.ParseInt(value, 10, 64)
@@ -45,7 +47,7 @@ func NewSettings(
 
 	return &VmSettings{
 		Mode: mode, Env: env, TypeCheck: typecheck, MemorySize: mem, CallStackSize: call_stack_Size,
-		IncludePaths: include_paths, Optimization: opt,
+		IncludePaths: include_paths, Optimization: opt, ProfilePath: profile_fn,
 	}
 }
 

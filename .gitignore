@@ -3,3 +3,4 @@ test
 /*.gorth
 bin/*
 .vscode
+*.prof

@@ -32,12 +32,13 @@ func main() {
 
 	flag.Parse()
 
+	gorth_script := flag.Args()[0]
+
 	settings := vm.NewSettings(
 		*modeFlag, *envFlag, !*tcFlag, vm_memory_size, recursion_limit, includePaths,
-		*optFlag,
+		*optFlag, gorth_script + ".prof",
 	)
 
-	gorth_script := flag.Args()[0]
 	i := interpreter.NewInterpreter(flag.Args(), package_dir, settings)
 
 	switch *modeFlag {

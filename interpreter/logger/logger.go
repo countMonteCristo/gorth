@@ -10,7 +10,7 @@ import (
 
 func FormatLoc(loc *utils.Location) (path string) {
 	if loc != nil {
-		path = fmt.Sprintf("%s:%d:%d", loc.Filepath, loc.Line+1, loc.Column+1)
+		path = loc.String()
 	}
 	return
 }
@@ -60,6 +60,10 @@ func OptimizerError(loc *utils.Location, msg string, args ...any) error {
 	return formatErrMsg(loc, ModuleOptimizer, msg, args...)
 }
 
+func ProfilerError(loc *utils.Location, msg string, args ...any) error {
+	return formatErrMsg(loc, ModuleProfiler, msg, args...)
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 func FormatInfoMsg(loc *utils.Location, msg string, args ...any) string {
@@ -104,4 +108,7 @@ func VmCrash(loc *utils.Location, msg string, args ...any) {
 	crash(loc, ModuleVm, msg, args...)
 }
 
+func ProfilerCrash(loc *utils.Location, msg string, args ...any) {
+	crash(loc, ModuleProfiler, msg, args...)
+}
 // ---------------------------------------------------------------------------------------------------------------------
