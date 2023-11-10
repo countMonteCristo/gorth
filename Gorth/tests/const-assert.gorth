@@ -1,0 +1,4 @@
+func main : int do
+  const x 1 2 = "condition failed" assert end
+  0
+end

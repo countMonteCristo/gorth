@@ -61,7 +61,7 @@
     [*] Add command to go out of current function
   [ ] add profiler
     [*] basic profiler
-    [ ] aggregate byf functions
+    [ ] aggregate by functions
 
 [ ] Low-level interaction with OS
   [ ] syscalls
@@ -73,7 +73,7 @@
 [ ] Testing
   [ ] more tests
   [ ] run tests asynchronously
-  [ ] add asserts
+  [*] add asserts
   [*] implement testing tool:
     [*] test single file, test all files in directory, test all dirs
     [*] support for providing input args and stdin for testcases

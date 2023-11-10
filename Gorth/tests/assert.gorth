@@ -1,0 +1,4 @@
+func main : int do
+  1 2 = "condition failed" assert
+  0
+end

@@ -42,6 +42,8 @@ const (
 	IntrinsicDebug
 	IntrinsicTypeDebug
 
+	IntrinsicAssert
+
 	IntrinsicLoad8
 	IntrinsicStore8
 	IntrinsicLoad16
@@ -109,6 +111,8 @@ var Intrinsic2Str = map[IntrinsicType]string{
 
 	IntrinsicDebug:     "???",
 	IntrinsicTypeDebug: "!!!",
+
+	IntrinsicAssert: "assert",
 
 	IntrinsicLoad8:   "@8",
 	IntrinsicStore8:  "!8",

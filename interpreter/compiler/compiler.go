@@ -469,6 +469,15 @@ loop:
 			const_stack.Push(Constant{Value: tok.Value.(types.IntType), Typ: lexer.DataTypeInt})
 		case lexer.TokenBool:
 			const_stack.Push(Constant{Value: tok.Value.(types.IntType), Typ: lexer.DataTypeBool})
+		case lexer.TokenString:
+			literal := tok.Value.(string)
+			if literal_addr, exists := c.Ctx.StringsMap[literal]; !exists {
+				err = logger.CompilerError(&token.Loc, "Unknown string literal at compile-time const evaluation: `%s`", literal)
+				return
+			} else {
+				const_stack.Push(Constant{Value: literal_addr, Typ: lexer.DataTypePtr})
+				const_stack.Push(Constant{Value: types.IntType(len(literal)), Typ: lexer.DataTypeInt})
+			}
 		case lexer.TokenWord:
 			if intrinsic, exists := lexer.Str2Intrinsic[tok.Text]; exists {
 				switch intrinsic {
@@ -625,6 +634,25 @@ loop:
 						values[i] = const_stack.Data[i].Typ
 					}
 					fmt.Println(logger.FormatNoneMsg(&tok.Loc, "Const stack types: %s", values))
+				case lexer.IntrinsicAssert:
+					if err = c.checkConstStackSize(tok, const_stack, 3); err != nil {
+						return
+					}
+					size := const_stack.Pop()
+					ptr := const_stack.Pop()
+					cond := const_stack.Pop()
+					if err = c.checkConstTypes(tok, lexer.DataTypes{lexer.DataTypeBool, lexer.DataTypePtr, lexer.DataTypeInt}, lexer.DataTypes{cond.Typ, ptr.Typ, size.Typ}); err != nil {
+						return
+					}
+					if cond.Value == 0 {
+						for literal, literal_addr := range c.Ctx.StringsMap {
+							if literal_addr == ptr.Value {
+								err = logger.CompilerError(&tok.Loc, "ASSERT failed: `%s`", literal)
+								return
+							}
+						}
+						logger.CompilerCrash(&tok.Loc, "ASSERT failed, but string literal was not found")
+					}
 				default:
 					err = logger.CompilerError(
 						&tok.Loc,

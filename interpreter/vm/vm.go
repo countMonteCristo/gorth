@@ -546,6 +546,14 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		case lexer.IntrinsicCastInt, lexer.IntrinsicCastPtr, lexer.IntrinsicCastBool, lexer.IntrinsicCastFptr:
 			// do nothing
 
+		case lexer.IntrinsicAssert:
+			size := vm.Rc.Stack.Pop()
+			ptr := vm.Rc.Stack.Pop()
+			cond := vm.Rc.Stack.Pop()
+			if !I2B(cond) {
+				return logger.VmRuntimeError(&op.Token.Loc, "ASSERT failed: `%s`", vm.Rc.Memory.Data[ptr:ptr+size])
+			}
+
 		default:
 			return logger.VmRuntimeError(&op.Token.Loc, "Unhandled intrinsic: `%s`", op.Token.Text)
 		}

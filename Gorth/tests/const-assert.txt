@@ -1,0 +1,7 @@
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "",
+  "stderr": "[ERROR] [COMPILER] ASSERT failed: `condition failed`:\n  Gorth/tests/const-assert.gorth:2:36",
+  "exit_code": 1
+}

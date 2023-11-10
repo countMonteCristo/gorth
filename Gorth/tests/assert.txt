@@ -1,0 +1,7 @@
+{
+  "argv": [],
+  "stdin": "",
+  "stdout": "",
+  "stderr": "Script finished with exit code 3:\n[RUNTIME_ERROR] [VM] ASSERT failed: `condition failed`:\n  Gorth/tests/assert.gorth:2:28\n",
+  "exit_code": 3
+}

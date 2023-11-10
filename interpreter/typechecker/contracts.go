@@ -136,6 +136,11 @@ var intrinsicType2Contract = map[lexer.IntrinsicType]*Contract{
 		Outputs: utils.NewStack(lexer.DataTypes{}),
 	},
 
+	lexer.IntrinsicAssert: {
+		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeBool, lexer.DataTypePtr, lexer.DataTypeInt}),
+		Outputs: utils.NewStack(lexer.DataTypes{}),
+	},
+
 	lexer.IntrinsicLoad8: {
 		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
 		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
@@ -267,6 +272,7 @@ func GetIntrinsicLogic(i lexer.IntrinsicType) (IntrinsicLogicFunc, string) {
 		lexer.IntrinsicEq, lexer.IntrinsicNe, lexer.IntrinsicLe, lexer.IntrinsicGe, lexer.IntrinsicLt, lexer.IntrinsicGt,
 		lexer.IntrinsicPuti,
 		lexer.IntrinsicDebug,
+		lexer.IntrinsicAssert,
 		lexer.IntrinsicLoad8, lexer.IntrinsicStore8,
 		lexer.IntrinsicLoad16, lexer.IntrinsicStore16,
 		lexer.IntrinsicLoad32, lexer.IntrinsicStore32,

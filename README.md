@@ -222,6 +222,7 @@ Only four types are supported for now: `int`, `bool`, `ptr` and `fptr`:
 - `argc` - pushes count of input arguments onto the stack
 - `argv` - pushes the pointer to the null-terminated list of pointers to the input arguments
 - `env`  - pushes the pointer to the null-terminated list of pointers to the environment variables
+- `assert` - gets condition, pointer to the string literal and its size from the top of the stack and perform an exit if condition is false
 
 ### Cast types
 - `cast(int)` - converts top element of the stack to `int`
