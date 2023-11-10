@@ -70,6 +70,9 @@ func (rc *RunTimeContext) Reset() {
 	rc.Scopes.Push(rc.global_scope)
 	rc.OpsCount = rc.Settings.OpsCount
 
+	// TODO: move to function?
+	rc.Memory.Ram.Ptr = rc.Memory.Ram.Start + rc.Settings.GlobalMemorySize
+
 	rc.Addr = rc.Settings.EntryPointAddr
 }
 
