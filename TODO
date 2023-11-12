@@ -72,7 +72,7 @@
 
 [ ] Testing
   [ ] more tests
-  [ ] run tests asynchronously
+  [*] run tests asynchronously
   [*] add asserts
   [*] implement testing tool:
     [*] test single file, test all files in directory, test all dirs
