@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -12,7 +12,12 @@ import (
 	"strings"
 )
 
-const GorthExec = "bin/gorth"
+const (
+	GorthExec    = "bin/gorth"
+	GorthExt     = ".gorth"
+	GorthTestDir = "Gorth"
+	GorthMain    = "gorth.go"
+)
 
 type TestStatus int
 
@@ -71,7 +76,6 @@ func (t *TestCase) GetExpectedFilePath() string {
 	return name + ".txt"
 }
 
-// TODO: update input and output separately
 func (t *TestCase) run() TestOutput {
 	cmd := exec.Command(t.Cmd[0], t.Cmd[1:]...)
 
@@ -81,13 +85,13 @@ func (t *TestCase) run() TestOutput {
 	}
 	defer stdin.Close()
 
-	io.WriteString(stdin, t.Config.Stdin)
+	fmt.Fprint(stdin, t.Config.Stdin)
 
 	var outbuf, errbuf strings.Builder
 	cmd.Stdout, cmd.Stderr = &outbuf, &errbuf
 
 	if err = cmd.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "An error occured: %s", err) //replace with logger, or anything you want
+		log.Fatalf("An error occured: %s", err) //replace with logger, or anything you want
 	}
 	cmd.Wait()
 
@@ -159,24 +163,6 @@ func CheckOutput(actual, expected, out_desc string, result *TestResult) bool {
 	return true
 }
 
-func ListDir(dir string) (fns []string) {
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, f := range files {
-		ext := filepath.Ext(f.Name())
-		if ext != ".gorth" {
-			continue
-		} else {
-			full_name := filepath.Join(dir, f.Name())
-			fns = append(fns, full_name)
-		}
-	}
-	return
-}
-
 func TestFile(fn string, results chan TestResult) {
 	testcase := NewTestCase(fn)
 	expected_output_file := testcase.GetExpectedFilePath()
@@ -216,7 +202,7 @@ func TestInputs(gorth_fns []string) {
 
 		fmt.Fprint(os.Stderr, result.msg)
 
-		if count == len(gorth_fns)-1 {
+		if count == len(gorth_fns) {
 			close(results_chan)
 			break
 		}
@@ -230,31 +216,17 @@ func TestInputs(gorth_fns []string) {
 
 func PrepareInputs(in_paths []string) (gorth_fns []string) {
 	for _, path := range in_paths {
-
-		fin, err := os.Open(path)
-		if err != nil {
-			fmt.Printf("WARNING: File or directory `%s` does not exist\n", path)
-			continue
-		}
-
-		fstat, err := fin.Stat()
-		if err != nil {
-			fmt.Printf("WARNING: Can not get stat for file or directory: `%s`\n", path)
-			continue
-		}
-
-		switch {
-		case fstat.IsDir():
-			dir_gorth_fns := ListDir(path)
-			gorth_fns = append(gorth_fns, dir_gorth_fns...)
-		default:
-			ext := filepath.Ext(path)
-			if ext != ".gorth" {
-				continue
-			} else {
-				gorth_fns = append(gorth_fns, path)
+		filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				log.Fatalf("ERROR: path %s does not exist", path)
 			}
-		}
+			if !d.IsDir() {
+				if ext := filepath.Ext(path); ext == GorthExt {
+					gorth_fns = append(gorth_fns, path)
+				}
+			}
+			return nil
+		})
 	}
 	return
 }
@@ -319,17 +291,13 @@ func main() {
 
 	var input_paths []string
 	if len(os.Args) == 2 {
-		input_paths = []string{
-			"Gorth/tests",
-			"Gorth/examples",
-			"Gorth/euler",
-		}
+		input_paths = []string{GorthTestDir}
 	} else {
 		input_paths = os.Args[2:]
 	}
 
 	if _, err := os.Stat(GorthExec); errors.Is(err, os.ErrNotExist) {
-		cmd := exec.Command("go", "build", "-o", GorthExec, "gorth.go")
+		cmd := exec.Command("go", "build", "-o", GorthExec, GorthMain)
 		cmd.Start()
 		cmd.Wait()
 	}
