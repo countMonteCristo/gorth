@@ -12,16 +12,20 @@ import (
 	"strings"
 )
 
-type Stats struct {
-	Total    int
-	Detailed map[int]int
-}
+const GorthExec = "bin/gorth"
+
+type TestStatus int
 
 const (
-	StatusSuccess = iota
+	StatusSuccess TestStatus = iota
 	StatusFail
 	StatusSkip
 )
+
+type Stats struct {
+	Total    int
+	Detailed map[TestStatus]int
+}
 
 type TestConfig struct {
 	Argv     []string `json:"argv"`
@@ -42,15 +46,19 @@ type TestCase struct {
 	Config TestConfig
 }
 
+type TestResult struct {
+	status TestStatus
+	msg    string
+}
+
 func NewTestCase(fn string) TestCase {
 	return TestCase{
 		File: fn,
 		Config: TestConfig{
 			Argv: make([]string, 0), Stdin: "", Stdout: "", Stderr: "", ExitCode: 0,
 		},
-		// TODO: build ./bin/gorth if it does not exist
 		Cmd: []string{
-			"./bin/gorth",
+			GorthExec,
 			"-O", "1",
 			fn,
 		},
@@ -65,8 +73,6 @@ func (t *TestCase) GetExpectedFilePath() string {
 
 // TODO: update input and output separately
 func (t *TestCase) run() TestOutput {
-	fmt.Printf("Running testcase %s\n", t.File)
-
 	cmd := exec.Command(t.Cmd[0], t.Cmd[1:]...)
 
 	stdin, err := cmd.StdinPipe()
@@ -115,37 +121,41 @@ func (t *TestCase) LoadExpected(fn string) (exists bool) {
 	return
 }
 
-func (t *TestCase) Check(output TestOutput) (status int) {
-	status = StatusFail
+func (t *TestCase) Check(output TestOutput, result *TestResult) {
+	result.status = StatusFail
 
-	stdout_ok := CheckOutput(output.Stdout, t.Config.Stdout, "STDOUT")
-	stderr_ok := CheckOutput(output.Stderr, t.Config.Stderr, "STDERR")
+	stdout_ok := CheckOutput(output.Stdout, t.Config.Stdout, "STDOUT", result)
+	stderr_ok := CheckOutput(output.Stderr, t.Config.Stderr, "STDERR", result)
 	exit_code_ok := (output.ExitCode == t.Config.ExitCode)
 
 	if !exit_code_ok {
-		fmt.Fprintln(os.Stderr, "  EXITCODE differs:")
-		fmt.Fprintf(os.Stderr, "\tActual:   %d\n", output.ExitCode)
-		fmt.Fprintf(os.Stderr, "\tExpected: %d\n", t.Config.ExitCode)
+		result.msg += fmt.Sprintf(
+			"  EXITCODE differs:"+
+				"\tActual:   %d\n"+
+				"\tExpected: %d\n",
+			output.ExitCode, t.Config.ExitCode,
+		)
 	}
 
 	if stdout_ok && stderr_ok && exit_code_ok {
-		fmt.Fprintln(os.Stderr, "SUCCESS")
-		status = StatusSuccess
+		result.msg += "SUCCESS\n"
+		result.status = StatusSuccess
 	} else {
-		fmt.Fprintln(os.Stderr, "FAILED")
-		status = StatusFail
+		result.msg += "FAILED\n"
+		result.status = StatusFail
 	}
-	return
 }
 
-func CheckOutput(actual, expected, out_desc string) bool {
+func CheckOutput(actual, expected, out_desc string, result *TestResult) bool {
 	if actual != expected {
-		fmt.Fprintf(os.Stderr, "  %s differs:\n", out_desc)
-		fmt.Fprintf(os.Stderr, "\tActual:   `%v`\n", actual)
-		fmt.Fprintf(os.Stderr, "\tExpected: `%v`\n", expected)
+		result.msg += fmt.Sprintf(
+			"  %s differs:\n"+
+				"\tActual:   `%v`\n"+
+				"\tExpected: `%v`\n",
+			out_desc, actual, expected,
+		)
 		return false
 	}
-
 	return true
 }
 
@@ -167,34 +177,51 @@ func ListDir(dir string) (fns []string) {
 	return
 }
 
-func TestFile(fn string, stats *Stats) {
+func TestFile(fn string, results chan TestResult) {
 	testcase := NewTestCase(fn)
 	expected_output_file := testcase.GetExpectedFilePath()
 
-	var status int
+	var result TestResult
 	exists := testcase.LoadExpected(expected_output_file)
+
+	result.msg += fmt.Sprintf("Running testcase %s\n", fn)
 	if !exists {
-		status = StatusSkip
-		fmt.Fprintf(os.Stderr, "Running testcase %s\n", fn)
-		fmt.Fprintf(os.Stderr, "  Config file %s not found, skip testcase\n", expected_output_file)
-		fmt.Println("SKIP")
+		result.status = StatusSkip
+		result.msg += fmt.Sprintf(
+			"  Config file %s not found, skip testcase\nSKIP\n",
+			expected_output_file,
+		)
 	} else {
 		output := testcase.run()
-		status = testcase.Check(output)
+		testcase.Check(output, &result)
 	}
-
-	stats.Total++
-	stats.Detailed[status]++
+	results <- result
 }
 
 func TestInputs(gorth_fns []string) {
-	stats := Stats{Detailed: map[int]int{StatusSuccess: 0, StatusSkip: 0, StatusFail: 0}}
+	stats := Stats{Detailed: map[TestStatus]int{StatusSuccess: 0, StatusSkip: 0, StatusFail: 0}}
 
+	results_chan := make(chan TestResult)
 	for _, gorth_fn := range gorth_fns {
-		TestFile(gorth_fn, &stats)
+		go TestFile(gorth_fn, results_chan)
 	}
 
-	fmt.Println()
+	count := 0
+	for {
+		result := <-results_chan
+		count++
+
+		stats.Total++
+		stats.Detailed[result.status]++
+
+		fmt.Fprint(os.Stderr, result.msg)
+
+		if count == len(gorth_fns)-1 {
+			close(results_chan)
+			break
+		}
+	}
+
 	fmt.Printf("Total tests: %d:\n", stats.Total)
 	fmt.Printf("  succeeded: %d\n", stats.Detailed[StatusSuccess])
 	fmt.Printf("  failed:    %d\n", stats.Detailed[StatusFail])
@@ -299,6 +326,12 @@ func main() {
 		}
 	} else {
 		input_paths = os.Args[2:]
+	}
+
+	if _, err := os.Stat(GorthExec); errors.Is(err, os.ErrNotExist) {
+		cmd := exec.Command("go", "build", "-o", GorthExec, "gorth.go")
+		cmd.Start()
+		cmd.Wait()
 	}
 
 	switch command {
