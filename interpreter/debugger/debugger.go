@@ -2,6 +2,7 @@ package debugger
 
 import (
 	"Gorth/interpreter/compiler"
+	"Gorth/interpreter/operations"
 	"Gorth/interpreter/settings"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/vm"
@@ -60,7 +61,7 @@ func (d *Debugger) Run() DebugTransition {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (d *Debugger) Debug(ops *[]vm.Op, args []string, ctx *compiler.CompileTimeContext) {
+func (d *Debugger) Debug(ops *[]operations.Op, args []string, ctx *compiler.CompileTimeContext) {
 loop:
 	for {
 		cmd := <-d.iface.Commands
@@ -277,10 +278,10 @@ loop:
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (d *Debugger) doSteps(ops *[]vm.Op, count int, go_up bool) error {
+func (d *Debugger) doSteps(ops *[]operations.Op, count int, go_up bool) error {
 	i := 0
 	for d.vm.Rc.Addr < d.vm.Rc.OpsCount {
-		is_func_end := (*ops)[d.vm.Rc.Addr].Typ == vm.OpFuncEnd
+		is_func_end := (*ops)[d.vm.Rc.Addr].Typ == operations.OpFuncEnd
 
 		if err := d.vm.Step(ops, d.s); err != nil {
 			return err
@@ -303,7 +304,7 @@ func (d *Debugger) doSteps(ops *[]vm.Op, count int, go_up bool) error {
 	return nil
 }
 
-func (d *Debugger) checkErr(err error, ops *[]vm.Op) {
+func (d *Debugger) checkErr(err error, ops *[]operations.Op) {
 	if err != nil {
 		d.iface.SendFailed(fmt.Sprintf("Script failed because of:\n%s", err.Error()))
 	} else {

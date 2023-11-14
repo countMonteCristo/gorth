@@ -1,6 +1,7 @@
 package debugger
 
 import (
+	"Gorth/interpreter/operations"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/vm"
 	"fmt"
@@ -77,7 +78,7 @@ func (di *DebugInterface) IsBreakpoint(ctx *vm.RunTimeContext) (types.IntType, b
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops *[]vm.Op, ctx *vm.RunTimeContext) {
+func (di *DebugInterface) PrintOpsList(start, finish types.IntType, ops *[]operations.Op, ctx *vm.RunTimeContext) {
 	path_column := make([]string, 0)
 	markers_column := make([]string, 0)
 	cmd_column := make([]string, 0)

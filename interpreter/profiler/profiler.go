@@ -2,6 +2,7 @@ package profiler
 
 import (
 	"Gorth/interpreter/logger"
+	"Gorth/interpreter/operations"
 	"Gorth/interpreter/settings"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/vm"
@@ -24,7 +25,7 @@ func NewProfiler(vm *vm.VM, fn string, s *settings.Settings) *Profiler {
 	}
 }
 
-func (p *Profiler) Run(ops *[]vm.Op, args []string) {
+func (p *Profiler) Run(ops *[]operations.Op, args []string) {
 	go p.logger.Run()
 
 	var err error = nil
@@ -44,7 +45,7 @@ func (p *Profiler) Run(ops *[]vm.Op, args []string) {
 	p.Summurize(ops)
 }
 
-func (p *Profiler) Summurize(ops *[]vm.Op) {
+func (p *Profiler) Summurize(ops *[]operations.Op) {
 	fout, err := os.Create(p.fn)
 	if err != nil {
 		logger.ProfilerCrash(nil, "Cannot create profiler file %s: %s", p.fn, err)

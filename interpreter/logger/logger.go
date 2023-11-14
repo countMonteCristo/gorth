@@ -92,6 +92,11 @@ func formatCrashMsg(loc *utils.Location, m ModuleType, msg string, args ...any) 
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+func Crash(msg string, args... any) {
+	fmt.Fprintf(os.Stderr, msg, args...)
+	utils.Exit(1)
+}
+
 func LexerCrash(loc *utils.Location, msg string, args ...any) {
 	crash(loc, ModuleLexer, msg, args...)
 }

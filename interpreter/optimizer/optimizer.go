@@ -3,6 +3,7 @@ package optimizer
 import (
 	"Gorth/interpreter/compiler"
 	"Gorth/interpreter/logger"
+	"Gorth/interpreter/operations"
 	"Gorth/interpreter/settings"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/vm"
@@ -17,7 +18,7 @@ func NewOptimizer(level int) *Optimizer {
 	return &Optimizer{level: OptLevelFromInt(level)}
 }
 
-func (o *Optimizer) scanFunction(ops *[]vm.Op, func_name string, used *map[string]bool) error {
+func (o *Optimizer) scanFunction(ops *[]operations.Op, func_name string, used *map[string]bool) error {
 	if _, exists := (*used)[func_name]; exists {
 		return nil
 	}
@@ -32,23 +33,23 @@ loop:
 	for i := f.Addr; i < types.IntType(len(*ops)); i++ {
 		op := (*ops)[i]
 		switch op.Typ {
-		case vm.OpCall, vm.OpPushFptr:
+		case operations.OpCall, operations.OpPushFptr:
 			call_name := op.Data.(string)
 			o.scanFunction(ops, call_name, used)
-		case vm.OpFuncEnd:
+		case operations.OpFuncEnd:
 			break loop
 		}
 	}
 	return nil
 }
 
-func (o *Optimizer) collectUnusedFunctions(ops *[]vm.Op) (map[string]bool, error) {
+func (o *Optimizer) collectUnusedFunctions(ops *[]operations.Op) (map[string]bool, error) {
 	used_functions := make(map[string]bool, 0)
 	err := o.scanFunction(ops, compiler.EntryPointName, &used_functions)
 	return used_functions, err
 }
 
-func (o *Optimizer) eliminateDeadCode(ops, optimized *[]vm.Op) error {
+func (o *Optimizer) eliminateDeadCode(ops, optimized *[]operations.Op) error {
 	used_functions, err := o.collectUnusedFunctions(ops)
 	if err != nil {
 		return err
@@ -58,18 +59,18 @@ func (o *Optimizer) eliminateDeadCode(ops, optimized *[]vm.Op) error {
 	use := true
 	for _, op := range *ops {
 		switch op.Typ {
-		case vm.OpFuncBegin:
+		case operations.OpFuncBegin:
 			func_name := op.Data.(string)
 			use = used_functions[func_name]
 			if use {
 				new_addresses[func_name] = types.IntType(len(*optimized))
 			}
-		case vm.OpCall:
+		case operations.OpCall:
 			if use {
 				func_name := op.Data.(string)
 				op.Operand = new_addresses[func_name] - types.IntType(len(*optimized))
 			}
-		case vm.OpPushFptr:
+		case operations.OpPushFptr:
 			if use {
 				func_name := op.Data.(string)
 				op.Operand = new_addresses[func_name]
@@ -82,7 +83,7 @@ func (o *Optimizer) eliminateDeadCode(ops, optimized *[]vm.Op) error {
 	return nil
 }
 
-func (o *Optimizer) Optimize(ops *[]vm.Op, ctx *compiler.CompileTimeContext, rts *vm.RuntimeSettings, s *settings.Settings) (err error) {
+func (o *Optimizer) Optimize(ops *[]operations.Op, ctx *compiler.CompileTimeContext, rts *vm.RuntimeSettings, s *settings.Settings) (err error) {
 	defer logger.Timeit(logger.ModuleOptimizer, s.LogLevel)()
 
 	o.ctx = ctx
@@ -91,7 +92,7 @@ func (o *Optimizer) Optimize(ops *[]vm.Op, ctx *compiler.CompileTimeContext, rts
 		return
 	}
 
-	optimized := make([]vm.Op, 0)
+	optimized := make([]operations.Op, 0)
 
 	if o.level == OptLevelBase {
 		if err = o.eliminateDeadCode(ops, &optimized); err != nil {

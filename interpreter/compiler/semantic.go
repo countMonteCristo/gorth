@@ -2,10 +2,10 @@ package compiler
 
 import (
 	"Gorth/interpreter/datatypes"
+	"Gorth/interpreter/operations"
 	"Gorth/interpreter/tokens"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
-	"Gorth/interpreter/vm"
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -26,7 +26,7 @@ type Function struct {
 	Sig     FuncSignature
 	Addr    types.IntType
 	Inlined bool
-	Ops     []vm.Op
+	Ops     []operations.Op
 }
 
 const EntryPointName = "main"
@@ -70,11 +70,11 @@ func (cl *CaptureList) Append(val CapturedVal) {
 }
 
 // Map for OpPushCapture operations
-var DataType2OpType = map[datatypes.DataType]vm.OpType{
-	datatypes.DataTypeBool: vm.OpPushBool,
-	datatypes.DataTypeInt:  vm.OpPushInt,
-	datatypes.DataTypePtr:  vm.OpPushPtr,
-	datatypes.DataTypeFptr: vm.OpPushFptr,
+var DataType2OpType = map[datatypes.DataType]operations.OpType{
+	datatypes.DataTypeBool: operations.OpPushBool,
+	datatypes.DataTypeInt:  operations.OpPushInt,
+	datatypes.DataTypePtr:  operations.OpPushPtr,
+	datatypes.DataTypeFptr: operations.OpPushFptr,
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

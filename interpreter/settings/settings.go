@@ -32,7 +32,7 @@ func NewSettings(
 	if exists {
 		val_int, err := strconv.ParseInt(value, 10, 64)
 		if err != nil || val_int <= 0 {
-			logger.VmCrash(nil, "Incorrect value for env variable GORTH_VM_MEMORY: %s", value)
+			logger.Crash("Incorrect value for env variable GORTH_VM_MEMORY: %s", value)
 		}
 		mem = val_int
 	}
@@ -41,7 +41,7 @@ func NewSettings(
 	if exists {
 		val_int, err := strconv.Atoi(value)
 		if err != nil || val_int <= 0 {
-			logger.VmCrash(nil, "Incorrect value for env variable GORTH_VM_CALL_STACK: %s", value)
+			logger.Crash("Incorrect value for env variable GORTH_VM_CALL_STACK: %s", value)
 		}
 		call_stack_Size = val_int
 	}
@@ -57,7 +57,7 @@ func NewSettings(
 	case "info":
 		l = logger.Info
 	default:
-		logger.VmCrash(nil, "Incorrect value for log level: %s", loglevel)
+		logger.Crash("Incorrect value for log level: %s", loglevel)
 	}
 
 	return &Settings{

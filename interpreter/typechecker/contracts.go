@@ -3,8 +3,8 @@ package typechecker
 import (
 	"Gorth/interpreter/datatypes"
 	"Gorth/interpreter/intrinsics"
+	"Gorth/interpreter/operations"
 	"Gorth/interpreter/utils"
-	"Gorth/interpreter/vm"
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -318,34 +318,34 @@ func GetIntrinsicLogic(i intrinsics.IntrinsicType) (IntrinsicLogicFunc, string) 
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-var simpleOp2Contract = map[vm.OpType]*Contract{
-	vm.OpPushInt: {
+var simpleOp2Contract = map[operations.OpType]*Contract{
+	operations.OpPushInt: {
 		Inputs:  utils.NewStack(datatypes.DataTypes{}),
 		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
-	vm.OpPushBool: {
+	operations.OpPushBool: {
 		Inputs:  utils.NewStack(datatypes.DataTypes{}),
 		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
 	},
-	vm.OpPushPtr: {
+	operations.OpPushPtr: {
 		Inputs:  utils.NewStack(datatypes.DataTypes{}),
 		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
 	},
-	vm.OpPushFptr: {
+	operations.OpPushFptr: {
 		Inputs:  utils.NewStack(datatypes.DataTypes{}),
 		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeFptr}),
 	},
-	vm.OpPushLocalAlloc: {
+	operations.OpPushLocalAlloc: {
 		Inputs:  utils.NewStack(datatypes.DataTypes{}),
 		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
 	},
-	vm.OpPushGlobalAlloc: {
+	operations.OpPushGlobalAlloc: {
 		Inputs:  utils.NewStack(datatypes.DataTypes{}),
 		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
 	},
 }
 
-func GetSimpleOpContract(o vm.OpType) (*Contract, string) {
+func GetSimpleOpContract(o operations.OpType) (*Contract, string) {
 	contract, ok := simpleOp2Contract[o]
 	if !ok {
 		return nil, "unknown simple operation"

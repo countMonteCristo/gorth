@@ -33,6 +33,7 @@ func NewRuntimeSettings(start types.IntType) *RuntimeSettings {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+type IntStack = utils.Stack[types.IntType]
 type StringStack = utils.Stack[string]
 
 type RunTimeContext struct {

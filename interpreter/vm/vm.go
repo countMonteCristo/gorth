@@ -3,6 +3,7 @@ package vm
 import (
 	"Gorth/interpreter/intrinsics"
 	"Gorth/interpreter/logger"
+	"Gorth/interpreter/operations"
 	"Gorth/interpreter/settings"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
@@ -410,22 +411,22 @@ func (vm *VM) ProcessSyscall6() {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (vm *VM) Step(ops *[]Op, s *settings.Settings) (err error) {
+func (vm *VM) Step(ops *[]operations.Op, s *settings.Settings) (err error) {
 	op := &(*ops)[vm.Rc.Addr]
 	switch op.Typ {
-	case OpPushInt, OpPushBool, OpPushPtr, OpPushFptr:
+	case operations.OpPushInt, operations.OpPushBool, operations.OpPushPtr, operations.OpPushFptr:
 		vm.Rc.Stack.Push(op.Operand.(types.IntType))
 		vm.Rc.Addr++
-	case OpCondJump:
+	case operations.OpCondJump:
 		top := vm.Rc.Stack.Pop()
 		if intrinsics.I2B(top) {
 			vm.Rc.Addr++
 		} else {
 			vm.Rc.Addr += op.Operand.(types.IntType)
 		}
-	case OpJump:
+	case operations.OpJump:
 		vm.Rc.Addr += op.Operand.(types.IntType)
-	case OpIntrinsic:
+	case operations.OpIntrinsic:
 		intrinsic := op.Operand.(intrinsics.IntrinsicType)
 		switch intrinsic {
 		case intrinsics.IntrinsicPlus, intrinsics.IntrinsicMinus, intrinsics.IntrinsicMul, intrinsics.IntrinsicBitAnd, intrinsics.IntrinsicBitOr, intrinsics.IntrinsicBitXor:
@@ -557,14 +558,14 @@ func (vm *VM) Step(ops *[]Op, s *settings.Settings) (err error) {
 			return logger.VmRuntimeError(&op.Token.Loc, "Unhandled intrinsic: `%s`", op.Token.Text)
 		}
 		vm.Rc.Addr++
-	case OpCall:
+	case operations.OpCall:
 		if vm.Rc.ReturnStack.Size() >= int(s.CallStackSize) {
 			return logger.VmRuntimeError(&op.Token.Loc, "Call stack overflow")
 		}
 		vm.Rc.ReturnStack.Push(vm.Rc.Addr)
 		vm.Rc.ReturnStack.Push(vm.Rc.CapturesCount)
 		vm.Rc.Addr += op.Operand.(types.IntType)
-	case OpCallLike:
+	case operations.OpCallLike:
 		addr := vm.Rc.Stack.Pop()
 		if vm.Rc.ReturnStack.Size() >= int(s.CallStackSize) {
 			return logger.VmRuntimeError(&op.Token.Loc, "Call stack overflow")
@@ -572,14 +573,14 @@ func (vm *VM) Step(ops *[]Op, s *settings.Settings) (err error) {
 		vm.Rc.ReturnStack.Push(vm.Rc.Addr)
 		vm.Rc.ReturnStack.Push(vm.Rc.CapturesCount)
 		vm.Rc.Addr = addr
-	case OpFuncBegin:
+	case operations.OpFuncBegin:
 		vm.Rc.Memory.Ram.Ptr += op.Operand.(types.IntType)
 		vm.Rc.CapturesCount = 0
 		vm.Rc.Addr++
 		if s.IsDebug() {
 			vm.Rc.Scopes.Push(op.DebugInfo.(string))
 		}
-	case OpFuncEnd:
+	case operations.OpFuncEnd:
 		if vm.Rc.ReturnStack.Empty() {
 			return logger.VmRuntimeError(&op.Token.Loc, "Return stack is empty")
 		}
@@ -592,15 +593,15 @@ func (vm *VM) Step(ops *[]Op, s *settings.Settings) (err error) {
 		if s.IsDebug() {
 			vm.Rc.Scopes.Pop()
 		}
-	case OpPushLocalAlloc:
+	case operations.OpPushLocalAlloc:
 		addr := vm.Rc.Memory.Ram.Ptr - op.Operand.(types.IntType)
 		vm.Rc.Stack.Push(addr)
 		vm.Rc.Addr++
-	case OpPushGlobalAlloc:
+	case operations.OpPushGlobalAlloc:
 		addr := vm.Rc.Memory.Ram.Start + op.Operand.(types.IntType)
 		vm.Rc.Stack.Push(addr)
 		vm.Rc.Addr++
-	case OpCapture:
+	case operations.OpCapture:
 		cap_count := op.Operand.(types.IntType)
 		for i := types.IntType(0); i < cap_count; i++ {
 			x := vm.Rc.Stack.Data[types.IntType(vm.Rc.Stack.Size())-cap_count+i]
@@ -608,20 +609,20 @@ func (vm *VM) Step(ops *[]Op, s *settings.Settings) (err error) {
 		}
 		vm.Rc.CapturesCount += cap_count
 		vm.Rc.Addr++
-	case OpDropCaptures:
+	case operations.OpDropCaptures:
 		cap_count := op.Operand.(types.IntType)
 		for i := types.IntType(0); i < cap_count; i++ {
 			vm.Rc.ReturnStack.Pop()
 		}
 		vm.Rc.CapturesCount -= cap_count
 		vm.Rc.Addr++
-	case OpPushCaptured:
+	case operations.OpPushCaptured:
 		idx := op.Operand.(types.IntType)
 		x := vm.Rc.ReturnStack.Data[types.IntType(vm.Rc.ReturnStack.Size())-1-idx]
 		vm.Rc.Stack.Push(x)
 		vm.Rc.Addr++
 	default:
-		return logger.VmRuntimeError(&op.Token.Loc, "Unhandled operation: `%s`", OpType2Str[op.Typ])
+		return logger.VmRuntimeError(&op.Token.Loc, "Unhandled operation: `%s`", operations.OpType2Str[op.Typ])
 	}
 	return
 }
@@ -635,7 +636,7 @@ func (vm *VM) PrepareRuntimeContext(args []string, s *settings.Settings) {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (vm *VM) Interprete(ops *[]Op, args []string, s *settings.Settings) ExitCodeType {
+func (vm *VM) Interprete(ops *[]operations.Op, args []string, s *settings.Settings) ExitCodeType {
 	defer logger.Timeit(logger.ModuleVm, s.LogLevel)()
 
 	vm.PrepareRuntimeContext(args, s)

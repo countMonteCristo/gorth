@@ -1,8 +1,8 @@
 package profiler
 
 import (
+	"Gorth/interpreter/operations"
 	"Gorth/interpreter/types"
-	"Gorth/interpreter/vm"
 	"fmt"
 	"io"
 	"sort"
@@ -60,10 +60,10 @@ func PrintHeader(w io.Writer) {
 	)
 }
 
-func (o *OpStat) Print(w io.Writer, op *vm.Op) {
+func (o *OpStat) Print(w io.Writer, op *operations.Op) {
 	fmt.Fprintf(w,
 		"%5d\t%12s\t%8d\t%9d\t%8.2f\t%8d\t%8d\t%10.1f\t%s\n",
-		o.Id, vm.OpType2Str[op.Typ], o.Count, o.Total, o.Mean, o.Min, o.Max, o.Median, &op.Token.Loc,
+		o.Id, operations.OpType2Str[op.Typ], o.Count, o.Total, o.Mean, o.Min, o.Max, o.Median, &op.Token.Loc,
 	)
 }
 
