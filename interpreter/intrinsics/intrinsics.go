@@ -1,4 +1,4 @@
-package lexer
+package intrinsics
 
 import "Gorth/interpreter/utils"
 

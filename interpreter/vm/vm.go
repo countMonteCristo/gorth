@@ -1,8 +1,9 @@
 package vm
 
 import (
-	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/intrinsics"
 	"Gorth/interpreter/logger"
+	"Gorth/interpreter/settings"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 	"fmt"
@@ -15,14 +16,12 @@ import (
 
 type VM struct {
 	Rc RunTimeContext
-	S  VmSettings
 }
 
-func NewVM(s *VmSettings, global_scope_name string) *VM {
+func NewVM(s *settings.Settings, global_scope_name string) *VM {
 	vm := VM{
-		S: *s,
+		Rc: *NewRuntimeContext(s, global_scope_name),
 	}
-	vm.Rc = *NewRuntimeContext(&vm.S, global_scope_name)
 
 	return &vm
 }
@@ -411,7 +410,7 @@ func (vm *VM) ProcessSyscall6() {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (vm *VM) Step(ops *[]Op) (err error) {
+func (vm *VM) Step(ops *[]Op, s *settings.Settings) (err error) {
 	op := &(*ops)[vm.Rc.Addr]
 	switch op.Typ {
 	case OpPushInt, OpPushBool, OpPushPtr, OpPushFptr:
@@ -419,7 +418,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		vm.Rc.Addr++
 	case OpCondJump:
 		top := vm.Rc.Stack.Pop()
-		if I2B(top) {
+		if intrinsics.I2B(top) {
 			vm.Rc.Addr++
 		} else {
 			vm.Rc.Addr += op.Operand.(types.IntType)
@@ -427,130 +426,130 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 	case OpJump:
 		vm.Rc.Addr += op.Operand.(types.IntType)
 	case OpIntrinsic:
-		intrinsic := op.Operand.(lexer.IntrinsicType)
+		intrinsic := op.Operand.(intrinsics.IntrinsicType)
 		switch intrinsic {
-		case lexer.IntrinsicPlus, lexer.IntrinsicMinus, lexer.IntrinsicMul, lexer.IntrinsicBitAnd, lexer.IntrinsicBitOr, lexer.IntrinsicBitXor:
+		case intrinsics.IntrinsicPlus, intrinsics.IntrinsicMinus, intrinsics.IntrinsicMul, intrinsics.IntrinsicBitAnd, intrinsics.IntrinsicBitOr, intrinsics.IntrinsicBitXor:
 			b := vm.Rc.Stack.Pop()
 			a := vm.Rc.Stack.Pop()
-			vm.Rc.Stack.Push(SafeArithmeticFunctions[intrinsic](a, b))
-		case lexer.IntrinsicDiv:
+			vm.Rc.Stack.Push(intrinsics.SafeArithmeticFunctions[intrinsic](a, b))
+		case intrinsics.IntrinsicDiv:
 			b := vm.Rc.Stack.Pop()
 			if b == 0 {
 				return logger.VmRuntimeError(&op.Token.Loc, "Division by zero")
 			}
 			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(a / b)
-		case lexer.IntrinsicMod:
+		case intrinsics.IntrinsicMod:
 			b := vm.Rc.Stack.Pop()
 			if b == 0 {
 				return logger.VmRuntimeError(&op.Token.Loc, "Division by zero")
 			}
 			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(a % b)
-		case lexer.IntrinsicShl:
+		case intrinsics.IntrinsicShl:
 			b := vm.Rc.Stack.Pop()
 			if b < 0 {
 				return logger.VmRuntimeError(&op.Token.Loc, "Negative shift amount in `<<`: %d", b)
 			}
 			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(a << b)
-		case lexer.IntrinsicShr:
+		case intrinsics.IntrinsicShr:
 			b := vm.Rc.Stack.Pop()
 			if b < 0 {
 				return logger.VmRuntimeError(&op.Token.Loc, "Negative shift amount in `>>`: %d", b)
 			}
 			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(a >> b)
-		case lexer.IntrinsicBitNot:
+		case intrinsics.IntrinsicBitNot:
 			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(^a)
-		case lexer.IntrinsicLogicalAnd, lexer.IntrinsicLogicalOr:
+		case intrinsics.IntrinsicLogicalAnd, intrinsics.IntrinsicLogicalOr:
 			b := vm.Rc.Stack.Pop()
 			a := vm.Rc.Stack.Pop()
-			vm.Rc.Stack.Push(LogicalFunctions[intrinsic](a, b))
-		case lexer.IntrinsicLogicalNot:
+			vm.Rc.Stack.Push(intrinsics.LogicalFunctions[intrinsic](a, b))
+		case intrinsics.IntrinsicLogicalNot:
 			x := vm.Rc.Stack.Pop()
-			vm.Rc.Stack.Push(B2I(!I2B(x)))
-		case lexer.IntrinsicDup:
+			vm.Rc.Stack.Push(intrinsics.B2I(!intrinsics.I2B(x)))
+		case intrinsics.IntrinsicDup:
 			x := vm.Rc.Stack.Top()
 			vm.Rc.Stack.Push(x)
-		case lexer.IntrinsicSwap:
+		case intrinsics.IntrinsicSwap:
 			b := vm.Rc.Stack.Pop()
 			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(b)
 			vm.Rc.Stack.Push(a)
-		case lexer.IntrinsicDrop:
+		case intrinsics.IntrinsicDrop:
 			vm.Rc.Stack.Pop()
-		case lexer.IntrinsicOver:
+		case intrinsics.IntrinsicOver:
 			x := vm.Rc.Stack.Data[len(vm.Rc.Stack.Data)-2]
 			vm.Rc.Stack.Push(x)
-		case lexer.IntrinsicRot:
+		case intrinsics.IntrinsicRot:
 			c := vm.Rc.Stack.Pop()
 			b := vm.Rc.Stack.Pop()
 			a := vm.Rc.Stack.Pop()
 			vm.Rc.Stack.Push(b)
 			vm.Rc.Stack.Push(c)
 			vm.Rc.Stack.Push(a)
-		case lexer.IntrinsicEq, lexer.IntrinsicNe, lexer.IntrinsicLe, lexer.IntrinsicGe, lexer.IntrinsicLt, lexer.IntrinsicGt:
+		case intrinsics.IntrinsicEq, intrinsics.IntrinsicNe, intrinsics.IntrinsicLe, intrinsics.IntrinsicGe, intrinsics.IntrinsicLt, intrinsics.IntrinsicGt:
 			b := vm.Rc.Stack.Pop()
 			a := vm.Rc.Stack.Pop()
-			vm.Rc.Stack.Push(ComparableFunctions[intrinsic](a, b))
-		case lexer.IntrinsicPuti:
+			vm.Rc.Stack.Push(intrinsics.ComparableFunctions[intrinsic](a, b))
+		case intrinsics.IntrinsicPuti:
 			x := vm.Rc.Stack.Pop()
 			fmt.Print(x)
-		case lexer.IntrinsicDebug:
+		case intrinsics.IntrinsicDebug:
 			fmt.Printf(
 				"\tMem: %v\tStack: %v\n",
 				// vm.Rc.Memory.Data[vm.Rc.Memory.Ram.Start:vm.Rc.Memory.Ram.Ptr],
 				0,
 				vm.Rc.Stack.Data,
 			)
-		case lexer.IntrinsicTypeDebug:
+		case intrinsics.IntrinsicTypeDebug:
 			// do nothing
-		case lexer.IntrinsicLoad8, lexer.IntrinsicLoad16, lexer.IntrinsicLoad32, lexer.IntrinsicLoad64:
+		case intrinsics.IntrinsicLoad8, intrinsics.IntrinsicLoad16, intrinsics.IntrinsicLoad32, intrinsics.IntrinsicLoad64:
 			ptr := vm.Rc.Stack.Pop()
-			val, err := vm.Rc.Memory.LoadFromMem(ptr, LoadSizes[intrinsic], &op.Token.Loc, false)
+			val, err := vm.Rc.Memory.LoadFromMem(ptr, intrinsics.LoadSizes[intrinsic], &op.Token.Loc, false)
 			if err != nil {
 				return err
 			}
 			vm.Rc.Stack.Push(val)
-		case lexer.IntrinsicStore8, lexer.IntrinsicStore16, lexer.IntrinsicStore32, lexer.IntrinsicStore64:
+		case intrinsics.IntrinsicStore8, intrinsics.IntrinsicStore16, intrinsics.IntrinsicStore32, intrinsics.IntrinsicStore64:
 			ptr := vm.Rc.Stack.Pop()
 			x := vm.Rc.Stack.Pop()
-			if err = vm.Rc.Memory.StoreToMem(ptr, x, StoreSizes[intrinsic], &op.Token.Loc, false); err != nil {
+			if err = vm.Rc.Memory.StoreToMem(ptr, x, intrinsics.StoreSizes[intrinsic], &op.Token.Loc, false); err != nil {
 				return err
 			}
 
-		case lexer.IntrinsicArgc:
+		case intrinsics.IntrinsicArgc:
 			vm.Rc.Stack.Push(vm.Rc.Argc)
-		case lexer.IntrinsicArgv:
+		case intrinsics.IntrinsicArgv:
 			vm.Rc.Stack.Push(vm.Rc.Memory.Argv)
-		case lexer.IntrinsicEnv:
+		case intrinsics.IntrinsicEnv:
 			vm.Rc.Stack.Push(vm.Rc.Memory.Env)
 
-		case lexer.IntrinsicSyscall0:
+		case intrinsics.IntrinsicSyscall0:
 			vm.ProcessSyscall0()
-		case lexer.IntrinsicSyscall1:
+		case intrinsics.IntrinsicSyscall1:
 			vm.ProcessSyscall1()
-		case lexer.IntrinsicSyscall2:
+		case intrinsics.IntrinsicSyscall2:
 			vm.ProcessSyscall2()
-		case lexer.IntrinsicSyscall3:
+		case intrinsics.IntrinsicSyscall3:
 			vm.ProcessSyscall3()
-		case lexer.IntrinsicSyscall4:
+		case intrinsics.IntrinsicSyscall4:
 			vm.ProcessSyscall4()
-		case lexer.IntrinsicSyscall5:
+		case intrinsics.IntrinsicSyscall5:
 			vm.ProcessSyscall5()
-		case lexer.IntrinsicSyscall6:
+		case intrinsics.IntrinsicSyscall6:
 			vm.ProcessSyscall6()
 
-		case lexer.IntrinsicCastInt, lexer.IntrinsicCastPtr, lexer.IntrinsicCastBool, lexer.IntrinsicCastFptr:
+		case intrinsics.IntrinsicCastInt, intrinsics.IntrinsicCastPtr, intrinsics.IntrinsicCastBool, intrinsics.IntrinsicCastFptr:
 			// do nothing
 
-		case lexer.IntrinsicAssert:
+		case intrinsics.IntrinsicAssert:
 			size := vm.Rc.Stack.Pop()
 			ptr := vm.Rc.Stack.Pop()
 			cond := vm.Rc.Stack.Pop()
-			if !I2B(cond) {
+			if !intrinsics.I2B(cond) {
 				return logger.VmRuntimeError(&op.Token.Loc, "ASSERT failed: `%s`", vm.Rc.Memory.Data[ptr:ptr+size])
 			}
 
@@ -559,7 +558,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		}
 		vm.Rc.Addr++
 	case OpCall:
-		if vm.Rc.ReturnStack.Size() >= int(vm.S.CallStackSize) {
+		if vm.Rc.ReturnStack.Size() >= int(s.CallStackSize) {
 			return logger.VmRuntimeError(&op.Token.Loc, "Call stack overflow")
 		}
 		vm.Rc.ReturnStack.Push(vm.Rc.Addr)
@@ -567,7 +566,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		vm.Rc.Addr += op.Operand.(types.IntType)
 	case OpCallLike:
 		addr := vm.Rc.Stack.Pop()
-		if vm.Rc.ReturnStack.Size() >= int(vm.S.CallStackSize) {
+		if vm.Rc.ReturnStack.Size() >= int(s.CallStackSize) {
 			return logger.VmRuntimeError(&op.Token.Loc, "Call stack overflow")
 		}
 		vm.Rc.ReturnStack.Push(vm.Rc.Addr)
@@ -577,7 +576,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		vm.Rc.Memory.Ram.Ptr += op.Operand.(types.IntType)
 		vm.Rc.CapturesCount = 0
 		vm.Rc.Addr++
-		if vm.S.IsDebug() {
+		if s.IsDebug() {
 			vm.Rc.Scopes.Push(op.DebugInfo.(string))
 		}
 	case OpFuncEnd:
@@ -590,7 +589,7 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 		vm.Rc.CapturesCount = vm.Rc.ReturnStack.Pop()
 		vm.Rc.Addr = vm.Rc.ReturnStack.Pop() + 1
 		vm.Rc.Memory.Ram.Ptr -= op.Operand.(types.IntType)
-		if vm.S.IsDebug() {
+		if s.IsDebug() {
 			vm.Rc.Scopes.Pop()
 		}
 	case OpPushLocalAlloc:
@@ -629,18 +628,20 @@ func (vm *VM) Step(ops *[]Op) (err error) {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (vm *VM) PrepareRuntimeContext(args []string) {
-	vm.Rc.PrepareMemory(args, &vm.S)
+func (vm *VM) PrepareRuntimeContext(args []string, s *settings.Settings) {
+	vm.Rc.PrepareMemory(args, s)
 	vm.Rc.Reset()
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (vm *VM) Interprete(ops *[]Op, args []string) ExitCodeType {
-	vm.PrepareRuntimeContext(args)
+func (vm *VM) Interprete(ops *[]Op, args []string, s *settings.Settings) ExitCodeType {
+	defer logger.Timeit(logger.ModuleVm, s.LogLevel)()
+
+	vm.PrepareRuntimeContext(args, s)
 	var err error = nil
 	for vm.Rc.Addr < vm.Rc.OpsCount {
-		err = vm.Step(ops)
+		err = vm.Step(ops, s)
 		if err != nil {
 			break
 		}

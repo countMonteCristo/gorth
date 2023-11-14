@@ -1,7 +1,8 @@
 package compiler
 
 import (
-	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/datatypes"
+	"Gorth/interpreter/tokens"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/vm"
 	"fmt"
@@ -33,13 +34,13 @@ func NewCompileTimeContext() *CompileTimeContext {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (ctx *CompileTimeContext) PreprocessStringLiterals(tokens *lexer.TokenHolder, start types.IntType) {
+func (ctx *CompileTimeContext) PreprocessStringLiterals(th *tokens.TokenHolder, start types.IntType) {
 	address := start
 
-	tokens.Reset()
-	for !tokens.Empty() {
-		token := tokens.GetNextToken()
-		if token.Typ != lexer.TokenString {
+	th.Reset()
+	for !th.Empty() {
+		token := th.GetNextToken()
+		if token.Typ != tokens.TokenString {
 			continue
 		}
 		literal := token.Value.(string)
@@ -140,11 +141,11 @@ func (c *CompileTimeContext) DebugConstNames(names []string, scope_name string) 
 	n_found := 0
 	for _, name := range names {
 		if constant, exists := c.GetLocalConst(name, scope_name); exists {
-			fmt.Printf("(%s) %s = %d type = %s\n", scope_name, name, constant.Value, lexer.DataType2Str[constant.Typ])
+			fmt.Printf("(%s) %s = %d type = %s\n", scope_name, name, constant.Value, datatypes.DataType2Str[constant.Typ])
 			n_found++
 		}
 		if constant, exists := c.GetGlobalConst(name); exists {
-			fmt.Printf("(%s) %s = %d type = %s\n", GlobalScopeName, name, constant.Value, lexer.DataType2Str[constant.Typ])
+			fmt.Printf("(%s) %s = %d type = %s\n", GlobalScopeName, name, constant.Value, datatypes.DataType2Str[constant.Typ])
 			n_found++
 		}
 	}

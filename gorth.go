@@ -2,8 +2,8 @@ package main
 
 import (
 	"Gorth/interpreter"
+	"Gorth/interpreter/settings"
 	"Gorth/interpreter/utils"
-	"Gorth/interpreter/vm"
 	"flag"
 	"path/filepath"
 	"runtime"
@@ -23,8 +23,8 @@ func main() {
 
 	var includePaths utils.ArrayArgs
 
-	// debugFlag := flag.Bool("debug", false, "run with debuger mode")
 	modeFlag := flag.String("mode", "interprete", "how to run (interprete|debug|profile)")
+	logLevel := flag.String("log", "info", "log level")
 	envFlag := flag.Bool("env", false, "save environment variables to VM memory")
 	tcFlag := flag.Bool("disable-typecheck", false, "disable type checking")
 	optFlag := flag.Int("O", 0, "optimization level")
@@ -34,9 +34,9 @@ func main() {
 
 	gorth_script := flag.Args()[0]
 
-	settings := vm.NewSettings(
+	settings := settings.NewSettings(
 		*modeFlag, *envFlag, !*tcFlag, vm_memory_size, recursion_limit, includePaths,
-		*optFlag, gorth_script + ".prof",
+		*optFlag, gorth_script+".prof", *logLevel,
 	)
 
 	i := interpreter.NewInterpreter(flag.Args(), package_dir, settings)

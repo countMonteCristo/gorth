@@ -67,7 +67,7 @@ Record test outputs:
 
 ## Usage
 ```
-> ./bin/gorth [-mode debug|profile|interprete] [-env] [-disable-typecheck] [-I include_dir] [-O level] Gorth/examples/helloworld.gorth [args...]
+> ./bin/gorth [-mode debug|profile|interprete] [-env] [-disable-typecheck] [-I include_dir] [-O level] [-log error|warn|debug|info] Gorth/examples/helloworld.gorth [args...]
 ```
 
 Supported flags:
@@ -79,6 +79,7 @@ Supported flags:
 * `check` - perform type checking before running the script
 * `I` - provide additional include directories (i.e. "-I dir1 -I dir2 ... -I dirN")
 * `O` - optimization level (`0` - no optimizations, `1` - eliminate dead code)
+* `log` - logging level (`info` by default)
 
 ## Debugger
 Run script with debugger.

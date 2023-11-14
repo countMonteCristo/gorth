@@ -3,6 +3,7 @@ package optimizer
 import (
 	"Gorth/interpreter/compiler"
 	"Gorth/interpreter/logger"
+	"Gorth/interpreter/settings"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/vm"
 )
@@ -81,7 +82,9 @@ func (o *Optimizer) eliminateDeadCode(ops, optimized *[]vm.Op) error {
 	return nil
 }
 
-func (o *Optimizer) Optimize(ops *[]vm.Op, ctx *compiler.CompileTimeContext, rts *vm.RuntimeSettings) (err error) {
+func (o *Optimizer) Optimize(ops *[]vm.Op, ctx *compiler.CompileTimeContext, rts *vm.RuntimeSettings, s *settings.Settings) (err error) {
+	defer logger.Timeit(logger.ModuleOptimizer, s.LogLevel)()
+
 	o.ctx = ctx
 
 	if o.level == OptLevelNo {

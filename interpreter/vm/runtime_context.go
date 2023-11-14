@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"Gorth/interpreter/settings"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 	"fmt"
@@ -48,7 +49,7 @@ type RunTimeContext struct {
 	global_scope  string
 }
 
-func NewRuntimeContext(s *VmSettings, global_scope_name string) *RunTimeContext {
+func NewRuntimeContext(s *settings.Settings, global_scope_name string) *RunTimeContext {
 	rc := &RunTimeContext{
 		Memory: NewMemory(s.MemorySize),
 		Stack:  IntStack{}, ReturnStack: IntStack{}, CapturesCount: 0,
@@ -78,7 +79,7 @@ func (rc *RunTimeContext) Reset() {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (rc *RunTimeContext) PrepareMemory(args []string, s *VmSettings) {
+func (rc *RunTimeContext) PrepareMemory(args []string, s *settings.Settings) {
 	env := []string{}
 	if s.Env {
 		env = os.Environ()

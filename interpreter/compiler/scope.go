@@ -1,7 +1,7 @@
 package compiler
 
 import (
-	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/tokens"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 )
@@ -31,7 +31,7 @@ type Scope struct {
 	Name     string
 	Allocs   map[string]Allocation
 	Consts   map[string]Constant
-	Names    map[string]*lexer.Token
+	Names    map[string]*tokens.Token
 	MemSize  types.IntType
 	Captures CapturedValueStack
 }
@@ -39,7 +39,7 @@ type Scope struct {
 func NewScope(funcName string) *Scope {
 	return &Scope{
 		Name: funcName, Consts: make(map[string]Constant), Allocs: make(map[string]Allocation),
-		Names: make(map[string]*lexer.Token), MemSize: 0, Captures: CapturedValueStack{},
+		Names: make(map[string]*tokens.Token), MemSize: 0, Captures: CapturedValueStack{},
 	}
 }
 

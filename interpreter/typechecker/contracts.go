@@ -1,7 +1,8 @@
 package typechecker
 
 import (
-	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/datatypes"
+	"Gorth/interpreter/intrinsics"
 	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
 )
@@ -9,236 +10,236 @@ import (
 // ---------------------------------------------------------------------------------------------------------------------
 
 type Contract struct {
-	Inputs  *lexer.TypeStack
-	Outputs *lexer.TypeStack
+	Inputs  *datatypes.TypeStack
+	Outputs *datatypes.TypeStack
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-var intrinsicType2Contract = map[lexer.IntrinsicType]*Contract{
-	lexer.IntrinsicPlus: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+var intrinsicType2Contract = map[intrinsics.IntrinsicType]*Contract{
+	intrinsics.IntrinsicPlus: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
-	lexer.IntrinsicMinus: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+	intrinsics.IntrinsicMinus: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
-	lexer.IntrinsicMul: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+	intrinsics.IntrinsicMul: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
-	lexer.IntrinsicDiv: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+	intrinsics.IntrinsicDiv: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
-	lexer.IntrinsicMod: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
-	},
-
-	lexer.IntrinsicShl: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
-	},
-	lexer.IntrinsicShr: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+	intrinsics.IntrinsicMod: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
 
-	lexer.IntrinsicBitAnd: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+	intrinsics.IntrinsicShl: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
-	lexer.IntrinsicBitOr: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
-	},
-	lexer.IntrinsicBitXor: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
-	},
-	lexer.IntrinsicBitNot: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+	intrinsics.IntrinsicShr: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
 
-	lexer.IntrinsicLogicalAnd: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeBool, lexer.DataTypeBool}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
+	intrinsics.IntrinsicBitAnd: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
-	lexer.IntrinsicLogicalOr: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeBool, lexer.DataTypeBool}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
+	intrinsics.IntrinsicBitOr: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
-	lexer.IntrinsicLogicalNot: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
+	intrinsics.IntrinsicBitXor: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
-
-	lexer.IntrinsicEq: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
-	},
-	lexer.IntrinsicNe: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
-	},
-	lexer.IntrinsicLe: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
-	},
-	lexer.IntrinsicGe: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
-	},
-	lexer.IntrinsicLt: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
-	},
-	lexer.IntrinsicGt: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
+	intrinsics.IntrinsicBitNot: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
 
-	lexer.IntrinsicDup: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny}),
+	intrinsics.IntrinsicLogicalAnd: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool, datatypes.DataTypeBool}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
 	},
-	lexer.IntrinsicSwap: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny}),
+	intrinsics.IntrinsicLogicalOr: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool, datatypes.DataTypeBool}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
 	},
-	lexer.IntrinsicDrop: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
-		Outputs: utils.NewStack(lexer.DataTypes{}),
-	},
-	lexer.IntrinsicOver: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny}),
-	},
-	lexer.IntrinsicRot: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny}),
+	intrinsics.IntrinsicLogicalNot: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
 	},
 
-	lexer.IntrinsicPuti: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{}),
+	intrinsics.IntrinsicEq: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
+	},
+	intrinsics.IntrinsicNe: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
+	},
+	intrinsics.IntrinsicLe: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
+	},
+	intrinsics.IntrinsicGe: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
+	},
+	intrinsics.IntrinsicLt: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
+	},
+	intrinsics.IntrinsicGt: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
 	},
 
-	lexer.IntrinsicDebug: {
-		Inputs:  utils.NewStack(lexer.DataTypes{}),
-		Outputs: utils.NewStack(lexer.DataTypes{}),
+	intrinsics.IntrinsicDup: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeAny}),
 	},
-	lexer.IntrinsicTypeDebug: {
-		Inputs:  utils.NewStack(lexer.DataTypes{}),
-		Outputs: utils.NewStack(lexer.DataTypes{}),
+	intrinsics.IntrinsicSwap: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeAny}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeAny}),
 	},
-
-	lexer.IntrinsicAssert: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeBool, lexer.DataTypePtr, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{}),
+	intrinsics.IntrinsicDrop: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny}),
+		Outputs: utils.NewStack(datatypes.DataTypes{}),
 	},
-
-	lexer.IntrinsicLoad8: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+	intrinsics.IntrinsicOver: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeAny}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny}),
 	},
-	lexer.IntrinsicLoad16: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
-	},
-	lexer.IntrinsicLoad32: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
-	},
-	lexer.IntrinsicLoad64: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+	intrinsics.IntrinsicRot: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny}),
 	},
 
-	lexer.IntrinsicStore8: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypePtr}),
-		Outputs: utils.NewStack(lexer.DataTypes{}),
-	},
-	lexer.IntrinsicStore16: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypePtr}),
-		Outputs: utils.NewStack(lexer.DataTypes{}),
-	},
-	lexer.IntrinsicStore32: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypePtr}),
-		Outputs: utils.NewStack(lexer.DataTypes{}),
-	},
-	lexer.IntrinsicStore64: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypePtr}),
-		Outputs: utils.NewStack(lexer.DataTypes{}),
+	intrinsics.IntrinsicPuti: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{}),
 	},
 
-	lexer.IntrinsicArgc: {
-		Inputs:  utils.NewStack(lexer.DataTypes{}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+	intrinsics.IntrinsicDebug: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{}),
+		Outputs: utils.NewStack(datatypes.DataTypes{}),
 	},
-	lexer.IntrinsicArgv: {
-		Inputs:  utils.NewStack(lexer.DataTypes{}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
-	},
-	lexer.IntrinsicEnv: {
-		Inputs:  utils.NewStack(lexer.DataTypes{}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
+	intrinsics.IntrinsicTypeDebug: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{}),
+		Outputs: utils.NewStack(datatypes.DataTypes{}),
 	},
 
-	lexer.IntrinsicSyscall0: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-	},
-	lexer.IntrinsicSyscall1: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-	},
-	lexer.IntrinsicSyscall2: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-	},
-	lexer.IntrinsicSyscall3: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-	},
-	lexer.IntrinsicSyscall4: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-	},
-	lexer.IntrinsicSyscall5: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
-	},
-	lexer.IntrinsicSyscall6: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeAny, lexer.DataTypeInt}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt, lexer.DataTypeInt}),
+	intrinsics.IntrinsicAssert: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool, datatypes.DataTypePtr, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{}),
 	},
 
-	lexer.IntrinsicCastInt: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+	intrinsics.IntrinsicLoad8: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
-	lexer.IntrinsicCastPtr: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
+	intrinsics.IntrinsicLoad16: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
-	lexer.IntrinsicCastBool: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
+	intrinsics.IntrinsicLoad32: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
-	lexer.IntrinsicCastFptr: {
-		Inputs:  utils.NewStack(lexer.DataTypes{lexer.DataTypeAny}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeFptr}),
+	intrinsics.IntrinsicLoad64: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
+	},
+
+	intrinsics.IntrinsicStore8: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypePtr}),
+		Outputs: utils.NewStack(datatypes.DataTypes{}),
+	},
+	intrinsics.IntrinsicStore16: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypePtr}),
+		Outputs: utils.NewStack(datatypes.DataTypes{}),
+	},
+	intrinsics.IntrinsicStore32: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypePtr}),
+		Outputs: utils.NewStack(datatypes.DataTypes{}),
+	},
+	intrinsics.IntrinsicStore64: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypePtr}),
+		Outputs: utils.NewStack(datatypes.DataTypes{}),
+	},
+
+	intrinsics.IntrinsicArgc: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
+	},
+	intrinsics.IntrinsicArgv: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
+	},
+	intrinsics.IntrinsicEnv: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
+	},
+
+	intrinsics.IntrinsicSyscall0: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+	},
+	intrinsics.IntrinsicSyscall1: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+	},
+	intrinsics.IntrinsicSyscall2: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+	},
+	intrinsics.IntrinsicSyscall3: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+	},
+	intrinsics.IntrinsicSyscall4: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+	},
+	intrinsics.IntrinsicSyscall5: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+	},
+	intrinsics.IntrinsicSyscall6: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeAny, datatypes.DataTypeInt}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt, datatypes.DataTypeInt}),
+	},
+
+	intrinsics.IntrinsicCastInt: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
+	},
+	intrinsics.IntrinsicCastPtr: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
+	},
+	intrinsics.IntrinsicCastBool: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
+	},
+	intrinsics.IntrinsicCastFptr: {
+		Inputs:  utils.NewStack(datatypes.DataTypes{datatypes.DataTypeAny}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeFptr}),
 	},
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func GetIntrinsicContract(i lexer.IntrinsicType) (*Contract, string) {
-	if i == lexer.IntrinsicOffset || i == lexer.IntrinsicReset {
+func GetIntrinsicContract(i intrinsics.IntrinsicType) (*Contract, string) {
+	if i == intrinsics.IntrinsicOffset || i == intrinsics.IntrinsicReset {
 		return nil, "compile-time intrinsics do not need contracts"
 	}
 
@@ -251,64 +252,64 @@ func GetIntrinsicContract(i lexer.IntrinsicType) (*Contract, string) {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-type CustomFunc func() lexer.DataTypes
+type CustomFunc func() datatypes.DataTypes
 
-var DefaultCustomFunc = func() lexer.DataTypes { return lexer.DataTypes{} }
+var DefaultCustomFunc = func() datatypes.DataTypes { return datatypes.DataTypes{} }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-type IntrinsicLogicFunc func(i lexer.IntrinsicType, c *Contract, inputs lexer.DataTypes, f CustomFunc) lexer.DataTypes
+type IntrinsicLogicFunc func(i intrinsics.IntrinsicType, c *Contract, inputs datatypes.DataTypes, f CustomFunc) datatypes.DataTypes
 
-func defaultLogic(i lexer.IntrinsicType, c *Contract, inputs lexer.DataTypes, f CustomFunc) lexer.DataTypes {
-	return utils.StackAsSlice[lexer.DataType](c.Outputs)
+func defaultLogic(i intrinsics.IntrinsicType, c *Contract, inputs datatypes.DataTypes, f CustomFunc) datatypes.DataTypes {
+	return utils.StackAsSlice[datatypes.DataType](c.Outputs)
 }
 
-func GetIntrinsicLogic(i lexer.IntrinsicType) (IntrinsicLogicFunc, string) {
+func GetIntrinsicLogic(i intrinsics.IntrinsicType) (IntrinsicLogicFunc, string) {
 	switch i {
-	case lexer.IntrinsicPlus, lexer.IntrinsicMinus, lexer.IntrinsicMul, lexer.IntrinsicDiv, lexer.IntrinsicMod,
-		lexer.IntrinsicShl, lexer.IntrinsicShr,
-		lexer.IntrinsicBitAnd, lexer.IntrinsicBitOr, lexer.IntrinsicBitXor, lexer.IntrinsicBitNot,
-		lexer.IntrinsicLogicalAnd, lexer.IntrinsicLogicalOr, lexer.IntrinsicLogicalNot,
-		lexer.IntrinsicEq, lexer.IntrinsicNe, lexer.IntrinsicLe, lexer.IntrinsicGe, lexer.IntrinsicLt, lexer.IntrinsicGt,
-		lexer.IntrinsicPuti,
-		lexer.IntrinsicDebug,
-		lexer.IntrinsicAssert,
-		lexer.IntrinsicLoad8, lexer.IntrinsicStore8,
-		lexer.IntrinsicLoad16, lexer.IntrinsicStore16,
-		lexer.IntrinsicLoad32, lexer.IntrinsicStore32,
-		lexer.IntrinsicLoad64, lexer.IntrinsicStore64,
-		lexer.IntrinsicArgc,
-		lexer.IntrinsicArgv, lexer.IntrinsicEnv,
-		lexer.IntrinsicCastInt, lexer.IntrinsicCastPtr, lexer.IntrinsicCastBool, lexer.IntrinsicCastFptr,
-		lexer.IntrinsicSyscall0, lexer.IntrinsicSyscall1, lexer.IntrinsicSyscall2,
-		lexer.IntrinsicSyscall3, lexer.IntrinsicSyscall4, lexer.IntrinsicSyscall5, lexer.IntrinsicSyscall6:
+	case intrinsics.IntrinsicPlus, intrinsics.IntrinsicMinus, intrinsics.IntrinsicMul, intrinsics.IntrinsicDiv, intrinsics.IntrinsicMod,
+		intrinsics.IntrinsicShl, intrinsics.IntrinsicShr,
+		intrinsics.IntrinsicBitAnd, intrinsics.IntrinsicBitOr, intrinsics.IntrinsicBitXor, intrinsics.IntrinsicBitNot,
+		intrinsics.IntrinsicLogicalAnd, intrinsics.IntrinsicLogicalOr, intrinsics.IntrinsicLogicalNot,
+		intrinsics.IntrinsicEq, intrinsics.IntrinsicNe, intrinsics.IntrinsicLe, intrinsics.IntrinsicGe, intrinsics.IntrinsicLt, intrinsics.IntrinsicGt,
+		intrinsics.IntrinsicPuti,
+		intrinsics.IntrinsicDebug,
+		intrinsics.IntrinsicAssert,
+		intrinsics.IntrinsicLoad8, intrinsics.IntrinsicStore8,
+		intrinsics.IntrinsicLoad16, intrinsics.IntrinsicStore16,
+		intrinsics.IntrinsicLoad32, intrinsics.IntrinsicStore32,
+		intrinsics.IntrinsicLoad64, intrinsics.IntrinsicStore64,
+		intrinsics.IntrinsicArgc,
+		intrinsics.IntrinsicArgv, intrinsics.IntrinsicEnv,
+		intrinsics.IntrinsicCastInt, intrinsics.IntrinsicCastPtr, intrinsics.IntrinsicCastBool, intrinsics.IntrinsicCastFptr,
+		intrinsics.IntrinsicSyscall0, intrinsics.IntrinsicSyscall1, intrinsics.IntrinsicSyscall2,
+		intrinsics.IntrinsicSyscall3, intrinsics.IntrinsicSyscall4, intrinsics.IntrinsicSyscall5, intrinsics.IntrinsicSyscall6:
 		return defaultLogic, ""
 
-	case lexer.IntrinsicOffset, lexer.IntrinsicReset:
+	case intrinsics.IntrinsicOffset, intrinsics.IntrinsicReset:
 		return nil, "compile-time intrinsics do not need contracts"
 
-	case lexer.IntrinsicTypeDebug:
-		return func(i lexer.IntrinsicType, c *Contract, inputs lexer.DataTypes, f CustomFunc) lexer.DataTypes {
+	case intrinsics.IntrinsicTypeDebug:
+		return func(i intrinsics.IntrinsicType, c *Contract, inputs datatypes.DataTypes, f CustomFunc) datatypes.DataTypes {
 			return f()
 		}, ""
 
-	case lexer.IntrinsicDup:
-		return func(i lexer.IntrinsicType, c *Contract, inputs lexer.DataTypes, f CustomFunc) lexer.DataTypes {
-			return lexer.DataTypes{inputs[0], inputs[0]}
+	case intrinsics.IntrinsicDup:
+		return func(i intrinsics.IntrinsicType, c *Contract, inputs datatypes.DataTypes, f CustomFunc) datatypes.DataTypes {
+			return datatypes.DataTypes{inputs[0], inputs[0]}
 		}, ""
-	case lexer.IntrinsicSwap:
-		return func(i lexer.IntrinsicType, c *Contract, inputs lexer.DataTypes, f CustomFunc) lexer.DataTypes {
-			return lexer.DataTypes{inputs[1], inputs[0]}
+	case intrinsics.IntrinsicSwap:
+		return func(i intrinsics.IntrinsicType, c *Contract, inputs datatypes.DataTypes, f CustomFunc) datatypes.DataTypes {
+			return datatypes.DataTypes{inputs[1], inputs[0]}
 		}, ""
-	case lexer.IntrinsicDrop:
+	case intrinsics.IntrinsicDrop:
 		return defaultLogic, ""
-	case lexer.IntrinsicOver:
-		return func(i lexer.IntrinsicType, c *Contract, inputs lexer.DataTypes, f CustomFunc) lexer.DataTypes {
-			return lexer.DataTypes{inputs[0], inputs[1], inputs[0]}
+	case intrinsics.IntrinsicOver:
+		return func(i intrinsics.IntrinsicType, c *Contract, inputs datatypes.DataTypes, f CustomFunc) datatypes.DataTypes {
+			return datatypes.DataTypes{inputs[0], inputs[1], inputs[0]}
 		}, ""
-	case lexer.IntrinsicRot:
-		return func(i lexer.IntrinsicType, c *Contract, inputs lexer.DataTypes, f CustomFunc) lexer.DataTypes {
-			return lexer.DataTypes{inputs[1], inputs[2], inputs[0]}
+	case intrinsics.IntrinsicRot:
+		return func(i intrinsics.IntrinsicType, c *Contract, inputs datatypes.DataTypes, f CustomFunc) datatypes.DataTypes {
+			return datatypes.DataTypes{inputs[1], inputs[2], inputs[0]}
 		}, ""
 	default:
 		return nil, "unknown intrinsic"
@@ -319,28 +320,28 @@ func GetIntrinsicLogic(i lexer.IntrinsicType) (IntrinsicLogicFunc, string) {
 
 var simpleOp2Contract = map[vm.OpType]*Contract{
 	vm.OpPushInt: {
-		Inputs:  utils.NewStack(lexer.DataTypes{}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeInt}),
+		Inputs:  utils.NewStack(datatypes.DataTypes{}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeInt}),
 	},
 	vm.OpPushBool: {
-		Inputs:  utils.NewStack(lexer.DataTypes{}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeBool}),
+		Inputs:  utils.NewStack(datatypes.DataTypes{}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeBool}),
 	},
 	vm.OpPushPtr: {
-		Inputs:  utils.NewStack(lexer.DataTypes{}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
+		Inputs:  utils.NewStack(datatypes.DataTypes{}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
 	},
 	vm.OpPushFptr: {
-		Inputs:  utils.NewStack(lexer.DataTypes{}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypeFptr}),
+		Inputs:  utils.NewStack(datatypes.DataTypes{}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypeFptr}),
 	},
 	vm.OpPushLocalAlloc: {
-		Inputs:  utils.NewStack(lexer.DataTypes{}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
+		Inputs:  utils.NewStack(datatypes.DataTypes{}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
 	},
 	vm.OpPushGlobalAlloc: {
-		Inputs:  utils.NewStack(lexer.DataTypes{}),
-		Outputs: utils.NewStack(lexer.DataTypes{lexer.DataTypePtr}),
+		Inputs:  utils.NewStack(datatypes.DataTypes{}),
+		Outputs: utils.NewStack(datatypes.DataTypes{datatypes.DataTypePtr}),
 	},
 }
 

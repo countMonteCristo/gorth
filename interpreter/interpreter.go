@@ -6,6 +6,7 @@ import (
 	"Gorth/interpreter/lexer"
 	"Gorth/interpreter/optimizer"
 	"Gorth/interpreter/profiler"
+	"Gorth/interpreter/settings"
 	"Gorth/interpreter/typechecker"
 	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
@@ -25,9 +26,10 @@ type Interpreter struct {
 	debugger    debugger.Debugger
 	profiler    profiler.Profiler
 	args        []string
+	s           settings.Settings
 }
 
-func NewInterpreter(arguments []string, pkg_dir string, s *vm.VmSettings) *Interpreter {
+func NewInterpreter(arguments []string, pkg_dir string, s *settings.Settings) *Interpreter {
 	i := &Interpreter{
 		lexer:       lexer.Lexer{},
 		vm:          *vm.NewVM(s, compiler.GlobalScopeName),
@@ -36,6 +38,7 @@ func NewInterpreter(arguments []string, pkg_dir string, s *vm.VmSettings) *Inter
 		optimizer:   *optimizer.NewOptimizer(s.Optimization),
 		args:        arguments,
 		importer:    *lexer.NewImporter(pkg_dir, s.IncludePaths),
+		s:           *s,
 	}
 
 	i.importer.Paths = append(i.importer.Paths, s.IncludePaths...)
@@ -45,20 +48,20 @@ func NewInterpreter(arguments []string, pkg_dir string, s *vm.VmSettings) *Inter
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (i *Interpreter) Prepare(fn string) {
-	tokens, err := i.lexer.ProcessFile(fn, []string{}, &i.importer)
+	token_holder, err := i.lexer.ProcessFile(fn, []string{}, &i.importer, &i.s)
 	if err != nil {
 		utils.ExitWithError(err)
 	}
 
-	if err = i.compiler.CompileTokens(tokens, &i.vm.Rc.Settings); err != nil {
+	if err = i.compiler.CompileTokens(token_holder, &i.vm.Rc.Settings, &i.s); err != nil {
 		utils.ExitWithError(err)
 	}
 
-	if err = i.typechecker.TypeCheckProgram(&i.compiler.Ops, &i.compiler.Ctx); err != nil {
+	if err = i.typechecker.TypeCheckProgram(&i.compiler.Ops, &i.compiler.Ctx, &i.s); err != nil {
 		utils.ExitWithError(err)
 	}
 
-	if err = i.optimizer.Optimize(&i.compiler.Ops, &i.compiler.Ctx, &i.vm.Rc.Settings); err != nil {
+	if err = i.optimizer.Optimize(&i.compiler.Ops, &i.compiler.Ctx, &i.vm.Rc.Settings, &i.s); err != nil {
 		utils.ExitWithError(err)
 	}
 
@@ -68,13 +71,13 @@ func (i *Interpreter) Prepare(fn string) {
 
 func (i *Interpreter) Run(fn string) vm.ExitCodeType {
 	i.Prepare(fn)
-	return i.vm.Interprete(&i.compiler.Ops, i.args)
+	return i.vm.Interprete(&i.compiler.Ops, i.args, &i.s)
 }
 
 func (i *Interpreter) RunDebug(fn string) {
 	i.Prepare(fn)
-	i.vm.Rc.PrepareMemory(i.args, &i.vm.S)
-	i.debugger = *debugger.NewDebugger(&i.vm)
+	i.vm.Rc.PrepareMemory(i.args, &i.s)
+	i.debugger = *debugger.NewDebugger(&i.vm, &i.s)
 
 	for {
 		i.vm.Rc.Reset()
@@ -88,8 +91,8 @@ func (i *Interpreter) RunDebug(fn string) {
 
 func (i *Interpreter) RunProfile(fn string) {
 	i.Prepare(fn)
-	i.vm.PrepareRuntimeContext(i.args)
-	i.profiler = *profiler.NewProfiler(&i.vm, i.vm.S.ProfilePath)
+	i.vm.PrepareRuntimeContext(i.args, &i.s)
+	i.profiler = *profiler.NewProfiler(&i.vm, i.s.ProfilePath, &i.s)
 	i.profiler.Run(&i.compiler.Ops, i.args)
 }
 

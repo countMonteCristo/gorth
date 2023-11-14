@@ -2,6 +2,7 @@ package debugger
 
 import (
 	"Gorth/interpreter/compiler"
+	"Gorth/interpreter/settings"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/vm"
 	"bufio"
@@ -14,12 +15,14 @@ import (
 
 type Debugger struct {
 	vm    *vm.VM
+	s     *settings.Settings
 	iface DebugInterface
 }
 
-func NewDebugger(vm *vm.VM) *Debugger {
+func NewDebugger(vm *vm.VM, s *settings.Settings) *Debugger {
 	return &Debugger{
 		vm:    vm,
+		s:     s,
 		iface: *NewDebugInterface(),
 	}
 }
@@ -279,7 +282,7 @@ func (d *Debugger) doSteps(ops *[]vm.Op, count int, go_up bool) error {
 	for d.vm.Rc.Addr < d.vm.Rc.OpsCount {
 		is_func_end := (*ops)[d.vm.Rc.Addr].Typ == vm.OpFuncEnd
 
-		if err := d.vm.Step(ops); err != nil {
+		if err := d.vm.Step(ops, d.s); err != nil {
 			return err
 		}
 

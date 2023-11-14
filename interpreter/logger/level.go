@@ -9,6 +9,7 @@ const (
 	Error
 	RuntimeError
 	Warning
+	Debug
 	Info
 	None
 )
@@ -25,6 +26,8 @@ func LogLevelToStr(level LogLevelType) string {
 		return "RUNTIME_ERROR"
 	case Warning:
 		return "WARNING"
+	case Debug:
+		return "DEBUG"
 	case Info:
 		return "INFO"
 	case None:

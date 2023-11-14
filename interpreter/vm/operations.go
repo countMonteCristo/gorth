@@ -1,8 +1,11 @@
 package vm
 
 import (
-	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/datatypes"
+	"Gorth/interpreter/intrinsics"
+	"Gorth/interpreter/keywords"
 	"Gorth/interpreter/logger"
+	"Gorth/interpreter/tokens"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 	"fmt"
@@ -47,7 +50,7 @@ var OpType2Str = map[OpType]string{
 	OpPushInt:  "PUSH_INT",
 	OpPushBool: "PUSH_BOOL",
 	OpPushPtr:  "PUSH_PTR",
-	OpPushFptr:	"PUSH_FPTR",
+	OpPushFptr: "PUSH_FPTR",
 
 	OpIntrinsic: "INTRINSIC",
 
@@ -72,7 +75,7 @@ var OpType2Str = map[OpType]string{
 type Op struct {
 	Typ       OpType
 	Operand   interface{}
-	Token     *lexer.Token
+	Token     *tokens.Token
 	Data      interface{}
 	DebugInfo interface{}
 }
@@ -84,7 +87,7 @@ func (op *Op) Str(addr types.IntType) (s string) {
 
 	switch op.Typ {
 	case OpIntrinsic:
-		operand = lexer.Intrinsic2Str[op.Operand.(lexer.IntrinsicType)]
+		operand = intrinsics.Intrinsic2Str[op.Operand.(intrinsics.IntrinsicType)]
 	case OpPushInt, OpPushBool, OpPushPtr, OpPushFptr, OpCall, OpPushLocalAlloc, OpPushGlobalAlloc:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
@@ -109,8 +112,8 @@ func (op *Op) Str(addr types.IntType) (s string) {
 			logger.VmCrash(&op.Token.Loc, "Can not cast interface to int: `%v`", op.Operand)
 		}
 		type_names := make([]string, 0)
-		for _, typ := range op.Data.(lexer.DataTypes) {
-			type_names = append(type_names, lexer.DataType2Str[typ])
+		for _, typ := range op.Data.(datatypes.DataTypes) {
+			type_names = append(type_names, datatypes.DataType2Str[typ])
 		}
 		operand = fmt.Sprintf("%d (%s)", res, strings.Join(type_names, ","))
 	case OpPushCaptured:
@@ -118,7 +121,7 @@ func (op *Op) Str(addr types.IntType) (s string) {
 		if !ok {
 			logger.VmCrash(&op.Token.Loc, "Can not cast interface to int: `%v`", op.Operand)
 		}
-		operand = fmt.Sprintf("%d (%s)", res, lexer.DataType2Str[op.Data.(lexer.DataType)])
+		operand = fmt.Sprintf("%d (%s)", res, datatypes.DataType2Str[op.Data.(datatypes.DataType)])
 	case OpDropCaptures:
 		res, ok := op.Operand.(types.IntType)
 		if !ok {
@@ -155,14 +158,14 @@ const (
 // ---------------------------------------------------------------------------------------------------------------------
 
 var OpJumpType2Str = map[OpJumpType]string{
-	OpJumpIf:       lexer.Keyword2Str[lexer.KeywordIf],
-	OpJumpElif:     lexer.Keyword2Str[lexer.KeywordElif],
-	OpJumpElse:     lexer.Keyword2Str[lexer.KeywordElse],
-	OpJumpEnd:      lexer.Keyword2Str[lexer.KeywordEnd],
-	OpJumpWhile:    lexer.Keyword2Str[lexer.KeywordWhile],
-	OpJumpBreak:    lexer.Keyword2Str[lexer.KeywordBreak],
-	OpJumpContinue: lexer.Keyword2Str[lexer.KeywordContinue],
-	OpJumpReturn:   lexer.Keyword2Str[lexer.KeywordReturn],
+	OpJumpIf:       keywords.Keyword2Str[keywords.KeywordIf],
+	OpJumpElif:     keywords.Keyword2Str[keywords.KeywordElif],
+	OpJumpElse:     keywords.Keyword2Str[keywords.KeywordElse],
+	OpJumpEnd:      keywords.Keyword2Str[keywords.KeywordEnd],
+	OpJumpWhile:    keywords.Keyword2Str[keywords.KeywordWhile],
+	OpJumpBreak:    keywords.Keyword2Str[keywords.KeywordBreak],
+	OpJumpContinue: keywords.Keyword2Str[keywords.KeywordContinue],
+	OpJumpReturn:   keywords.Keyword2Str[keywords.KeywordReturn],
 }
 
 var Str2OpJumpType = utils.RevMap(OpJumpType2Str).(map[string]OpJumpType)

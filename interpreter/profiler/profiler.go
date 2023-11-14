@@ -2,6 +2,7 @@ package profiler
 
 import (
 	"Gorth/interpreter/logger"
+	"Gorth/interpreter/settings"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/vm"
 	"fmt"
@@ -13,12 +14,13 @@ import (
 type Profiler struct {
 	logger Logger
 	vm     *vm.VM
+	s      *settings.Settings
 	fn     string
 }
 
-func NewProfiler(vm *vm.VM, fn string) *Profiler {
+func NewProfiler(vm *vm.VM, fn string, s *settings.Settings) *Profiler {
 	return &Profiler{
-		logger: *NewLogger(), vm: vm, fn: fn,
+		logger: *NewLogger(), vm: vm, fn: fn, s: s,
 	}
 }
 
@@ -29,7 +31,7 @@ func (p *Profiler) Run(ops *[]vm.Op, args []string) {
 	for p.vm.Rc.Addr < p.vm.Rc.OpsCount {
 		start := time.Now().UnixNano()
 		m := Message{OpId: p.vm.Rc.Addr, Time: 0}
-		err = p.vm.Step(ops)
+		err = p.vm.Step(ops, p.s)
 		m.Time = time.Now().UnixNano() - start
 		p.logger.Messages <- m
 		if err != nil {

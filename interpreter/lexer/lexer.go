@@ -1,7 +1,11 @@
 package lexer
 
 import (
+	"Gorth/interpreter/datatypes"
+	"Gorth/interpreter/keywords"
 	"Gorth/interpreter/logger"
+	"Gorth/interpreter/settings"
+	"Gorth/interpreter/tokens"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 
@@ -136,7 +140,7 @@ func (lx *Lexer) ChopWord(data string, line int, pos int) (word string, empty bo
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (lx *Lexer) next_token() (token Token, end bool, err error) {
+func (lx *Lexer) next_token() (token tokens.Token, end bool, err error) {
 	end = false
 	if lx.Row >= len(lx.Lines) {
 		end = true
@@ -169,12 +173,12 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 			continue
 		}
 
-		token = Token{Text: word, Loc: lx.Loc}
+		token = tokens.Token{Text: word, Loc: lx.Loc}
 
 		// check if word is string literal
 		if word[0] == '"' {
 			// fmt.Printf("`%s` - is a string\n", word)
-			token.Typ = TokenString
+			token.Typ = tokens.TokenString
 			token.Value = word[1 : len(word)-1]
 			return
 		}
@@ -182,7 +186,7 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 		// check if word is char literal
 		if word[0] == '\'' {
 			// fmt.Printf("`%s` - is a char\n", word)
-			token.Typ = TokenChar
+			token.Typ = tokens.TokenChar
 			token.Value = types.IntType(word[1])
 			return
 		}
@@ -191,17 +195,17 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 		boolean, exists := types.Str2Bool[word]
 		if exists {
 			// fmt.Printf("`%s` - is a boolean\n", word)
-			token.Typ = TokenBool
+			token.Typ = tokens.TokenBool
 			token.Value = boolean
 			return
 		}
 
 		// check if word is keyword
 		// fmt.Printf("try to create token as keyword\n")
-		keyword, exists := Str2Keyword[word]
+		keyword, exists := keywords.Str2Keyword[word]
 		if exists {
 			// fmt.Printf("`%s` - is a keyword\n", word)
-			token.Typ = TokenKeyword
+			token.Typ = tokens.TokenKeyword
 			token.Value = keyword
 			return
 		}
@@ -210,7 +214,7 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 		number, terr := strconv.ParseInt(word, 10, 64)
 		if terr == nil {
 			// fmt.Printf("`%s` - is an int\n", word)
-			token.Typ = TokenInt
+			token.Typ = tokens.TokenInt
 			token.Value = number
 			return
 		}
@@ -227,23 +231,23 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 				base = 2
 			}
 			if number, terr = strconv.ParseInt(w, base, 64); terr == nil {
-				token.Typ = TokenInt
+				token.Typ = tokens.TokenInt
 				token.Value = number
 				return
 			}
 		}
 
-		datatype, exists := Str2DataType[word]
+		datatype, exists := datatypes.Str2DataType[word]
 		if exists {
 			// fmt.Printf("`%s` - is a type\n", word)
-			token.Typ = TokenWord
+			token.Typ = tokens.TokenWord
 			token.Value = datatype
 			return
 		}
 
 		// word is some name
 		// fmt.Printf("`%s` - is a word\n", word)
-		token.Typ = TokenWord
+		token.Typ = tokens.TokenWord
 		token.Value = word
 		return
 	}
@@ -254,14 +258,16 @@ func (lx *Lexer) next_token() (token Token, end bool, err error) {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (th *TokenHolder, err error) {
+func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer, s *settings.Settings) (th *tokens.TokenHolder, err error) {
+	defer logger.Timeit(logger.ModuleLexer, s.LogLevel)()
+
 	lx.Fn = fn
 	lx.Row = 0
 	lx.Col = 0
 
 	lx.Lines = utils.ReadFile(lx.Fn)
 
-	th = NewTokenHolder()
+	th = tokens.NewTokenHolder()
 
 	for {
 		token, end, terr := lx.next_token()
@@ -274,9 +280,9 @@ func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (th
 			break
 		}
 
-		if token.Typ == TokenKeyword {
-			kw_type := token.Value.(KeywordType)
-			if kw_type == KeywordInclude {
+		if token.Typ == tokens.TokenKeyword {
+			kw_type := token.Value.(keywords.KeywordType)
+			if kw_type == keywords.KeywordInclude {
 				next, end, terr := lx.next_token()
 				if terr != nil {
 					err = terr
@@ -287,10 +293,10 @@ func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (th
 					err = logger.LexerError(&token.Loc, "Expected import file path to be a string, but got nothing")
 					return
 				}
-				if next.Typ != TokenString {
+				if next.Typ != tokens.TokenString {
 					err = logger.LexerError(
 						&token.Loc, "Expected import file path to be a %s, but got %s",
-						TokenType2Str[TokenString], TokenType2Str[next.Typ],
+						tokens.TokenType2Str[tokens.TokenString], tokens.TokenType2Str[next.Typ],
 					)
 					return
 				}
@@ -318,7 +324,7 @@ func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer) (th
 				new_path := append([]string{}, import_path...)
 				new_path = append(new_path, fn)
 				new_lexer := Lexer{}
-				included_tokens, ierr := new_lexer.ProcessFile(full_imported_fn, new_path, imp)
+				included_tokens, ierr := new_lexer.ProcessFile(full_imported_fn, new_path, imp, s)
 				if ierr != nil {
 					err = ierr
 					return

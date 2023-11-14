@@ -66,6 +66,10 @@ func ProfilerError(loc *utils.Location, msg string, args ...any) error {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+func FormatMsg(m ModuleType, l LogLevelType, msg string, args... any) string {
+	return fmt.Sprintf("[%s] [%s] %s", LogLevelToStr(l), ModuleToStr(m), fmt.Sprintf(msg, args...))
+}
+
 func FormatInfoMsg(loc *utils.Location, msg string, args ...any) string {
 	return fmt.Sprintf("[%s] %s%s", LogLevelToStr(Info), fmt.Sprintf(msg, args...), FormatAddLoc(loc))
 }

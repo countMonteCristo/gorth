@@ -1,7 +1,8 @@
 package compiler
 
 import (
-	"Gorth/interpreter/lexer"
+	"Gorth/interpreter/datatypes"
+	"Gorth/interpreter/tokens"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 	"Gorth/interpreter/vm"
@@ -16,8 +17,8 @@ type ConstantStack = utils.Stack[Constant]
 // Function description describes input and output arguments
 type FuncSignature struct {
 	Name    string
-	Inputs  lexer.TypeStack
-	Outputs lexer.TypeStack
+	Inputs  datatypes.TypeStack
+	Outputs datatypes.TypeStack
 }
 
 // Function description - name, signature, inline flag, list of operations
@@ -42,17 +43,17 @@ type Allocation struct {
 
 // Local or global constants defined in script
 type Constant struct {
-	Value types.IntType  // value which will be pushed onto the stack
-	Typ   lexer.DataType // type of constant
+	Value types.IntType      // value which will be pushed onto the stack
+	Typ   datatypes.DataType // type of constant
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Captured value
 type CapturedVal struct {
-	Name  string         // name to be used inside the capture block
-	Typ   lexer.DataType // type of captured value
-	Token *lexer.Token   // token from script where value had been captured
+	Name  string             // name to be used inside the capture block
+	Typ   datatypes.DataType // type of captured value
+	Token *tokens.Token      // token from script where value had been captured
 }
 
 // List of all captured values in the block
@@ -69,11 +70,11 @@ func (cl *CaptureList) Append(val CapturedVal) {
 }
 
 // Map for OpPushCapture operations
-var DataType2OpType = map[lexer.DataType]vm.OpType{
-	lexer.DataTypeBool: vm.OpPushBool,
-	lexer.DataTypeInt:  vm.OpPushInt,
-	lexer.DataTypePtr:  vm.OpPushPtr,
-	lexer.DataTypeFptr: vm.OpPushFptr,
+var DataType2OpType = map[datatypes.DataType]vm.OpType{
+	datatypes.DataTypeBool: vm.OpPushBool,
+	datatypes.DataTypeInt:  vm.OpPushInt,
+	datatypes.DataTypePtr:  vm.OpPushPtr,
+	datatypes.DataTypeFptr: vm.OpPushFptr,
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-package lexer
+package datatypes
 
 import (
 	"Gorth/interpreter/utils"

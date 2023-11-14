@@ -1,4 +1,4 @@
-package vm
+package settings
 
 import (
 	"Gorth/interpreter/logger"
@@ -10,7 +10,7 @@ import (
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-type VmSettings struct {
+type Settings struct {
 	Mode          string // running mode
 	Env           bool   // store env variables to memory
 	TypeCheck     bool   // do type checking before running the program
@@ -19,6 +19,7 @@ type VmSettings struct {
 	IncludePaths  utils.ArrayArgs
 	Optimization  int
 	ProfilePath   string
+	LogLevel      logger.LogLevelType
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -26,7 +27,7 @@ type VmSettings struct {
 // TODO: add flags for memory and call_stack instead of reading env?
 func NewSettings(
 	mode string, env, typecheck bool, mem types.IntType, call_stack_Size int,
-	include_paths utils.ArrayArgs, opt int, profile_fn string) *VmSettings {
+	include_paths utils.ArrayArgs, opt int, profile_fn string, loglevel string) *Settings {
 	value, exists := os.LookupEnv("GORTH_VM_MEMORY")
 	if exists {
 		val_int, err := strconv.ParseInt(value, 10, 64)
@@ -45,13 +46,27 @@ func NewSettings(
 		call_stack_Size = val_int
 	}
 
-	return &VmSettings{
+	var l logger.LogLevelType
+	switch loglevel {
+	case "error":
+		l = logger.Error
+	case "warn":
+		l = logger.Warning
+	case "debug":
+		l = logger.Debug
+	case "info":
+		l = logger.Info
+	default:
+		logger.VmCrash(nil, "Incorrect value for log level: %s", loglevel)
+	}
+
+	return &Settings{
 		Mode: mode, Env: env, TypeCheck: typecheck, MemorySize: mem, CallStackSize: call_stack_Size,
-		IncludePaths: include_paths, Optimization: opt, ProfilePath: profile_fn,
+		IncludePaths: include_paths, Optimization: opt, ProfilePath: profile_fn, LogLevel: l,
 	}
 }
 
-func (s *VmSettings) IsDebug() bool {
+func (s *Settings) IsDebug() bool {
 	return s.Mode == "debug"
 }
 

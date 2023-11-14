@@ -81,7 +81,7 @@
     [*] update testcase expecting output file
 
 [*] Split Gorth project into modules
-  [ ] show compilation statuses and timing
+  [*] show compilation statuses and timing
 
 [*] Add `break` and `continue` to while loops
   [*] break
