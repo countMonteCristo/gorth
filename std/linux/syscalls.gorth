@@ -35,9 +35,9 @@ const SYS_DUP             32 end
 const SYS_DUP2            33 end
 // const SYS_PAUSE           34 end  // TODO: don't know how to do it properly yet (need pointers to functions)
 const SYS_NANOSLEEP       35 end
-const SYS_GETITIMER       36 end  // TODO: how to retrnslate signals to gorth script?
-const SYS_ALARM           37 end  // TODO: how to retrnslate signals to gorth script?
-const SYS_SETTIMER        38 end  // TODO: how to retrnslate signals to gorth script?
+// const SYS_GETITIMER       36 end  // TODO: how to retrnslate signals to gorth script?
+// const SYS_ALARM           37 end  // TODO: how to retrnslate signals to gorth script?
+// const SYS_SETTIMER        38 end  // TODO: how to retrnslate signals to gorth script?
 const SYS_GETPID          39 end
 const SYS_SENDFILE        40 end
 const SYS_SOCKET          41 end
@@ -54,15 +54,15 @@ const SYS_GETSOCKNAME     51 end
 const SYS_GETPEERNAME     52 end
 const SYS_SOCKETPAIR      53 end
 const SYS_SETSOCKOPT      54 end
-// below this line not all syscalls are implemented
 const SYS_GETSOCKOPT      55 end
-const SYS_CLONE           56 end
+// const SYS_CLONE           56 end  // TODO: don't know how to do it properly yet
 const SYS_FORK            57 end
 const SYS_VFORK           58 end
 const SYS_EXECVE          59 end
 const SYS_EXIT            60 end
 const SYS_WAIT4           61 end
 const SYS_KILL            62 end
+// below this line not all syscalls are implemented
 const SYS_UNAME           63 end
 const SYS_SEMGET          64 end
 const SYS_SEMOP           65 end
@@ -155,10 +155,9 @@ inline func stat
   ptr   // path name
   ptr   // statbuf
     :
-  int   // 0 on success and -1 on error
   int   // errno
 do
-  SYS_STAT syscall2
+  SYS_STAT syscall2 swap drop
 end
 
 // Execute `fstat` system call
@@ -166,10 +165,9 @@ inline func fstat
   int   // fd
   ptr   // statbuf
     :
-  int   // 0 on success and -1 on error
   int   // errno
 do
-  SYS_FSTAT syscall2
+  SYS_FSTAT syscall2 swap drop
 end
 
 // Execute `lstat` system call
@@ -177,10 +175,9 @@ inline func lstat
   ptr   // path name
   ptr   // statbuf
     :
-  int   // 0 on success and -1 on error
   int   // errno
 do
-  SYS_LSTAT syscall2
+  SYS_LSTAT syscall2 swap drop
 end
 
 // Execute `poll` system call
@@ -213,10 +210,9 @@ inline func ioctl
   int   // request
   int   // arg
     :
-  int   // 0 on success and -1 on error
   int   // errno
 do
-  SYS_IOCTL syscall3
+  SYS_IOCTL syscall3 swap drop
 end
 
 // Execute `pread64` system call
@@ -274,20 +270,18 @@ inline func access
   ptr   // filename
   int   // mode
     :
-  int   // 0 on success and -1 on error
   int   // errno
 do
-  SYS_ACCESS syscall2
+  SYS_ACCESS syscall2 swap drop
 end
 
 // Execute `pipe` system call
 inline func pipe
   ptr   // fds[2]
     :
-  int   // 0 on success and -1 on error
   int   // errno
 do
-  SYS_PIPE syscall1
+  SYS_PIPE syscall1 swap drop
 end
 
 // Execute `select` system call
@@ -307,10 +301,9 @@ end
 // Execute `sched_yield` system call
 inline func sched_yield
     :
-  int   // 0 on success and -1 on error
   int   // errno
 do
-  SYS_SCHED_YIELD syscall0
+  SYS_SCHED_YIELD syscall0 swap drop
 end
 
 // Execute `dup` system call
@@ -360,7 +353,7 @@ inline func sendfile
   ptr   // offset_ptr
   int   // count
     :
-  int   // number of bytes written or -1
+  int   // number of bytes written or -1 on error
   int   // errno
 do
   SYS_SENDFILE syscall4
@@ -372,7 +365,7 @@ inline func socket
   int // type
   int // protocol
     :
-  int // socket fd
+  int // socket fd or -1 on error
   int // errno
 do
   SYS_SOCKET syscall3
@@ -384,10 +377,9 @@ inline func connect
   ptr // addr_ptr
   int // addr_len
     :
-  int // 0 on success and -1 on error
   int // errno
 do
-  SYS_CONNECT syscall3
+  SYS_CONNECT syscall3 swap drop
 end
 
 // Execute `accept` system call
@@ -396,7 +388,7 @@ inline func accept
   ptr // addr
   ptr // addr_len
     :
-  int // sock_fd
+  int // sock_fd or -1 on error
   int // errno
 do
   SYS_ACCEPT syscall3
@@ -461,10 +453,9 @@ inline func shutdown
   int // socket fd
   int // how
     :
-  int // 0 on success and -1 on fail
   int // errno
 do
-  SYS_SHUTDOWN syscall2
+  SYS_SHUTDOWN syscall2 swap drop
 end
 
 // Execute `bind` system call
@@ -494,10 +485,9 @@ inline func getsockname
   ptr // addr_ptr
   ptr // addrlen_ptr
     :
-  int // 0 on success and -1 on error
   int // errno
 do
-  SYS_GETSOCKNAME syscall3
+  SYS_GETSOCKNAME syscall3 swap drop
 end
 
 // Execute `getpeername` system call
@@ -506,10 +496,9 @@ inline func getpeername
   ptr // addr_ptr
   ptr // addrlen_ptr
     :
-  int // 0 on success and -1 on error
   int // errno
 do
-  SYS_GETPEERNAME syscall3
+  SYS_GETPEERNAME syscall3 swap drop
 end
 
 // Execute `socketpair` system call
@@ -519,10 +508,9 @@ inline func socketpair
   int // protocol
   ptr // sv[2]
     :
-  int // 0 on success and -1 on error
   int // errno
 do
-  SYS_SOCKETPAIR syscall4
+  SYS_SOCKETPAIR syscall4 swap drop
 end
 
 // Execute `setsockopt` system call
@@ -538,10 +526,23 @@ do
   SYS_SETSOCKOPT syscall5 swap drop
 end
 
+// Execute `getsockopt` system call
+inline func getsockopt
+  int // socket fd
+  int // level
+  int // optname
+  ptr // optval_ptr
+  ptr // optlen_ptr
+    :
+  int // errno
+do
+  SYS_GETSOCKOPT syscall5 swap drop
+end
+
 // Execute `fork` system call
 inline func fork
     :
-  int // child pid or zero
+  int // child pid or 0 on error
   int // errno
 do
   SYS_FORK syscall0
@@ -550,10 +551,21 @@ end
 // Execute `vfork` system call
 inline func vfork
     :
-  int // child pid or zero
+  int // child pid or 0 on error
   int // errno
 do
   SYS_VFORK syscall0
+end
+
+// Execute `execve` system call
+inline func execve
+  ptr // program name
+  ptr // char* argv[]
+  ptr // char *env[]
+    :
+  int // errno
+do
+  SYS_EXECVE syscall3 swap drop
 end
 
 // Execute `exit` system call
@@ -582,10 +594,9 @@ inline func kill
   int // pid
   int // signal
     :
-  int // 0 on success and -1 on error
   int // errno
 do
-  SYS_KILL syscall2
+  SYS_KILL syscall2 swap drop
 end
 
 // Execute `fcntl` system call
@@ -605,30 +616,27 @@ inline func flock
   int   // fd
   int   // cmd
     :
-  int   // 0 on success and -1 on error
   int   // errno
 do
-  SYS_FLOCK syscall2
+  SYS_FLOCK syscall2 swap drop
 end
 
 // Execute `fsync` system call
 inline func fsync
   int   // fd
     :
-  int   // 0 on success and -1 on error
   int   // errno
 do
-  SYS_FSYNC syscall1
+  SYS_FSYNC syscall1 swap drop
 end
 
 // Execute `fdatasync` system call
 inline func fdatasync
   int   // fd
     :
-  int   // 0 on success and -1 on error
   int   // errno
 do
-  SYS_FDATASYNC syscall1
+  SYS_FDATASYNC syscall1 swap drop
 end
 
 // Execute `ftruncate` system call
@@ -636,10 +644,9 @@ inline func ftruncate
   int   // fd
   int   // length
     :
-  int   // 0 on success and -1 on error
   int   // errno
 do
-  SYS_FTRUNCATE syscall2
+  SYS_FTRUNCATE syscall2 swap drop
 end
 
 // ---------------------------------------------------------------------------------------------------------------------

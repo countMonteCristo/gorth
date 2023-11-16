@@ -301,6 +301,7 @@ func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer, s *
 					return
 				}
 
+				// TODO: do proper checks if files have been already imported
 				imported_fn := next.Value.(string)
 				full_imported_fn, exists := imp.Find(fn, imported_fn)
 				if !exists {

@@ -8,9 +8,8 @@ import (
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 	"fmt"
+	"syscall"
 	"unsafe"
-
-	"golang.org/x/sys/unix"
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -29,497 +28,364 @@ func NewVM(s *settings.Settings, global_scope_name string) *VM {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+func (vm *VM) mPtr(ptr types.IntType) uintptr {
+	return uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[ptr]))
+}
+
+// Gets pointer to the zero-terminated array of pointers and return slice of pointers
+func (vm *VM) ptrSlice(ptr types.IntType) []*byte {
+	ptrs := make([]*byte, 0)
+	for {
+		p, err := vm.Rc.Memory.LoadFromMem(ptr, SIZEOF_PTR, nil, true)
+		if err != nil {
+			logger.VmCrash(nil, "Cannot load pointer from memory")
+		}
+		if p == 0 {
+			ptrs = append(ptrs, nil)
+			break
+		}
+		ptrs = append(ptrs, &vm.Rc.Memory.Data[ptr])
+		ptr += SIZEOF_PTR
+	}
+	return ptrs
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
 func (vm *VM) ProcessSyscall0() {
-	switch syscall_id := uintptr(vm.Rc.Stack.Pop()); syscall_id {
-	case unix.SYS_SCHED_YIELD:
-		r1, _, err := unix.Syscall(syscall_id, 0, 0, 0)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_GETPID:
-		r1, _, err := unix.Syscall(syscall_id, 0, 0, 0)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_FORK:
-		r1, _, err := unix.Syscall(syscall_id, 0, 0, 0)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
+	var r1 uintptr        // syscall result
+	var err syscall.Errno // errno
+
+	syscall_id := uintptr(vm.Rc.Stack.Pop())
+	switch syscall_id {
+	case syscall.SYS_SCHED_YIELD:
+	case syscall.SYS_GETPID:
+	case syscall.SYS_FORK:
 	default:
 		logger.VmCrash(nil, "syscall0 for #%d is not implemented yet\n", syscall_id)
 	}
+
+	r1, _, err = syscall.Syscall(syscall_id, 0, 0, 0)
+	vm.Rc.Stack.Push(types.IntType(r1))
+	vm.Rc.Stack.Push(types.IntType(err))
 }
 
 func (vm *VM) ProcessSyscall1() {
-	switch syscall_id := uintptr(vm.Rc.Stack.Pop()); syscall_id {
-	case unix.SYS_CLOSE:
+	var r1 uintptr        // syscall result
+	var err syscall.Errno // errno
+	var a1 uintptr        // syscall input arguments
+
+	syscall_id := uintptr(vm.Rc.Stack.Pop())
+	switch syscall_id {
+	case syscall.SYS_CLOSE:
 		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), 0, 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_EXIT:
-		utils.Exit(int(vm.Rc.Stack.Pop()))
-	case unix.SYS_FSYNC:
-		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), 0, 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_FDATASYNC:
-		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), 0, 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_PIPE:
+		a1 = uintptr(fd)
+	case syscall.SYS_PIPE:
 		fds := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[fds])), 0, 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_DUP:
+		a1 = vm.mPtr(fds)
+	case syscall.SYS_DUP:
 		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), 0, 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
+		a1 = uintptr(fd)
+	case syscall.SYS_EXIT:
+		utils.Exit(int(vm.Rc.Stack.Pop()))
+	case syscall.SYS_FSYNC:
+		fd := vm.Rc.Stack.Pop()
+		a1 = uintptr(fd)
+	case syscall.SYS_FDATASYNC:
+		fd := vm.Rc.Stack.Pop()
+		a1 = uintptr(fd)
 	default:
 		logger.VmCrash(nil, "syscall1 for #%d is not implemented yet\n", syscall_id)
 	}
+
+	r1, _, err = syscall.Syscall(syscall_id, a1, 0, 0)
+	vm.Rc.Stack.Push(types.IntType(r1))
+	vm.Rc.Stack.Push(types.IntType(err))
 }
 
 func (vm *VM) ProcessSyscall2() {
-	switch syscall_id := uintptr(vm.Rc.Stack.Pop()); syscall_id {
-	case unix.SYS_STAT:
+	var r1 uintptr        // syscall result
+	var err syscall.Errno // errno
+	var a1, a2 uintptr    // syscall input arguments
+
+	syscall_id := uintptr(vm.Rc.Stack.Pop())
+	switch syscall_id {
+	case syscall.SYS_STAT:
 		statbuf := vm.Rc.Stack.Pop()
 		pathname := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id,
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[pathname])),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[statbuf])),
-			0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_FSTAT:
+		a1, a2 = vm.mPtr(pathname), vm.mPtr(statbuf)
+	case syscall.SYS_FSTAT:
 		statbuf := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id,
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[fd])),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[statbuf])),
-			0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_LSTAT:
+		a1, a2 = vm.mPtr(fd), vm.mPtr(statbuf)
+	case syscall.SYS_LSTAT:
 		statbuf := vm.Rc.Stack.Pop()
 		pathname := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id,
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[pathname])),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[statbuf])),
-			0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_ACCESS:
+		a1, a2 = vm.mPtr(pathname), vm.mPtr(statbuf)
+	case syscall.SYS_ACCESS:
 		pathname := vm.Rc.Stack.Pop()
 		mode := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id,
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[pathname])),
-			uintptr(mode),
-			0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_DUP2:
+		a1, a2 = vm.mPtr(pathname), uintptr(mode)
+	case syscall.SYS_DUP2:
 		oldfd := vm.Rc.Stack.Pop()
 		newfd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(oldfd), uintptr(newfd), 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_LISTEN:
-		backlog := vm.Rc.Stack.Pop()
-		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), uintptr(backlog), 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_NANOSLEEP:
+		a1, a2 = uintptr(oldfd), uintptr(newfd)
+	case syscall.SYS_NANOSLEEP:
 		rem_ptr := vm.Rc.Stack.Pop()
 		req_ptr := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id,
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[req_ptr])),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[rem_ptr])),
-			0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_KILL:
-		signal := vm.Rc.Stack.Pop()
-		pid := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(pid), uintptr(signal), 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_SHUTDOWN:
+		a1, a2 = vm.mPtr(req_ptr), vm.mPtr(rem_ptr)
+	case syscall.SYS_SHUTDOWN:
 		how := vm.Rc.Stack.Pop()
 		sockfd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(sockfd), uintptr(how), 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_FLOCK:
+		a1, a2 = uintptr(sockfd), uintptr(how)
+	case syscall.SYS_LISTEN:
+		backlog := vm.Rc.Stack.Pop()
+		fd := vm.Rc.Stack.Pop()
+		a1, a2 = uintptr(fd), uintptr(backlog)
+	case syscall.SYS_KILL:
+		signal := vm.Rc.Stack.Pop()
+		pid := vm.Rc.Stack.Pop()
+		a1, a2 = uintptr(pid), uintptr(signal)
+	case syscall.SYS_FLOCK:
 		cmd := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), uintptr(cmd), 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_FDATASYNC:
+		a1, a2 = uintptr(fd), uintptr(cmd)
+	case syscall.SYS_FDATASYNC:
 		length := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), uintptr(length), 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
+		a1, a2 = uintptr(fd), uintptr(length)
 	default:
 		logger.VmCrash(nil, "syscall2 for #%d is not implemented yet\n", syscall_id)
 	}
+
+	r1, _, err = syscall.Syscall(syscall_id, a1, a2, 0)
+	vm.Rc.Stack.Push(types.IntType(r1))
+	vm.Rc.Stack.Push(types.IntType(err))
 }
 
 func (vm *VM) ProcessSyscall3() {
-	switch syscall_id := uintptr(vm.Rc.Stack.Pop()); syscall_id {
-	case unix.SYS_OPEN:
+	var r1 uintptr         // syscall result
+	var err syscall.Errno  // errno
+	var a1, a2, a3 uintptr // syscall input arguments
+
+	syscall_id := uintptr(vm.Rc.Stack.Pop())
+	switch syscall_id {
+	case syscall.SYS_READ:
+		count := vm.Rc.Stack.Pop()
+		ptr := vm.Rc.Stack.Pop()
+		fd := vm.Rc.Stack.Pop()
+		a1, a2, a3 = uintptr(fd), vm.mPtr(ptr), uintptr(count)
+	case syscall.SYS_WRITE:
+		count := vm.Rc.Stack.Pop()
+		ptr := vm.Rc.Stack.Pop()
+		fd := vm.Rc.Stack.Pop()
+		a1, a2, a3 = uintptr(fd), vm.mPtr(ptr), uintptr(count)
+	case syscall.SYS_OPEN:
 		mode := vm.Rc.Stack.Pop()
 		flags := vm.Rc.Stack.Pop()
 		ptr := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[ptr])), uintptr(flags), uintptr(mode),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_READ:
-		count := vm.Rc.Stack.Pop()
-		ptr := vm.Rc.Stack.Pop()
-		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[ptr])), uintptr(count),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_WRITE:
-		count := vm.Rc.Stack.Pop()
-		ptr := vm.Rc.Stack.Pop()
-		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[ptr])), uintptr(count),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_POLL:
+		a1, a2, a3 = vm.mPtr(ptr), uintptr(flags), uintptr(mode)
+	case syscall.SYS_POLL:
 		timeoout := vm.Rc.Stack.Pop()
 		nfds := vm.Rc.Stack.Pop()
 		fds := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[fds])), uintptr(nfds), uintptr(timeoout),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_LSEEK:
+		a1, a2, a3 = vm.mPtr(fds), uintptr(nfds), uintptr(timeoout)
+	case syscall.SYS_LSEEK:
 		whence := vm.Rc.Stack.Pop()
 		offset := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), uintptr(offset), uintptr(whence),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_IOCTL:
+		a1, a2, a3 = uintptr(fd), uintptr(offset), uintptr(whence)
+	case syscall.SYS_IOCTL:
 		arg := vm.Rc.Stack.Pop()
 		request := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), uintptr(request), uintptr(arg),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_READV:
+		a1, a2, a3 = uintptr(fd), uintptr(request), uintptr(arg)
+	case syscall.SYS_READV:
 		iovcnt := vm.Rc.Stack.Pop()
 		iov := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[iov])), uintptr(iovcnt),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_WRITEV:
+		a1, a2, a3 = uintptr(fd), vm.mPtr(iov), uintptr(iovcnt)
+	case syscall.SYS_WRITEV:
 		iovcnt := vm.Rc.Stack.Pop()
 		iov := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[iov])), uintptr(iovcnt),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_SOCKET:
+		a1, a2, a3 = uintptr(fd), vm.mPtr(iov), uintptr(iovcnt)
+	case syscall.SYS_SOCKET:
 		protocol := vm.Rc.Stack.Pop()
 		typ := vm.Rc.Stack.Pop()
 		domain := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(domain), uintptr(typ), uintptr(protocol),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_CONNECT:
+		a1, a2, a3 = uintptr(domain), uintptr(typ), uintptr(protocol)
+	case syscall.SYS_CONNECT:
 		addr_len := vm.Rc.Stack.Pop()
 		addr_ptr := vm.Rc.Stack.Pop()
 		sock_fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(sock_fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[addr_ptr])), uintptr(addr_len),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_SENDMSG:
+		a1, a2, a3 = uintptr(sock_fd), vm.mPtr(addr_ptr), uintptr(addr_len)
+	case syscall.SYS_ACCEPT:
+		addrlen_ptr := vm.Rc.Stack.Pop()
+		addr_ptr := vm.Rc.Stack.Pop()
+		sock_fd := vm.Rc.Stack.Pop()
+		a1, a2, a3 = uintptr(sock_fd), vm.mPtr(addr_ptr), vm.mPtr(addrlen_ptr)
+	case syscall.SYS_SENDMSG:
 		flags := vm.Rc.Stack.Pop()
 		msg_ptr := vm.Rc.Stack.Pop()
 		sock_fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(sock_fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[msg_ptr])), uintptr(flags),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_RECVMSG:
+		a1, a2, a3 = uintptr(sock_fd), vm.mPtr(msg_ptr), uintptr(flags)
+	case syscall.SYS_RECVMSG:
 		flags := vm.Rc.Stack.Pop()
 		msg_ptr := vm.Rc.Stack.Pop()
 		sock_fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(sock_fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[msg_ptr])), uintptr(flags),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_BIND:
+		a1, a2, a3 = uintptr(sock_fd), vm.mPtr(msg_ptr), uintptr(flags)
+	case syscall.SYS_BIND:
 		addrlen := vm.Rc.Stack.Pop()
 		addr := vm.Rc.Stack.Pop()
 		sock_fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(sock_fd), uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[addr])), uintptr(addrlen),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_ACCEPT:
+		a1, a2, a3 = uintptr(sock_fd), vm.mPtr(addr), uintptr(addrlen)
+	case syscall.SYS_GETSOCKNAME:
 		addrlen_ptr := vm.Rc.Stack.Pop()
 		addr_ptr := vm.Rc.Stack.Pop()
 		sock_fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(sock_fd),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[addr_ptr])),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[addrlen_ptr])),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_GETSOCKNAME:
+		a1, a2, a3 = uintptr(sock_fd), vm.mPtr(addr_ptr), vm.mPtr(addrlen_ptr)
+	case syscall.SYS_GETPEERNAME:
 		addrlen_ptr := vm.Rc.Stack.Pop()
 		addr_ptr := vm.Rc.Stack.Pop()
 		sock_fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(sock_fd),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[addr_ptr])),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[addrlen_ptr])),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_GETPEERNAME:
-		addrlen_ptr := vm.Rc.Stack.Pop()
-		addr_ptr := vm.Rc.Stack.Pop()
-		sock_fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(sock_fd),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[addr_ptr])),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[addrlen_ptr])),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_FCNTL:
+		a1, a2, a3 = uintptr(sock_fd), vm.mPtr(addr_ptr), vm.mPtr(addrlen_ptr)
+	case syscall.SYS_EXECVE:
+		env_ptr := vm.Rc.Stack.Pop()
+		args_ptr := vm.Rc.Stack.Pop()
+		prog_ptr := vm.Rc.Stack.Pop()
+
+		argp := vm.ptrSlice(args_ptr)
+		envp := vm.ptrSlice(env_ptr)
+
+		a1, a2, a3 = vm.mPtr(prog_ptr), uintptr(unsafe.Pointer(&argp[0])), uintptr(unsafe.Pointer(&envp[0]))
+	case syscall.SYS_FCNTL:
 		arg := vm.Rc.Stack.Pop()
 		cmd := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall(
-			syscall_id, uintptr(fd), uintptr(arg), uintptr(cmd),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
+		a1, a2, a3 = uintptr(fd), uintptr(arg), uintptr(cmd)
 	default:
 		logger.VmCrash(nil, "syscall3 for #%d is not implemented yet\n", syscall_id)
 	}
+
+	r1, _, err = syscall.Syscall(syscall_id, a1, a2, a3)
+	vm.Rc.Stack.Push(types.IntType(r1))
+	vm.Rc.Stack.Push(types.IntType(err))
 }
 
 func (vm *VM) ProcessSyscall4() {
-	switch syscall_id := uintptr(vm.Rc.Stack.Pop()); syscall_id {
-	case unix.SYS_PREAD64:
+	var r1 uintptr             // syscall result
+	var err syscall.Errno      // errno
+	var a1, a2, a3, a4 uintptr // syscall input arguments
+
+	syscall_id := uintptr(vm.Rc.Stack.Pop())
+	switch syscall_id {
+	case syscall.SYS_PREAD64:
 		offset := vm.Rc.Stack.Pop()
 		count := vm.Rc.Stack.Pop()
 		buf_ptr := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall6(
-			syscall_id, uintptr(fd),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[buf_ptr])),
-			uintptr(count),
-			uintptr(offset),
-			0, 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_PWRITE64:
+		a1, a2, a3, a4 = uintptr(fd), vm.mPtr(buf_ptr), uintptr(count), uintptr(offset)
+	case syscall.SYS_PWRITE64:
 		offset := vm.Rc.Stack.Pop()
 		count := vm.Rc.Stack.Pop()
 		buf_ptr := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall6(
-			syscall_id, uintptr(fd),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[buf_ptr])),
-			uintptr(count),
-			uintptr(offset),
-			0, 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_WAIT4:
-		rusage_ptr := vm.Rc.Stack.Pop()
-		options := vm.Rc.Stack.Pop()
-		wstatus_ptr := vm.Rc.Stack.Pop()
-		pid := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall6(
-			syscall_id, uintptr(pid),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[wstatus_ptr])),
-			uintptr(options),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[rusage_ptr])),
-			0, 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_SENDFILE:
+		a1, a2, a3, a4 = uintptr(fd), vm.mPtr(buf_ptr), uintptr(count), uintptr(offset)
+	case syscall.SYS_SENDFILE:
 		count := vm.Rc.Stack.Pop()
 		offset_ptr := vm.Rc.Stack.Pop()
 		in_fd := vm.Rc.Stack.Pop()
 		out_fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall6(
-			syscall_id, uintptr(out_fd),
-			uintptr(in_fd),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[offset_ptr])),
-			uintptr(count),
-			0, 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_SOCKETPAIR:
+		a1, a2, a3, a4 = uintptr(out_fd), uintptr(in_fd), vm.mPtr(offset_ptr), uintptr(count)
+	case syscall.SYS_SOCKETPAIR:
 		sv_ptr := vm.Rc.Stack.Pop()
 		protocol := vm.Rc.Stack.Pop()
 		typ := vm.Rc.Stack.Pop()
 		domain := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall6(
-			syscall_id, uintptr(domain),
-			uintptr(typ),
-			uintptr(protocol),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[sv_ptr])),
-			0, 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
+		a1, a2, a3, a4 = uintptr(domain), uintptr(typ), uintptr(protocol), vm.mPtr(sv_ptr)
+	case syscall.SYS_WAIT4:
+		rusage_ptr := vm.Rc.Stack.Pop()
+		options := vm.Rc.Stack.Pop()
+		wstatus_ptr := vm.Rc.Stack.Pop()
+		pid := vm.Rc.Stack.Pop()
+		a1, a2, a3, a4 = uintptr(pid), vm.mPtr(wstatus_ptr), uintptr(options), vm.mPtr(rusage_ptr)
 	default:
 		logger.VmCrash(nil, "syscall4 for #%d is not implemented yet\n", syscall_id)
 	}
+
+	r1, _, err = syscall.Syscall6(syscall_id, a1, a2, a3, a4, 0, 0)
+	vm.Rc.Stack.Push(types.IntType(r1))
+	vm.Rc.Stack.Push(types.IntType(err))
 }
 
 func (vm *VM) ProcessSyscall5() {
-	switch syscall_id := uintptr(vm.Rc.Stack.Pop()); syscall_id {
-	case unix.SYS_SETSOCKOPT:
-		optlen := vm.Rc.Stack.Pop()
-		optval_ptr := vm.Rc.Stack.Pop()
-		optname := vm.Rc.Stack.Pop()
-		level := vm.Rc.Stack.Pop()
-		fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall6(
-			syscall_id, uintptr(fd), uintptr(level), uintptr(optname),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[optval_ptr])),
-			uintptr(optlen), 0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_SELECT:
+	var r1 uintptr                 // syscall result
+	var err syscall.Errno          // errno
+	var a1, a2, a3, a4, a5 uintptr // syscall input arguments
+
+	syscall_id := uintptr(vm.Rc.Stack.Pop())
+	switch syscall_id {
+	case syscall.SYS_SELECT:
 		timeout_ptr := vm.Rc.Stack.Pop()
 		except_fds := vm.Rc.Stack.Pop()
 		output_fds := vm.Rc.Stack.Pop()
 		input_fds := vm.Rc.Stack.Pop()
 		n := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall6(
-			syscall_id, uintptr(n),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[input_fds])),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[output_fds])),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[except_fds])),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[timeout_ptr])),
-			0,
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
+		a1, a2, a3, a4, a5 = uintptr(n), vm.mPtr(input_fds), vm.mPtr(output_fds), vm.mPtr(except_fds), vm.mPtr(timeout_ptr)
+	case syscall.SYS_SETSOCKOPT:
+		optlen := vm.Rc.Stack.Pop()
+		optval_ptr := vm.Rc.Stack.Pop()
+		optname := vm.Rc.Stack.Pop()
+		level := vm.Rc.Stack.Pop()
+		fd := vm.Rc.Stack.Pop()
+		a1, a2, a3, a4, a5 = uintptr(fd), uintptr(level), uintptr(optname), vm.mPtr(optval_ptr), uintptr(optlen)
+	case syscall.SYS_GETSOCKOPT:
+		optlen_ptr := vm.Rc.Stack.Pop()
+		optval_ptr := vm.Rc.Stack.Pop()
+		optname := vm.Rc.Stack.Pop()
+		level := vm.Rc.Stack.Pop()
+		fd := vm.Rc.Stack.Pop()
+		a1, a2, a3, a4, a5 = uintptr(fd), uintptr(level), uintptr(optname), vm.mPtr(optval_ptr), vm.mPtr(optlen_ptr)
 	default:
 		logger.VmCrash(nil, "syscall2 for #%d is not implemented yet\n", syscall_id)
 	}
+
+	r1, _, err = syscall.Syscall6(syscall_id, a1, a2, a3, a4, a5, 0)
+	vm.Rc.Stack.Push(types.IntType(r1))
+	vm.Rc.Stack.Push(types.IntType(err))
 }
 
 func (vm *VM) ProcessSyscall6() {
-	switch syscall_id := uintptr(vm.Rc.Stack.Pop()); syscall_id {
-	case unix.SYS_SENDTO:
+	var r1 uintptr                     // syscall result
+	var err syscall.Errno              // errno
+	var a1, a2, a3, a4, a5, a6 uintptr // syscall input arguments
+
+	syscall_id := uintptr(vm.Rc.Stack.Pop())
+	switch syscall_id {
+	case syscall.SYS_SENDTO:
 		addrlen := vm.Rc.Stack.Pop()
 		dest_addr_ptr := vm.Rc.Stack.Pop()
 		flags := vm.Rc.Stack.Pop()
 		len := vm.Rc.Stack.Pop()
 		buf_ptr := vm.Rc.Stack.Pop()
 		sock_fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall6(
-			syscall_id,
-			uintptr(sock_fd),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[buf_ptr])),
-			uintptr(len), uintptr(flags),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[dest_addr_ptr])),
-			uintptr(addrlen),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
-	case unix.SYS_RECVFROM:
+		a1, a2, a3, a4, a5, a6 = uintptr(sock_fd), vm.mPtr(buf_ptr), uintptr(len), uintptr(flags), vm.mPtr(dest_addr_ptr), uintptr(addrlen)
+	case syscall.SYS_RECVFROM:
 		addrlen_ptr := vm.Rc.Stack.Pop()
 		dest_addr_ptr := vm.Rc.Stack.Pop()
 		flags := vm.Rc.Stack.Pop()
 		len := vm.Rc.Stack.Pop()
 		buf_ptr := vm.Rc.Stack.Pop()
 		sock_fd := vm.Rc.Stack.Pop()
-		r1, _, err := unix.Syscall6(
-			syscall_id,
-			uintptr(sock_fd),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[buf_ptr])),
-			uintptr(len), uintptr(flags),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[dest_addr_ptr])),
-			uintptr(unsafe.Pointer(&vm.Rc.Memory.Data[addrlen_ptr])),
-		)
-		vm.Rc.Stack.Push(types.IntType(r1))
-		vm.Rc.Stack.Push(types.IntType(err))
+		a1, a2, a3, a4, a5, a6 = uintptr(sock_fd), vm.mPtr(buf_ptr), uintptr(len), uintptr(flags), vm.mPtr(dest_addr_ptr), vm.mPtr(addrlen_ptr)
 	default:
 		logger.VmCrash(nil, "syscall6 for #%d is not implemented yet\n", syscall_id)
 	}
+
+	r1, _, err = syscall.Syscall6(syscall_id, a1, a2, a3, a4, a5, a6)
+	vm.Rc.Stack.Push(types.IntType(r1))
+	vm.Rc.Stack.Push(types.IntType(err))
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
