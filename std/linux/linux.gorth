@@ -1,0 +1,4 @@
+include "linux/consts.gorth"
+include "linux/types.gorth"
+include "linux/syscalls.gorth"
+include "linux/stdlib.gorth"

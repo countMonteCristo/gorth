@@ -35,9 +35,9 @@ const SYS_DUP             32 end
 const SYS_DUP2            33 end
 // const SYS_PAUSE           34 end  // TODO: don't know how to do it properly yet (need pointers to functions)
 const SYS_NANOSLEEP       35 end
-const SYS_GETTIMER        36 end
-const SYS_ALARM           37 end
-const SYS_SETTIMER        38 end
+const SYS_GETITIMER       36 end  // TODO: how to retrnslate signals to gorth script?
+const SYS_ALARM           37 end  // TODO: how to retrnslate signals to gorth script?
+const SYS_SETTIMER        38 end  // TODO: how to retrnslate signals to gorth script?
 const SYS_GETPID          39 end
 const SYS_SENDFILE        40 end
 const SYS_SOCKET          41 end
@@ -54,6 +54,7 @@ const SYS_GETSOCKNAME     51 end
 const SYS_GETPEERNAME     52 end
 const SYS_SOCKETPAIR      53 end
 const SYS_SETSOCKOPT      54 end
+// below this line not all syscalls are implemented
 const SYS_GETSOCKOPT      55 end
 const SYS_CLONE           56 end
 const SYS_FORK            57 end
@@ -101,163 +102,8 @@ const SYS_GETRUSAGE       98 end
 const SYS_SYSINFO         99 end
 const SYS_TIMES          100 end
 
-// Standart streams
-const STDIN  0 end
-const STDOUT 1 end
-const STDERR 2 end
-
-// flags for open syscall
-const O_RDONLY    0o00000000 end
-const O_WRONLY    0o00000001 end
-const O_RDWR      0o00000002 end
-const O_CREAT     0o00000100 end
-const O_EXCL      0o00000200 end
-const O_NOCTTY    0o00000400 end
-const O_TRUNC     0o00001000 end
-const O_APPEND    0o00002000 end
-const O_NONBLOCK  0o00004000 end
-const O_DSYNC     0o00010000 end
-const FASYNC      0o00020000 end
-const O_DIRECT    0o00040000 end
-const O_LARGEFILE 0o00100000 end
-const O_DIRECTORY 0o00200000 end
-const O_NOFOLLOW  0o00400000 end
-const O_NOATIME   0o01000000 end
-const O_CLOEXEC   0o02000000 end
-
-// flags for create new files
-const S_NONE       0 end
-const S_IXOTH      1 end
-const S_IWOTH      2 end
-const S_IROTH      4 end
-const S_IRWXO      7 end
-const S_IXGRP      8 end
-const S_IWGRP     16 end
-const S_IRGRP     32 end
-const S_IRWXG     56 end
-const S_IXUSR     64 end
-const S_IWUSR    128 end
-const S_IRUSR    256 end
-const S_IRWXU    448 end
-const S_ISVTX    512 end
-const S_ISGID   1024 end
-const S_ISUID   2048 end
-const S_IFIFO   4096 end
-const S_IFCHR   8192 end
-const S_IFDIR  16384 end
-const S_IFREG  32768 end
-const S_IFBLK  24576 end
-const S_IFLNK  40960 end
-const S_IFSOCK 49152 end
-const S_IFMT   61440 end
-
-// Addresses
-const INADDR_ANY       0x00000000 end // Address to accept any incoming messages
-const INADDR_BROADCAST 0xffffffff end // Address to send to all hosts
-const INADDR_NONE      0xffffffff end // Address indicating an error return
-const INADDR_DUMMY     0xc0000008 end // Dummy address for source of ICMPv6 errors converted to IPv4 (RFC7600)
-
-// Address families
-const AF_LOCAL  1 end
-const AF_INET   2 end
-const AF_INET6 10 end
-
-// Types of sockets
-const SOCK_STREAM    1 end  // Sequenced, reliable, connection-based byte streams
-const SOCK_DGRAM     2 end  // Connectionless, unreliable datagrams of fixed maximum length
-const SOCK_RAW       3 end  // Raw protocol interface
-const SOCK_RDM       4 end  // Reliably-delivered messages
-const SOCK_SEQPACKET 5 end  // Sequenced, reliable, connection-based,datagrams of fixed maximum length
-const SOCK_DCCP      6 end  // Datagram Congestion Control Protocol
-const SOCK_PACKET   10 end  // Linux specific way of getting packets at the dev level. For writing rarp and other similar things on the user level
-
-// Maximum queue length specifiable by listen
-const SOMAXCONN    4096 end
-
-// Socket levels
-const SOL_SOCKET     1 end
-
-// Socket option names
-const SO_REUSEADDR   2 end
-const SO_TYPE        3 end
-const SO_ERROR       4 end
-const SO_DONTROUTE   5 end
-const SO_BROADCAST   6 end
-const SO_SNDBUF      7 end
-const SO_RCVBUF      8 end
-const SO_KEEPALIVE   9 end
-const SO_OOBINLINE  10 end
-const SO_LINGER     13 end
-const SO_RCVLOWAT   18 end
-const SO_SNDLOWAT   19 end
-const SO_ACCEPTCONN 30 end
-
-// Siganls
-const SIG_HUP       1 end
-const SIG_INT       2 end
-const SIG_QUIT      3 end
-const SIG_ILL       4 end
-const SIG_TRAP      5 end
-const SIG_ABRT      6 end
-const SIG_BUS       7 end
-const SIG_FPE       8 end
-const SIG_KILL      9 end
-const SIG_USR1     10 end
-const SIG_SEGV     11 end
-const SIG_USR2     12 end
-const SIG_PIPE     13 end
-const SIG_ALRM     14 end
-const SIG_TERM     15 end
-const SIG_STKFLT   16 end
-const SIG_CHLD     17 end
-const SIG_CONT     18 end
-const SIG_STOP     19 end
-const SIG_TSTP     20 end
-const SIG_TTIN     21 end
-const SIG_TTOU     22 end
-const SIG_URG      23 end
-const SIG_XCPU     24 end
-const SIG_XFSZ     25 end
-const SIG_VTALRM   26 end
-const SIG_PROF     27 end
-const SIG_WINCH    28 end
-const SIG_POLL     29 end
-const SIG_PWR      30 end
-const SIG_SYS      31 end
-
-// Revverse byte order for 16-bit integers
-inline func htons
-  int : int // 16-bit integers
-do
-  // ab -> ba
-  dup  0xff   & 8 <<  // ab -> b0
-  swap 0xff00 & 8 >>  // ab -> 0a
-  |                   // b0 | 0a -> ba
-end
-
-// Revverse byte order for 32-bit integers
-inline func htonl
-  int : int // 32-bit integers
-do
-  // abcd -> dcba
-  dup  0xffff     & htons 16 <<       // abcd -> 00cd -> 00dc -> dc00
-  swap 0xffff0000 &       16 >> htons // abcd -> ab00 -> 00ab -> 00ba
-  |                                   // dc00 | 00ba -> dcba
-end
 
 // ------------------------------------------------------ SYSCALLS -----------------------------------------------------
-
-// Execute `open` system call
-inline func open
-  ptr   // const char* filename
-  int   // flags
-  int   // mode
-    :
-  int   // file descriptor
-  int   // errno
-do
-  SYS_OPEN syscall3
-end
 
 // Execute `read` system call
 inline func read
@@ -281,6 +127,18 @@ inline func write
   int   // errno
 do
   SYS_WRITE syscall3
+end
+
+// Execute `open` system call
+inline func open
+  ptr   // const char* filename
+  int   // flags
+  int   // mode
+    :
+  int   // file descriptor
+  int   // errno
+do
+  SYS_OPEN syscall3
 end
 
 // Execute `close` system call
@@ -476,6 +334,16 @@ do
   SYS_DUP2 syscall2
 end
 
+// Execute `nanosleep` system call
+inline func nanosleep
+  ptr   // required time
+  ptr   // remain time or NULL
+    :
+  int   // errno
+do
+  SYS_NANOSLEEP syscall2 drop
+end
+
 // Execute `getpid` system call
 inline func getpid
     :
@@ -485,14 +353,17 @@ do
   SYS_GETPID syscall0
 end
 
-// Execute `nanosleep` system call
-inline func nanosleep
-  ptr   // required time
-  ptr   // remain time or NULL
+// Execute `sendfile` system call
+inline func sendfile
+  int   // out_fd
+  int   // in_fd
+  ptr   // offset_ptr
+  int   // count
     :
+  int   // number of bytes written or -1
   int   // errno
 do
-  SYS_NANOSLEEP syscall2 drop
+  SYS_SENDFILE syscall4
 end
 
 // Execute `socket` system call
@@ -507,20 +378,85 @@ do
   SYS_SOCKET syscall3
 end
 
-// Execute `setsockopt` system call
-inline func setsockopt
-  int // socket fd
-  int // level
-  int // optname
-  ptr // optval_ptr
-  int // optlen
+// Execute `connect` system call
+inline func connect
+  int // sock_fd
+  ptr // addr_ptr
+  int // addr_len
     :
+  int // 0 on success and -1 on error
   int // errno
 do
-  SYS_SETSOCKOPT syscall5 swap drop
+  SYS_CONNECT syscall3
 end
 
-// Execute `shutdown` syscall
+// Execute `accept` system call
+inline func accept
+  int // sock_fd
+  ptr // addr
+  ptr // addr_len
+    :
+  int // sock_fd
+  int // errno
+do
+  SYS_ACCEPT syscall3
+end
+
+// Execute `sendto` system call
+inline func sendto
+  int // sock_fd
+  ptr // buf
+  int // len
+  int // flags
+  ptr // dest_addr_ptr
+  int // addrlen
+    :
+  int // number of bytes sent or -1 on error
+  int // errno
+do
+  SYS_SENDTO syscall6
+end
+
+// Execute `recvfrom` system call
+inline func recvfrom
+  int // sock_fd
+  ptr // buf
+  int // len
+  int // flags
+  ptr // dest_addr_ptr
+  ptr // addrlen_ptr
+    :
+  int // number of bytes recieved or -1 on error
+  int // errno
+do
+  SYS_RECVFROM syscall6
+end
+
+// Execute `sendmsg` system call
+inline func sendmsg
+  int // sock_fd
+  ptr // msg_ptr
+  int // flags
+    :
+  int // number of bytes sent or -1 on error
+  int // errno
+do
+  SYS_SENDMSG syscall3
+end
+
+// Execute `recvmsg` system call
+inline func recvmsg
+  int // sock_fd
+  ptr // msg_ptr
+  int // flags
+    :
+  int // number of bytes sent or -1 on error
+  int // errno
+do
+  SYS_RECVMSG syscall3
+end
+
+// Execute `shutdown` system call
 inline func shutdown
   int // socket fd
   int // how
@@ -552,19 +488,57 @@ do
   SYS_LISTEN syscall2 swap drop
 end
 
-// Execute `accept` system call
-inline func accept
-  int // sock_fd
-  ptr // addr
-  ptr // addr_len
+// Execute `getsockname` system call
+inline func getsockname
+  int // sockfd
+  ptr // addr_ptr
+  ptr // addrlen_ptr
     :
-  int // sock_fd
+  int // 0 on success and -1 on error
   int // errno
 do
-  SYS_ACCEPT syscall3
+  SYS_GETSOCKNAME syscall3
 end
 
-// Execute `fork` syscall
+// Execute `getpeername` system call
+inline func getpeername
+  int // sockfd
+  ptr // addr_ptr
+  ptr // addrlen_ptr
+    :
+  int // 0 on success and -1 on error
+  int // errno
+do
+  SYS_GETPEERNAME syscall3
+end
+
+// Execute `socketpair` system call
+inline func socketpair
+  int // domain
+  int // type
+  int // protocol
+  ptr // sv[2]
+    :
+  int // 0 on success and -1 on error
+  int // errno
+do
+  SYS_SOCKETPAIR syscall4
+end
+
+// Execute `setsockopt` system call
+inline func setsockopt
+  int // socket fd
+  int // level
+  int // optname
+  ptr // optval_ptr
+  int // optlen
+    :
+  int // errno
+do
+  SYS_SETSOCKOPT syscall5 swap drop
+end
+
+// Execute `fork` system call
 inline func fork
     :
   int // child pid or zero
@@ -573,7 +547,7 @@ do
   SYS_FORK syscall0
 end
 
-// Execute `vfork` syscall
+// Execute `vfork` system call
 inline func vfork
     :
   int // child pid or zero
@@ -582,7 +556,7 @@ do
   SYS_VFORK syscall0
 end
 
-// Execute `exit` syscall
+// Execute `exit` system call
 inline func exit
   int // exit code
     :
@@ -590,18 +564,7 @@ do
   SYS_EXIT syscall1 drop drop
 end
 
-// Execute `kill` signal
-inline func kill
-  int // pid
-  int // signal
-    :
-  int // 0 on success and -1 on error
-  int // errno
-do
-  SYS_KILL syscall2
-end
-
-// execute wait4 syscall
+// execute wait4 system call
 inline func wait4
   int   // pid
   ptr   // wstatus or NULL
@@ -614,7 +577,18 @@ do
   SYS_WAIT4 syscall4
 end
 
-// Execute `fcntl` syscall
+// Execute `kill` system call
+inline func kill
+  int // pid
+  int // signal
+    :
+  int // 0 on success and -1 on error
+  int // errno
+do
+  SYS_KILL syscall2
+end
+
+// Execute `fcntl` system call
 inline func fcntl
   int   // fd
   int   // cmd
@@ -626,7 +600,7 @@ do
   SYS_FCNTL syscall3
 end
 
-// Execute `flock` syscall
+// Execute `flock` system call
 inline func flock
   int   // fd
   int   // cmd
@@ -637,7 +611,7 @@ do
   SYS_FLOCK syscall2
 end
 
-// Execute `fsync` syscall
+// Execute `fsync` system call
 inline func fsync
   int   // fd
     :
@@ -647,7 +621,7 @@ do
   SYS_FSYNC syscall1
 end
 
-// Execute `fdatasync` syscall
+// Execute `fdatasync` system call
 inline func fdatasync
   int   // fd
     :
@@ -657,7 +631,7 @@ do
   SYS_FDATASYNC syscall1
 end
 
-// Execute `ftruncate` syscall
+// Execute `ftruncate` system call
 inline func ftruncate
   int   // fd
   int   // length
@@ -669,72 +643,3 @@ do
 end
 
 // ---------------------------------------------------------------------------------------------------------------------
-
-// --------------------------------------------------- Write Functions -------------------------------------------------
-
-// Prints string to fd
-inline func fputs
-  int   // fd
-  ptr   // const char* string
-  int   // string length
-    :
-do
-  write drop drop
-end
-
-// Prints string to stdout
-inline func puts
-  ptr   // const char* string
-  int   // string length
-    :
-do
-  capture data ptr len int do drop drop
-    STDOUT data len fputs
-  end
-end
-
-// Prints string to stderr
-inline func eputs
-  ptr   // const char* string
-  int   // string length
-    :
-do
-  capture data ptr len int do drop drop
-    STDERR data len fputs
-  end
-end
-
-// Prints char to fd
-func fputc
-  int     // fd
-  int     // char
-    :
-do
-  alloc buf 1 end
-  buf !8
-  buf 1 fputs
-end
-
-// Prints char to stdout
-func putc
-  int     // char
-    :
-do
-  capture char int do drop
-    STDOUT char fputc
-  end
-end
-
-// Prints char to stderr
-func eputc
-  int     // char
-    :
-do
-  capture char int do drop
-    STDERR char fputc
-  end
-end
-
-// ---------------------------------------------------------------------------------------------------------------------
-
-// TODO: add errno messages

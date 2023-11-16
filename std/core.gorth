@@ -1,0 +1,114 @@
+// Basic types
+const sizeof(char)                1 end
+const sizeof(bool) sizeof(char)     end
+const sizeof(i8)   sizeof(char)     end
+const sizeof(u8)   sizeof(i8)       end
+const sizeof(i16)  sizeof(i8)   2 * end
+const sizeof(u16)  sizeof(i16)      end
+const sizeof(i32)  sizeof(i8)   4 * end
+const sizeof(u32)  sizeof(i32)      end
+const sizeof(i64)  sizeof(i8)   8 * end
+const sizeof(u64)  sizeof(i64)      end
+
+const sizeof(short)     sizeof(i16) end
+const sizeof(ushort)    sizeof(u16) end
+const sizeof(int)       sizeof(i32) end
+const sizeof(uint)      sizeof(u32) end
+const sizeof(long)      sizeof(i64) end
+const sizeof(ulong)     sizeof(u64) end
+const sizeof(longlong)  sizeof(i64) end
+const sizeof(ulonglong) sizeof(u64) end
+
+const sizeof(ptr)  sizeof(int) end
+const sizeof(fptr) sizeof(ptr) end
+
+const NULL 0 cast(ptr) end
+
+// Time constants
+const NANOSEC_IN_SEC  1000000000 end
+const MICROSEC_IN_SEC    1000000 end
+const MILLISEC_IN_SEC       1000 end
+
+// ------------------------------------------------ Basic Arithmetics --------------------------------------------------
+
+func inc8 ptr : do
+  dup @8 1 + swap !8
+end
+
+func inc16 ptr : do
+  dup @16 1 + swap !16
+end
+
+func inc32 ptr : do
+  dup @32 1 + swap !32
+end
+
+func inc64 ptr : do
+  dup @64 1 + swap !64
+end
+
+func dec8 ptr : do
+  dup @8 1 - swap !8
+end
+
+func dec16 ptr : do
+  dup @16 1 - swap !16
+end
+
+func dec32 ptr : do
+  dup @32 1 - swap !32
+end
+
+func dec64 ptr : do
+  dup @64 1 - swap !64
+end
+
+func upd8with ptr int : do
+  over @8 + swap !8
+end
+
+func upd16with ptr int : do
+  over @16 + swap !16
+end
+
+func upd32with ptr int : do
+  over @32 + swap !32
+end
+
+func upd64with ptr int : do
+  over @64 + swap !64
+end
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+
+// ----------------------------------------------- Pointer Arithmetics -------------------------------------------------
+
+// Adds ptr diff to ptr
+inline func +ptr
+  int ptr
+    :
+  ptr
+do
+  cast(int) + cast(ptr)
+end
+
+// Adds ptr diff to ptr
+inline func ptr+
+  ptr int
+    :
+  ptr
+do
+  swap +ptr
+end
+
+// Get distance between 2 pointers
+inline func ptr-
+  ptr ptr
+    :
+  int
+do
+  cast(int) swap cast(int) swap -
+end
+
+// ---------------------------------------------------------------------------------------------------------------------

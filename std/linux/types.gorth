@@ -1,0 +1,112 @@
+include "core.gorth"
+
+// linux typedefs
+const sizeof(size_t)    sizeof(u64) end
+const sizeof(dev_t)     sizeof(u64) end
+const sizeof(ino_t)     sizeof(u64) end
+const sizeof(mode_t)    sizeof(u32) end
+const sizeof(nlink_t)   sizeof(u64) end
+const sizeof(uid_t)     sizeof(u32) end
+const sizeof(gid_t)     sizeof(u32) end
+const sizeof(off_t)     sizeof(u64) end
+const sizeof(socklen_t) sizeof(u32) end
+
+// Structure describing a generic socket addres <bits/socket.h>
+const sockaddr.sa_family sizeof(ushort) offset end
+const sockaddr.data                  14 offset end
+const sizeof(sockaddr)                   reset end
+
+// Internet address <netinet/in.h>
+const sizeof(sin_addr) sizeof(u32) end
+
+// Structure describing an Internet socket address <netinet/in.h>
+const sockaddr_in.sin_family sizeof(short)    offset end // address family
+const sockaddr_in.sin_port   sizeof(u16)      offset end // port
+const sockaddr_in.sin_addr   sizeof(sin_addr) offset end // internet address
+const sockaddr_in.sin_zero
+                           sizeof(sockaddr)
+                           sizeof(ushort) -
+                           sizeof(u16) -
+                           sizeof(sin_addr) -
+                                              offset end // pad zeros to size of sockaddr
+const sizeof(sockaddr_in)                      reset end
+
+// Structure for time (seconds and nanoseconds) <time.h>
+const timespec.tv_sec  sizeof(u64) offset end
+const timespec.tv_nsec sizeof(u64) offset end
+const sizeof(timespec)              reset end
+
+// A time value that is accurate to the nearest microsecond but also has a range of years <struct_timeval.h>
+const timeval.tv_sec  sizeof(long) offset end // seconds
+const timeval.tv_usec sizeof(long) offset end // milliseconds
+const sizeof(timeval)               reset end
+
+// Interval timer structure
+const itimerval.it_interval sizeof(timeval) offset end  // interval for periodic timer
+const itimerval.it_value    sizeof(timeval) offset end  // time until next expiration
+const sizeof(itimerval)                      reset end
+
+// Structure which says how much of each resource has been used.
+// If the system does not keep track of a particular value, the struct
+// field is always zero <struct_rusage.h>
+const rusage.ru_utime     sizeof(timeval) offset end  // user CPU time used
+const rusage.ru_stime     sizeof(timeval) offset end  // system CPU time used
+const rusage.ru_maxrss    sizeof(long)    offset end  // maximum resident set size
+const rusage.ru_ixrss     sizeof(long)    offset end  // integral shared memory size
+const rusage.ru_idrss     sizeof(long)    offset end  // integral unshared data size
+const rusage.ru_isrss     sizeof(long)    offset end  // integral unshared stack size
+const rusage.ru_minflt    sizeof(long)    offset end  // page reclaims (soft page faults)
+const rusage.ru_majflt    sizeof(long)    offset end  // page faults (hard page faults)
+const rusage.ru_nswap     sizeof(long)    offset end  // swaps
+const rusage.ru_inblock   sizeof(long)    offset end  // block input operations
+const rusage.ru_oublock   sizeof(long)    offset end  // block output operations
+const rusage.ru_msgsnd    sizeof(long)    offset end  // IPC messages sent
+const rusage.ru_msgrcv    sizeof(long)    offset end  // IPC messages recieved
+const rusage.ru_nsignals  sizeof(long)    offset end  // signals received
+const rusage.ru_nvcsw     sizeof(long)    offset end  // voluntary context switches
+const rusage.ru_nivcsw    sizeof(long)    offset end  // involuntary context switches
+const sizeof(rusage)                       reset end
+
+// <bits/struct_stat.h>
+const stat.st_dev     sizeof(u64)       offset end  // ID of device containing file
+const stat.st_ino     sizeof(u64)       offset end  // Inode number
+const stat.st_mode    sizeof(u32)       offset end  // File type and mode
+const stat.st_nlink   sizeof(u64)       offset end  // Number of hard links
+const stat.st_uid     sizeof(u32)       offset end  // User ID of owner
+const stat.st_gid     sizeof(u32)       offset end  // Group ID of owner
+const stat.__pad0     sizeof(i32)       offset end  // padding
+const stat.st_rdev    sizeof(u64)       offset end  // Device ID (if special file)
+const stat.st_size    sizeof(u64)       offset end  // Total size, in bytes
+const stat.st_blksize sizeof(u64)       offset end  // Block size for filesystem I/O
+const stat.st_blocks  sizeof(u64)       offset end  // Number of 512B blocks allocated
+const stat.st_atim    sizeof(timespec)  offset end  // Time of last access
+const stat.st_mtim    sizeof(timespec)  offset end  // Time of last modification
+const stat.st_ctim    sizeof(timespec)  offset end  // Time of last status change
+const stat.__pad2     sizeof(u64) 3 *   offset end  // glibc reserved
+const sizeof(stat)                       reset end
+
+// struct pollfd <sys/poll.h>
+const pollfd.fd       sizeof(int)   offset end  // file descriptor to poll
+const pollfd.events   sizeof(short) offset end  // types of events poller cares about
+const pollfd.revents  sizeof(short) offset end  // types of events that actually occured
+const sizeof(pollfd)                 reset end
+
+// structure for sending end recieving messages to/from sockets
+const msghdr.msg_name       sizeof(ptr)       offset end  // optional address
+const msghdr.msg_namelen    sizeof(socklen_t) offset end  // size of address
+const msghdr.msg_iov        sizeof(ptr)       offset end  // scatter/gather array
+const msghdr.msg_iovlen     sizeof(u64)       offset end  // number of elements in msg_iov
+const msghdr.msg_control    sizeof(ptr)       offset end  // ancillary data
+const msghdr.msg_controllen sizeof(u64)       offset end  // ancillary data buffer len
+const msghdr.msg_flags      sizeof(int)       offset end  // flags (unused)
+const sizeof(msghdr)                           reset end
+
+// Struct for readv and writev system calls
+const iovec.iov_base  sizeof(ptr) offset end    // starting address
+const iovec.iov_len   sizeof(u64) offset end    // number of bytes to transfer
+const sizeof(iovec)                reset end
+
+// fd_set for select and pselect
+// internally fd_set is an array of 1024 bits, where each bit corresponds to fd
+const fd_set.fds_bits 128 offset end
+const sizeof(fd_set)       reset end

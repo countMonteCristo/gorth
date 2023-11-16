@@ -25,10 +25,14 @@ func NewImporter(pkg_dir string, include_paths utils.ArrayArgs) *Importer {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (i *Importer) Find(fn string) (string, bool) {
+func (i *Importer) Find(script_fn, fn string) (string, bool) {
 	results := make([]string, 0)
 
-	for _, include_path := range i.Paths {
+	paths := make([]string, 0)
+	paths = append(paths, filepath.Dir(script_fn))
+	paths = append(paths, i.Paths...)
+
+	for _, include_path := range paths {
 		err := filepath.Walk(include_path,
 			func(path string, info os.FileInfo, err error) error {
 				if err != nil {

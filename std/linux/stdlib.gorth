@@ -1,0 +1,130 @@
+include "syscalls.gorth"
+
+// Reverse byte order for 16-bit integers
+inline func htons
+  int : int // 16-bit integers
+do
+  // ab -> ba
+  dup  0xff   & 8 <<  // ab -> b0
+  swap 0xff00 & 8 >>  // ab -> 0a
+  |                   // b0 | 0a -> ba
+end
+
+// Reverse byte order for 32-bit integers
+inline func htonl
+  int : int // 32-bit integers
+do
+  // abcd -> dcba
+  dup  0xffff     & htons 16 <<       // abcd -> 00cd -> 00dc -> dc00
+  swap 0xffff0000 &       16 >> htons // abcd -> ab00 -> 00ab -> 00ba
+  |                                   // dc00 | 00ba -> dcba
+end
+
+// --------------------------------------------------- Write Functions -------------------------------------------------
+
+// Prints string to fd
+inline func fputs
+  int   // fd
+  ptr   // const char* string
+  int   // string length
+    :
+do
+  write drop drop
+end
+
+// Prints string to stdout
+inline func puts
+  ptr   // const char* string
+  int   // string length
+    :
+do
+  capture data ptr len int do drop drop
+    STDOUT data len fputs
+  end
+end
+
+// Prints string to stderr
+inline func eputs
+  ptr   // const char* string
+  int   // string length
+    :
+do
+  capture data ptr len int do drop drop
+    STDERR data len fputs
+  end
+end
+
+// Prints char to fd
+func fputc
+  int     // fd
+  int     // char
+    :
+do
+  alloc buf 1 end
+  buf !8
+  buf 1 fputs
+end
+
+// Prints char to stdout
+func putc
+  int     // char
+    :
+do
+  capture char int do drop
+    STDOUT char fputc
+  end
+end
+
+// Prints char to stderr
+func eputc
+  int     // char
+    :
+do
+  capture char int do drop
+    STDERR char fputc
+  end
+end
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+
+// -------------------------- Functions for manipulating fd sets (needed for select syscall) ---------------------------
+
+// clear fd set
+func FD_ZERO ptr : do
+  0 while dup sizeof(fd_set) < do
+    swap
+    0 over !8
+    1 ptr+ swap
+    1 +
+  end drop drop
+end
+
+// add fd to fd_set
+func FD_SET int ptr : do
+  over 8 / ptr+
+  swap 8 % 1 swap <<
+  over @8 |
+  swap !8
+end
+
+// check if fd is in fd_set
+func FD_ISSET int ptr : bool do
+  over 8 / ptr+
+  swap 8 % 1 swap <<
+  swap @8 &
+  0 !=
+end
+
+// remove fd from fd_set
+func FD_CLR int ptr : do
+  over 8 / ptr+
+  swap 8 % 1 swap << ~
+  over @8 &
+  swap !8
+end
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+
+// TODO: add errno messages

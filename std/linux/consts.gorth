@@ -1,0 +1,154 @@
+// Standart streams
+const STDIN  0 end
+const STDOUT 1 end
+const STDERR 2 end
+
+// flags for open system call
+const O_RDONLY    0o00000000 end
+const O_WRONLY    0o00000001 end
+const O_RDWR      0o00000002 end
+const O_CREAT     0o00000100 end
+const O_EXCL      0o00000200 end
+const O_NOCTTY    0o00000400 end
+const O_TRUNC     0o00001000 end
+const O_APPEND    0o00002000 end
+const O_NONBLOCK  0o00004000 end
+const O_DSYNC     0o00010000 end
+const FASYNC      0o00020000 end
+const O_DIRECT    0o00040000 end
+const O_LARGEFILE 0o00100000 end
+const O_DIRECTORY 0o00200000 end
+const O_NOFOLLOW  0o00400000 end
+const O_NOATIME   0o01000000 end
+const O_CLOEXEC   0o02000000 end
+
+// flags for create new files
+const S_NONE       0 end
+const S_IXOTH      1 end
+const S_IWOTH      2 end
+const S_IROTH      4 end
+const S_IRWXO      7 end
+const S_IXGRP      8 end
+const S_IWGRP     16 end
+const S_IRGRP     32 end
+const S_IRWXG     56 end
+const S_IXUSR     64 end
+const S_IWUSR    128 end
+const S_IRUSR    256 end
+const S_IRWXU    448 end
+const S_ISVTX    512 end
+const S_ISGID   1024 end
+const S_ISUID   2048 end
+const S_IFIFO   4096 end
+const S_IFCHR   8192 end
+const S_IFDIR  16384 end
+const S_IFREG  32768 end
+const S_IFBLK  24576 end
+const S_IFLNK  40960 end
+const S_IFSOCK 49152 end
+const S_IFMT   61440 end
+
+// Addresses
+const INADDR_ANY       0x00000000 end // Address to accept any incoming messages
+const INADDR_BROADCAST 0xffffffff end // Address to send to all hosts
+const INADDR_NONE      0xffffffff end // Address indicating an error return
+const INADDR_DUMMY     0xc0000008 end // Dummy address for source of ICMPv6 errors converted to IPv4 (RFC7600)
+
+// Address families
+const AF_LOCAL  1 end
+const AF_INET   2 end
+const AF_INET6 10 end
+
+// Types of sockets
+const SOCK_STREAM    1 end  // Sequenced, reliable, connection-based byte streams
+const SOCK_DGRAM     2 end  // Connectionless, unreliable datagrams of fixed maximum length
+const SOCK_RAW       3 end  // Raw protocol interface
+const SOCK_RDM       4 end  // Reliably-delivered messages
+const SOCK_SEQPACKET 5 end  // Sequenced, reliable, connection-based,datagrams of fixed maximum length
+const SOCK_DCCP      6 end  // Datagram Congestion Control Protocol
+const SOCK_PACKET   10 end  // Linux specific way of getting packets at the dev level. For writing rarp and other similar things on the user level
+
+// Maximum queue length specifiable by listen
+const SOMAXCONN    4096 end
+
+// Socket levels
+const SOL_SOCKET     1 end
+
+// Socket option names
+const SO_REUSEADDR   2 end
+const SO_TYPE        3 end
+const SO_ERROR       4 end
+const SO_DONTROUTE   5 end
+const SO_BROADCAST   6 end
+const SO_SNDBUF      7 end
+const SO_RCVBUF      8 end
+const SO_KEEPALIVE   9 end
+const SO_OOBINLINE  10 end
+const SO_LINGER     13 end
+const SO_RCVLOWAT   18 end
+const SO_SNDLOWAT   19 end
+const SO_ACCEPTCONN 30 end
+
+// Siganls
+const SIG_HUP       1 end
+const SIG_INT       2 end
+const SIG_QUIT      3 end
+const SIG_ILL       4 end
+const SIG_TRAP      5 end
+const SIG_ABRT      6 end
+const SIG_BUS       7 end
+const SIG_FPE       8 end
+const SIG_KILL      9 end
+const SIG_USR1     10 end
+const SIG_SEGV     11 end
+const SIG_USR2     12 end
+const SIG_PIPE     13 end
+const SIG_ALRM     14 end
+const SIG_TERM     15 end
+const SIG_STKFLT   16 end
+const SIG_CHLD     17 end
+const SIG_CONT     18 end
+const SIG_STOP     19 end
+const SIG_TSTP     20 end
+const SIG_TTIN     21 end
+const SIG_TTOU     22 end
+const SIG_URG      23 end
+const SIG_XCPU     24 end
+const SIG_XFSZ     25 end
+const SIG_VTALRM   26 end
+const SIG_PROF     27 end
+const SIG_WINCH    28 end
+const SIG_POLL     29 end
+const SIG_PWR      30 end
+const SIG_SYS      31 end
+
+// Interval timers
+const ITIMER_REAL    0 end
+const ITIMER_VIRTUAL 1 end
+const ITIMER_PROF    2 end
+
+// Event types that can be polled for.  These bits may be set in `events'
+// to indicate the interesting event types; they will appear in `revents'
+// to indicate the status of the file descriptor.
+const POLLIN      0x0001  end   // There is data to read
+const POLLPRI     0x0002  end   // There is urgent data to read
+const POLLOUT     0x0004  end   // Writing now will not block
+const POLLERR     0x0008  end   // Error condition.
+const POLLHUP     0x0010  end   // Hung up.
+const POLLNVAL    0x0020  end   // Invalid polling request.
+const POLLRDNORM  0x0040  end   // Normal data may be read.
+const POLLRDBAND  0x0080  end   // Priority data may be read.
+const POLLWRNORM  0x0100  end   // Writing now will not block.
+const POLLWRBAND  0x0200  end   // Priority data may be written.
+const POLLMSG     0x0400  end
+const POLLREMOVE  0x1000  end
+const POLLRDHUP   0x2000  end
+
+// `flags` argument for `sendto` and `recvfrom` syscalls is the bitwise OR of following flags
+const MSG_OOB       0x0001 end
+const MSG_DONTROUTE 0x0004 end
+const MSG_DONTWAIT  0x0040 end
+const MSG_EOR       0x0080 end
+const MSG_CONFIRM   0x0800 end
+const MSG_MORE      0x8000 end
+const MSG_NOSIGNAL  0x4000 end

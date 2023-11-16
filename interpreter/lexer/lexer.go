@@ -302,7 +302,7 @@ func (lx *Lexer) ProcessFile(fn string, import_path []string, imp *Importer, s *
 				}
 
 				imported_fn := next.Value.(string)
-				full_imported_fn, exists := imp.Find(imported_fn)
+				full_imported_fn, exists := imp.Find(fn, imported_fn)
 				if !exists {
 					err = logger.LexerError(&next.Loc, "Can not import file %s: not in Paths", full_imported_fn)
 					return
