@@ -127,4 +127,30 @@ end
 // ---------------------------------------------------------------------------------------------------------------------
 
 
+// --------------------------------------------------- System V IPC ----------------------------------------------------
+
+func ftok
+  ptr // const char* existing_fn
+  int // proj_id
+    :
+  int // System V IPC key for msgget, semget of shmget
+  int // errno
+do
+  alloc fn_stat sizeof(stat) end
+  fn_stat 0 sizeof(stat) memset drop
+
+  swap fn_stat stat
+  if dup 0 != do
+    swap drop
+    -1 swap return
+  end drop
+
+  0xff & 24 <<
+  fn_stat stat.st_dev ptr+ @64 0xff   & 16 << |
+  fn_stat stat.st_ino ptr+ @64 0xffff &       |
+  0
+end
+
+// ---------------------------------------------------------------------------------------------------------------------
+
 // TODO: add errno messages

@@ -146,11 +146,19 @@ func (vm *VM) ProcessSyscall2() {
 		signal := vm.Rc.Stack.Pop()
 		pid := vm.Rc.Stack.Pop()
 		a1, a2 = uintptr(pid), uintptr(signal)
+	case syscall.SYS_MSGGET:
+		msgflg := vm.Rc.Stack.Pop()
+		key := vm.Rc.Stack.Pop()
+		a1, a2 = uintptr(key), uintptr(msgflg)
 	case syscall.SYS_FLOCK:
 		cmd := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
 		a1, a2 = uintptr(fd), uintptr(cmd)
-	case syscall.SYS_FDATASYNC:
+	case syscall.SYS_TRUNCATE:
+		length := vm.Rc.Stack.Pop()
+		path_ptr := vm.Rc.Stack.Pop()
+		a1, a2 = vm.mPtr(path_ptr), uintptr(length)
+	case syscall.SYS_FTRUNCATE:
 		length := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
 		a1, a2 = uintptr(fd), uintptr(length)
@@ -259,11 +267,26 @@ func (vm *VM) ProcessSyscall3() {
 		envp := vm.ptrSlice(env_ptr)
 
 		a1, a2, a3 = vm.mPtr(prog_ptr), uintptr(unsafe.Pointer(&argp[0])), uintptr(unsafe.Pointer(&envp[0]))
+	case syscall.SYS_SEMGET:
+		semflg := vm.Rc.Stack.Pop()
+		nsems := vm.Rc.Stack.Pop()
+		key := vm.Rc.Stack.Pop()
+		a1, a2, a3 = uintptr(key), uintptr(nsems), uintptr(semflg)
+	case syscall.SYS_SEMOP:
+		nsops := vm.Rc.Stack.Pop()
+		sops_ptr := vm.Rc.Stack.Pop()
+		semid := vm.Rc.Stack.Pop()
+		a1, a2, a3 = uintptr(semid), vm.mPtr(sops_ptr), uintptr(nsops)
+	case syscall.SYS_MSGCTL:
+		buf_ptr := vm.Rc.Stack.Pop()
+		cmd := vm.Rc.Stack.Pop()
+		msqid := vm.Rc.Stack.Pop()
+		a1, a2, a3 = uintptr(msqid), uintptr(cmd), vm.mPtr(buf_ptr)
 	case syscall.SYS_FCNTL:
 		arg := vm.Rc.Stack.Pop()
 		cmd := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
-		a1, a2, a3 = uintptr(fd), uintptr(arg), uintptr(cmd)
+		a1, a2, a3 = uintptr(fd), uintptr(cmd), uintptr(arg)
 	default:
 		logger.VmCrash(nil, "syscall3 for #%d is not implemented yet\n", syscall_id)
 	}
@@ -310,6 +333,12 @@ func (vm *VM) ProcessSyscall4() {
 		wstatus_ptr := vm.Rc.Stack.Pop()
 		pid := vm.Rc.Stack.Pop()
 		a1, a2, a3, a4 = uintptr(pid), vm.mPtr(wstatus_ptr), uintptr(options), vm.mPtr(rusage_ptr)
+	case syscall.SYS_MSGSND:
+		msgflg := vm.Rc.Stack.Pop()
+		msgsz := vm.Rc.Stack.Pop()
+		msg_ptr := vm.Rc.Stack.Pop()
+		msqid := vm.Rc.Stack.Pop()
+		a1, a2, a3, a4 = uintptr(msqid), vm.mPtr(msg_ptr), uintptr(msgsz), uintptr(msgflg)
 	default:
 		logger.VmCrash(nil, "syscall4 for #%d is not implemented yet\n", syscall_id)
 	}
@@ -347,6 +376,13 @@ func (vm *VM) ProcessSyscall5() {
 		level := vm.Rc.Stack.Pop()
 		fd := vm.Rc.Stack.Pop()
 		a1, a2, a3, a4, a5 = uintptr(fd), uintptr(level), uintptr(optname), vm.mPtr(optval_ptr), vm.mPtr(optlen_ptr)
+	case syscall.SYS_MSGRCV:
+		msgflg := vm.Rc.Stack.Pop()
+		msgtyp := vm.Rc.Stack.Pop()
+		msgsz := vm.Rc.Stack.Pop()
+		msg_ptr := vm.Rc.Stack.Pop()
+		msqid := vm.Rc.Stack.Pop()
+		a1, a2, a3, a4, a5 = uintptr(msqid), vm.mPtr(msg_ptr), uintptr(msgsz), uintptr(msgtyp), uintptr(msgflg)
 	default:
 		logger.VmCrash(nil, "syscall2 for #%d is not implemented yet\n", syscall_id)
 	}

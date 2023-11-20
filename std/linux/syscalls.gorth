@@ -62,12 +62,11 @@ const SYS_EXECVE          59 end
 const SYS_EXIT            60 end
 const SYS_WAIT4           61 end
 const SYS_KILL            62 end
-// below this line not all syscalls are implemented
-const SYS_UNAME           63 end
+// const SYS_UNAME           63 end  // TODO: needs dynamic memory allocation
 const SYS_SEMGET          64 end
 const SYS_SEMOP           65 end
-const SYS_SEMCTL          66 end
-const SYS_SHMDT           67 end
+// const SYS_SEMCTL          66 end // TODO: don't know how to handle fourth union argument properly yet
+// const SYS_SHMDT           67 end // TODO: don't know how to do it properly yet
 const SYS_MSGGET          68 end
 const SYS_MSGSND          69 end
 const SYS_MSGRCV          70 end
@@ -78,6 +77,7 @@ const SYS_FSYNC           74 end
 const SYS_FDATASYNC       75 end
 const SYS_TRUNCATE        76 end
 const SYS_FTRUNCATE       77 end
+// below this line not all syscalls are implemented
 const SYS_GETDENTS        78 end
 const SYS_GETCWD          79 end
 const SYS_CHDIR           80 end
@@ -599,6 +599,78 @@ do
   SYS_KILL syscall2 swap drop
 end
 
+// Execute `semget` sysrtem call
+inline func semget
+  int // key
+  int // nsems
+  int // semflg
+    :
+  int // semaphore set identifier or -1
+  int // errno
+do
+  SYS_SEMGET syscall3
+end
+
+// Execute `semop` sysrtem call
+inline func semop
+  int // semid
+  ptr // sops
+  int // nsops
+    :
+  int // errno
+do
+  SYS_SEMOP syscall3 swap drop
+end
+
+// Execute `msgget` sysrtem call
+inline func msgget
+  int // key
+  int // msgflg
+    :
+  int // message queue identifier or -1
+  int // errno
+do
+  SYS_MSGGET syscall2
+end
+
+// Execute `msgsnd` sysrtem call
+inline func msgsnd
+  int // msqid
+  ptr // msgp, see `man 2 msgsnd` for details
+  int // msgsz
+  int // msgflg
+    :
+  int // errno
+do
+  SYS_MSGSND syscall4 swap drop
+end
+
+// Execute `msgrcv` sysrtem call
+inline func msgrcv
+  int // msqid
+  ptr // msgp, see `man 2 msgrcv` for details
+  int // msgsz
+  int // msgtyp
+  int // msgflg
+    :
+  int // number of bytes recieved
+  int // errno
+do
+  SYS_MSGRCV syscall5
+end
+
+// Execute `msgctl` sysrtem call
+inline func msgctl
+  int // msqid
+  int // cmd
+  int // buf_ptr
+    :
+  int // returned value depends on cmd
+  int // errno
+do
+  SYS_MSGCTL syscall3
+end
+
 // Execute `fcntl` system call
 inline func fcntl
   int   // fd
@@ -637,6 +709,16 @@ inline func fdatasync
   int   // errno
 do
   SYS_FDATASYNC syscall1 swap drop
+end
+
+// Execute `truncate` system call
+inline func truncate
+  ptr   // const char* path
+  int   // length
+    :
+  int   // errno
+do
+  SYS_TRUNCATE syscall2 swap drop
 end
 
 // Execute `ftruncate` system call

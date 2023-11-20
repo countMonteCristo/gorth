@@ -7,9 +7,14 @@ const sizeof(ino_t)     sizeof(u64) end
 const sizeof(mode_t)    sizeof(u32) end
 const sizeof(nlink_t)   sizeof(u64) end
 const sizeof(uid_t)     sizeof(u32) end
+const sizeof(key_t)     sizeof(u32) end
 const sizeof(gid_t)     sizeof(u32) end
+const sizeof(pid_t)     sizeof(u32) end
 const sizeof(off_t)     sizeof(u64) end
 const sizeof(socklen_t) sizeof(u32) end
+const sizeof(time_t)    sizeof(u64) end
+const sizeof(msgqnum_t) sizeof(ulong) end
+const sizeof(msglen_t)  sizeof(ulong) end
 
 // Structure describing a generic socket addres <bits/socket.h>
 const sockaddr.sa_family sizeof(ushort) offset end
@@ -110,3 +115,31 @@ const sizeof(iovec)                reset end
 // internally fd_set is an array of 1024 bits, where each bit corresponds to fd
 const fd_set.fds_bits 128 offset end
 const sizeof(fd_set)       reset end
+
+// semop system calls takes an array of these
+const sembuf.sem_num sizeof(ushort) offset end
+const sembuf.sem_op   sizeof(short) offset end
+const sembuf.sem_flg sizeof(ushort) offset end
+const sizeof(sembuf)                 reset end
+
+// Ownership and permissions for System V IPC
+const ipc_perm.__key  sizeof(key_t)  offset end  // Key supplied to msgget(2)
+const ipc_perm.uid    sizeof(uid_t)  offset end  // Effective UID of owner
+const ipc_perm.gid    sizeof(gid_t)  offset end  // Effective GID of owner
+const ipc_perm.cuid   sizeof(uid_t)  offset end  // Effective UID of creator
+const ipc_perm.cgid   sizeof(gid_t)  offset end  // Effective GID of creator
+const ipc_perm.mode   sizeof(ushort) offset end  // Permissions
+const ipc_perm.__seq  sizeof(ushort) offset end  // Sequence number
+const sizeof(ipc_perm)                reset end
+
+// Struct for performing System V message queue control operations
+const msqid_ds.msg_perm   sizeof(ipc_perm)  offset end // Ownership and permissions
+const msqid_ds.msg_stime  sizeof(time_t)    offset end // Time of last msgsnd(2)
+const msqid_ds.msg_rtime  sizeof(time_t)    offset end // Time of last msgrcv(2)
+const msqid_ds.msg_ctime  sizeof(time_t)    offset end // Time of creation or last modification by msgctl()
+const msqid_ds.msg_cbytes sizeof(ulong)     offset end // # of bytes in queue
+const msqid_ds.msg_qnum   sizeof(msgqnum_t) offset end // # number of messages in queue
+const msqid_ds.msg_qbytes sizeof(msglen_t)  offset end // Maximum # of bytes in queue
+const msqid_ds.msg_lspid  sizeof(pid_t)     offset end // PID of last msgsnd(2)
+const msqid_ds.msg_lrpid  sizeof(pid_t)     offset end // PID of last msgrcv(2)
+const sizeof(msqid_ds)                       reset end

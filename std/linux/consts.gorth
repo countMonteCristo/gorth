@@ -152,3 +152,17 @@ const MSG_EOR       0x0080 end
 const MSG_CONFIRM   0x0800 end
 const MSG_MORE      0x8000 end
 const MSG_NOSIGNAL  0x4000 end
+
+// System V IPC constants for semget, semctl, semop, etc.
+const IPC_CREAT   0o00001000 end  // create if key is nonexistent
+const IPC_EXCL    0o00002000 end  // fail if key exists
+const IPC_NOWAIT  0o00004000 end  // return error on wait
+const IPC_DIPC    0o00010000 end  // make it distributed
+const IPC_OWN     0o00020000 end  // this machine is the DIPC owner
+const IPC_RMID             0 end  // remove resource
+const IPC_SET              1 end  // set ipc_perm options
+const IPC_STAT             2 end  // get ipc_perm options
+const IPC_INFO             3 end  // see ipcs
+const IPC_OLD              0 end  // Old version (no 32-bit UID support on many architectures)
+const IPC_64          0x0100 end  // New version (support 32-bit UIDs, bigger message sizes, etc.
+

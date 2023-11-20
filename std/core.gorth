@@ -112,3 +112,49 @@ do
 end
 
 // ---------------------------------------------------------------------------------------------------------------------
+
+
+// ------------------------------------------------- Memory functions --------------------------------------------------
+
+// Copy memory chunk of count `count` bytes from `source` to `destination`, returns nothing
+// WARNING: situations when src and dst are overlapped ARE NOT HANDLED!
+func memcpy
+  ptr   // destination
+  ptr   // source
+  int   // count of copied bytes
+    :
+do
+  over swap ptr+
+  capture src_end ptr do drop
+    while src_end over ptr- 0 > do
+      capture dst ptr src_begin ptr do drop drop
+        src_begin @8 dst !8
+        dst       1 ptr+
+        src_begin 1 ptr+
+      end // capture dst src_begin
+    end
+  end //capture src_end
+  drop drop
+end
+
+// Sets `size` count of bytes starting from `pointer` to `value`
+func memset
+  ptr   // pointer
+  int   // value
+  int   // size
+    :
+  ptr   // pointer
+do
+  capture data ptr value int size int do drop drop drop
+    value data data size ptr+
+    capture ptr_end ptr do drop
+      while ptr_end over ptr- 0 > do
+        over over !8
+        1 ptr+
+      end drop drop
+    end // capture ptr_end
+    data
+  end // capture data value count
+end
+
+// ---------------------------------------------------------------------------------------------------------------------
