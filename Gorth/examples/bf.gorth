@@ -1,0 +1,153 @@
+include "std/std.gorth"
+
+// Simple Brainfuck interpreter written in Gorth
+// Tape length is 30000
+// Maximum program length is 10K
+// Cell width is 256
+// Usage: ./bin/gorth ./Gorth/examples/bf.gorth brainfuck_script_filename
+
+
+const tape_size   30000     end
+const prog_cap    10 1024 * end
+const cell_width  256       end
+
+alloc tape      tape_size end
+alloc program   prog_cap  end
+alloc prog_size 2         end
+alloc pos       2         end
+alloc buf       1         end
+
+inline func tape_ptr : ptr do
+  tape pos @16 ptr+
+end
+
+inline func wrap int : int do
+  cell_width + cell_width %
+end
+
+inline func tape_add int : do
+  tape_ptr
+  dup @8 rot + wrap swap
+  !8
+end
+
+func goto_ket int : int do
+  1 +
+  1 while dup 0 > do
+    over program +ptr @8
+    capture c int do drop
+      if   c '[' = do
+        1 +
+      elif c ']' = do
+        1 -
+      elif c  0  = do
+        "[ERROR] No ket found for bra\n" eputs
+        1 exit
+      end
+    end
+    swap 1 + swap
+  end drop
+  1 +
+end
+
+func goto_bra int : int do
+  1 -
+  1 while dup 0 > do
+    if over 0 < do
+      "[ERROR] No bra found for ket\n" eputs
+      1 exit
+    end
+    over program +ptr @8
+    capture c int do drop
+      if   c ']' = do
+        1 +
+      elif c '[' = do
+        1 -
+      end
+    end
+    swap 1 - swap
+  end drop
+  1 +
+end
+
+func main : int do
+  if argc 2 < do
+    "Usage: "           eputs
+    0 argv_n dup strlen eputs
+    " bf_filename\n"    eputs
+    1 return
+  end
+
+  1 argv_n O_RDONLY S_NONE open
+  if 0 != do
+    "[ERROR] Can not open file: " eputs
+    1 argv_n dup strlen           eputs
+    drop 1 return
+  end
+
+  program 1 32 << read    // read a lot
+  if 0 != do
+    "[ERROR] Can not read file "  eputs
+    1 argv_n dup strlen           eputs
+    drop 1 return
+  end
+
+  if dup prog_cap > do
+    "[ERROR] Not enough memory were allocated to store the program\n" eputs
+    "\tbytes read: " eputs      dup puti " bytes\n" eputs
+    "\tallocated:  " eputs prog_cap puti " bytes\n" eputs
+    "NOTE: update `prog_cap` allocation in the interpreter script\n"  eputs
+    drop 1 return
+  end
+
+  prog_size !16
+  tape 0 tape_size memset drop
+  0 pos !16
+
+  0 while dup prog_size @16 < do
+    dup program +ptr @8
+    capture c int do drop
+      if   c '+' = do
+        1 tape_add
+        1 +
+      elif c '-' = do
+        -1 tape_add
+        1 +
+      elif c '>' = do
+        pos inc16
+        if pos @16 tape_size >= do
+          "[ERROR] Tape position is above the bounds\n" eputs
+          drop 1 return
+        end
+        1 +
+      elif c '<' = do
+        pos dec16
+        if pos @16 0 < do
+          "[ERROR] Tape position is below the bounds\n" eputs
+          drop 1 return
+        end
+        1 +
+      elif c '.' = do
+        tape_ptr @8 putc
+        1 +
+      elif c ',' = do
+        STDIN buf 1 read
+        if 0 != do
+          "[ERROR] Can not read from stdin\n" eputs
+          drop drop 1 return
+        end drop
+        buf @8 tape_ptr !8
+        0 buf !8
+        1 +
+      elif c '[' = do
+        if tape_ptr @8 0 != do 1 + else goto_ket end
+      elif c ']' = do
+        if tape_ptr @8 0  = do 1 + else goto_bra end
+      else
+        1 +
+      end
+    end // capture c
+  end drop
+
+  0
+end
