@@ -224,6 +224,9 @@ Only four types are supported for now: `int`, `bool`, `ptr` and `fptr`:
 - `argv` - pushes the pointer to the null-terminated list of pointers to the input arguments
 - `env`  - pushes the pointer to the null-terminated list of pointers to the environment variables
 - `assert` - gets condition, pointer to the string literal and its size from the top of the stack and perform an exit if condition is false
+- `puti` - print top of the stack to standard output as a number
+- `offset` - acts like `iota` in Golang: gets top of the stack, adds it to its internal counter and pushes resulted value on top of the stack
+- `reset` - sets `offset` internal counter to zero
 
 ### Cast types
 - `cast(int)` - converts top element of the stack to `int`
