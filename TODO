@@ -62,6 +62,9 @@
   [ ] add profiler
     [*] basic profiler
     [ ] aggregate by functions
+  [ ] Save compiled code
+    [*] Add flag
+    [ ] Run compiled code from *.gorthc
 
 [ ] Low-level interaction with OS
   [ ] syscalls
