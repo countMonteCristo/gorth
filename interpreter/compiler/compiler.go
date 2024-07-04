@@ -172,7 +172,7 @@ func (c *Compiler) compileIfBlock(token *tokens.Token, th *tokens.TokenHolder, s
 	return c.compile(th, scope)
 }
 
-func (c *Compiler) compileElifBlock(token *tokens.Token, th *tokens.TokenHolder, scope *Scope) error {
+func (c *Compiler) compileElifBlock(token *tokens.Token, _ *tokens.TokenHolder, scope *Scope) error {
 	if c.Blocks.Empty() {
 		return logger.CompilerError(&token.Loc, "Unexpected `elif` found")
 	}
@@ -194,7 +194,7 @@ func (c *Compiler) compileElifBlock(token *tokens.Token, th *tokens.TokenHolder,
 	return nil
 }
 
-func (c *Compiler) compileElseBlock(token *tokens.Token, th *tokens.TokenHolder, scope *Scope) error {
+func (c *Compiler) compileElseBlock(token *tokens.Token, _ *tokens.TokenHolder, scope *Scope) error {
 	if c.Blocks.Empty() {
 		return logger.CompilerError(&token.Loc, "Unexpected `else` found")
 	}
@@ -223,7 +223,7 @@ func (c *Compiler) compileWhileBlock(token *tokens.Token, th *tokens.TokenHolder
 	return c.compile(th, scope)
 }
 
-func (c *Compiler) compileDoBlock(token *tokens.Token, th *tokens.TokenHolder, scope *Scope) error {
+func (c *Compiler) compileDoBlock(token *tokens.Token, _ *tokens.TokenHolder, scope *Scope) error {
 	if c.Blocks.Empty() {
 		return logger.CompilerError(&token.Loc, "Unexpected `do` found")
 	}
@@ -904,7 +904,7 @@ func (c *Compiler) parseCapturedVal(th *tokens.TokenHolder, scope *Scope) (*Capt
 	return &CapturedVal{Name: name, Typ: typ, Token: name_tok}, nil
 }
 
-func (c *Compiler) compileCaptureList(token *tokens.Token, th *tokens.TokenHolder, scope *Scope) (*CaptureList, error) {
+func (c *Compiler) compileCaptureList(_ *tokens.Token, th *tokens.TokenHolder, scope *Scope) (*CaptureList, error) {
 	captures := NewCaptureList()
 
 	for !th.Empty() {
