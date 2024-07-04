@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 )
@@ -85,9 +86,15 @@ func (a *ArrayArgs) String() string {
 }
 
 func (a *ArrayArgs) Set(value string) error {
-	*a = append(*a, value)
+	abs_path, err := filepath.Abs(value)
+	if err != nil {
+		return err
+	}
+	*a = append(*a, abs_path)
 	return nil
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
 
 func MapF[T, V any](ts []T, fn func(T) V) []V {
 	result := make([]V, len(ts))

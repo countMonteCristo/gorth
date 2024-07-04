@@ -8,6 +8,7 @@ import (
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
 	"fmt"
+	"os"
 	"syscall"
 	"unsafe"
 )
@@ -48,6 +49,21 @@ func (vm *VM) ptrSlice(ptr types.IntType) []*byte {
 		ptr += SIZEOF_PTR
 	}
 	return ptrs
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+func (vm *VM) DumpOps(filename string, ops *[]operations.Op, s *settings.Settings) {
+	file, err := os.Create(filename);
+	if (err != nil) {
+		panic("Can not open file for writing: " + filename)
+	}
+	file.WriteString(s.Serialize())
+	file.WriteString("\n")
+	for _, op := range *ops {
+		op_string := op.Serialize(s.IsDebug())
+		file.WriteString(op_string + "\n")
+	}
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

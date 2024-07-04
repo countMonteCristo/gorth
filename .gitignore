@@ -1,6 +1,7 @@
 gorth
 test
 /*.gorth
+/*.gorthc
 bin/*
 .vscode
 *.prof

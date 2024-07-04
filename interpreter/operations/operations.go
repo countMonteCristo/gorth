@@ -78,7 +78,7 @@ type Op struct {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-func (op *Op) Str(addr types.IntType) (s string) {
+func (op *Op) Serialize(debug bool) string {
 	var operand string
 
 	switch op.Typ {
@@ -130,8 +130,15 @@ func (op *Op) Str(addr types.IntType) (s string) {
 		logger.VmCrash(&op.Token.Loc, "Unhandled operation: `%s`", OpType2Str[op.Typ])
 	}
 
-	s = fmt.Sprintf("%4d: %s %v\t\t(debug: %s)", addr, OpType2Str[op.Typ], operand, op.DebugInfo.(string))
-	return
+	s := fmt.Sprintf("%s %v", OpType2Str[op.Typ], operand)
+	if (debug) {
+		s = fmt.Sprintf("%s\t\t(debug: %s)", s, op.DebugInfo.(string))
+	}
+	return s
+}
+
+func (op *Op) Str(addr types.IntType) string {
+	return fmt.Sprintf("%4d: %s", addr, op.Serialize(true))
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

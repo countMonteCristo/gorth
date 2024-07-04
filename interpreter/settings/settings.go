@@ -4,8 +4,10 @@ import (
 	"Gorth/interpreter/logger"
 	"Gorth/interpreter/types"
 	"Gorth/interpreter/utils"
+	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -20,6 +22,7 @@ type Settings struct {
 	Optimization  int
 	ProfilePath   string
 	LogLevel      logger.LogLevelType
+	Dump          bool
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -27,7 +30,8 @@ type Settings struct {
 // TODO: add flags for memory and call_stack instead of reading env?
 func NewSettings(
 	mode string, env, typecheck bool, mem types.IntType, call_stack_Size int,
-	include_paths utils.ArrayArgs, opt int, profile_fn string, loglevel string) *Settings {
+	include_paths utils.ArrayArgs, opt int, profile_fn string, loglevel string,
+	dump bool) *Settings {
 	value, exists := os.LookupEnv("GORTH_VM_MEMORY")
 	if exists {
 		val_int, err := strconv.ParseInt(value, 10, 64)
@@ -63,11 +67,30 @@ func NewSettings(
 	return &Settings{
 		Mode: mode, Env: env, TypeCheck: typecheck, MemorySize: mem, CallStackSize: call_stack_Size,
 		IncludePaths: include_paths, Optimization: opt, ProfilePath: profile_fn, LogLevel: l,
+		Dump: dump,
 	}
 }
 
 func (s *Settings) IsDebug() bool {
 	return s.Mode == "debug"
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+func (s *Settings) Serialize() string {
+	builder := strings.Builder{}
+
+	builder.WriteString(fmt.Sprintf("%s\n", s.Mode))
+	builder.WriteString(fmt.Sprintf("%v\n", s.Env))
+	builder.WriteString(fmt.Sprintf("%v\n", s.TypeCheck))
+	builder.WriteString(fmt.Sprintf("%d\n", s.MemorySize))
+	builder.WriteString(fmt.Sprintf("%d\n", s.CallStackSize))
+	builder.WriteString(fmt.Sprintf("%s\n", strings.Join(s.IncludePaths, ",")))
+	builder.WriteString(fmt.Sprintf("%d\n", s.Optimization))
+	builder.WriteString(fmt.Sprintf("%s\n", s.ProfilePath))
+	builder.WriteString(fmt.Sprintf("%d\n", s.LogLevel))
+
+	return builder.String()
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

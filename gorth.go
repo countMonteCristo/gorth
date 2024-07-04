@@ -2,6 +2,7 @@ package main
 
 import (
 	"Gorth/interpreter"
+	"Gorth/interpreter/logger"
 	"Gorth/interpreter/settings"
 	"Gorth/interpreter/utils"
 	"flag"
@@ -23,11 +24,12 @@ func main() {
 
 	var includePaths utils.ArrayArgs
 
-	modeFlag := flag.String("mode", "interprete", "how to run (interprete|debug|profile)")
+	modeFlag := flag.String("mode", "interprete", "how to run (interprete|debug|profile|dump)")
 	logLevel := flag.String("log", "info", "log level")
 	envFlag := flag.Bool("env", false, "save environment variables to VM memory")
 	tcFlag := flag.Bool("disable-typecheck", false, "disable type checking")
 	optFlag := flag.Int("O", 0, "optimization level")
+	dumpFlag := flag.Bool("p", false, "only compile script, do not execute")
 	flag.Var(&includePaths, "I", "provide additional include paths")
 
 	flag.Parse()
@@ -36,7 +38,7 @@ func main() {
 
 	settings := settings.NewSettings(
 		*modeFlag, *envFlag, !*tcFlag, vm_memory_size, recursion_limit, includePaths,
-		*optFlag, gorth_script+".prof", *logLevel,
+		*optFlag, gorth_script+".prof", *logLevel, *dumpFlag,
 	)
 
 	i := interpreter.NewInterpreter(flag.Args(), package_dir, settings)
@@ -48,6 +50,11 @@ func main() {
 	case "debug":
 		i.RunDebug(gorth_script)
 	case "profile":
+		if *dumpFlag {
+			logger.Crash("Can not use dump in `profile` mode")
+		}
 		i.RunProfile(gorth_script)
+	default:
+		logger.Crash("Unknown mode: %s", *modeFlag)
 	}
 }

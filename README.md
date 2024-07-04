@@ -80,6 +80,7 @@ Supported flags:
 * `I` - provide additional include directories (i.e. "-I dir1 -I dir2 ... -I dirN")
 * `O` - optimization level (`0` - no optimizations, `1` - eliminate dead code)
 * `log` - logging level (`info` by default)
+* `p` - do not run the script, just compile and save to *.gorthc file
 
 ## Debugger
 Run script with debugger.

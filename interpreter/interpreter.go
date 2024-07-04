@@ -64,27 +64,37 @@ func (i *Interpreter) Prepare(fn string) {
 	if err = i.optimizer.Optimize(&i.compiler.Ops, &i.compiler.Ctx, &i.vm.Rc.Settings, &i.s); err != nil {
 		utils.ExitWithError(err)
 	}
-
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (i *Interpreter) Run(fn string) vm.ExitCodeType {
 	i.Prepare(fn)
-	return i.vm.Interprete(&i.compiler.Ops, i.args, &i.s)
+	if i.s.Dump {
+		i.vm.DumpOps(fn+"c", &i.compiler.Ops, &i.s)
+		return vm.ExitCodeType{Code: 0, Msg: ""}
+	} else {
+		return i.vm.Interprete(&i.compiler.Ops, i.args, &i.s)
+	}
+
 }
 
 func (i *Interpreter) RunDebug(fn string) {
 	i.Prepare(fn)
 	i.vm.Rc.PrepareMemory(i.args, &i.s)
-	i.debugger = *debugger.NewDebugger(&i.vm, &i.s)
 
-	for {
-		i.vm.Rc.Reset()
-		go i.debugger.Debug(&i.compiler.Ops, i.args, &i.compiler.Ctx)
-		res := i.debugger.Run()
-		if res == debugger.DebugQuit {
-			break
+	if i.s.Dump {
+		i.vm.DumpOps(fn+"c", &i.compiler.Ops, &i.s)
+	} else {
+		i.debugger = *debugger.NewDebugger(&i.vm, &i.s)
+
+		for {
+			i.vm.Rc.Reset()
+			go i.debugger.Debug(&i.compiler.Ops, i.args, &i.compiler.Ctx)
+			res := i.debugger.Run()
+			if res == debugger.DebugQuit {
+				break
+			}
 		}
 	}
 }
